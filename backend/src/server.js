@@ -2,14 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
 const path = require('path');
+const morgan = require('morgan');
+const logger = require('./config/logger');
 
-require('dotenv').config();
+const envFile = process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : '.env';
+require('dotenv').config({ path: path.join(__dirname, '..', envFile) });
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// HTTP request logging
+app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    origin: process.env.FRONTEND_URL || '*', // Fallback to * if not defined
     credentials: true
 }));
 app.use(express.json());
@@ -30,11 +36,11 @@ app.get('/', (req, res) => {
 // Sync Database and Start Server
 sequelize.sync({ alter: true })
     .then(() => {
-        console.log('Database synced');
+        logger.info('Database synced');
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            logger.info(`Server is running on port ${PORT}`);
         });
     })
     .catch(err => {
-        console.error('Unable to sync database:', err);
+        logger.error('Unable to sync database: %s', err.message);
     });
