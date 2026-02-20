@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Property, Interaction } = require('../models');
+const { Property, Interaction, Inquiry } = require('../models');
 const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
@@ -146,6 +146,10 @@ router.delete('/:id', auth, async (req, res) => {
     try {
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
+
+        // Delete associated records to avoid SQLITE_CONSTRAINT foreign key failure
+        await Interaction.destroy({ where: { propertyId: property.id } });
+        await Inquiry.destroy({ where: { propertyId: property.id } });
 
         await property.destroy();
         res.json({ message: 'Property removed' });

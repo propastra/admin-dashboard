@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 
 const PropertyList = () => {
@@ -84,7 +84,7 @@ const PropertyList = () => {
                             <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px' }}>
                                     {property.photos && property.photos.length > 0 ? (
-                                        <img src={`http://localhost:5001${property.photos[0]}`} alt={property.title} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                                        <img src={`${API_BASE_URL}${property.photos[0]}`} alt={property.title} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
                                     ) : (
                                         <div style={{ width: '50px', height: '50px', backgroundColor: '#e5e7eb', borderRadius: '4px' }}></div>
                                     )}

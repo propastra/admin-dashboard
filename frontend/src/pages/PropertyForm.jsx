@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 const PropertyForm = () => {
     const { id } = useParams();
@@ -16,7 +16,6 @@ const PropertyForm = () => {
         priceUnit: 'Lakhs',
         dimensions: '',
         configuration: '',
-        projectName: '',
         amenities: '', // comma separatedString
         status: 'Available'
     });
@@ -41,7 +40,6 @@ const PropertyForm = () => {
                         priceUnit: data.priceUnit || 'Lakhs',
                         dimensions: data.dimensions,
                         configuration: data.configuration,
-                        projectName: data.projectName,
                         amenities: data.amenities ? data.amenities.join(', ') : '',
                         status: data.status
                     });
@@ -153,18 +151,19 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Project Name</label>
-                    <input name="projectName" value={formData.projectName} onChange={handleChange} className="form-input" />
-                </div>
-
-                <div className="form-group">
                     <label className="form-label">Dimensions</label>
                     <input name="dimensions" value={formData.dimensions} onChange={handleChange} className="form-input" placeholder="e.g. 1200 sqft" />
                 </div>
 
                 <div className="form-group">
                     <label className="form-label">Configuration</label>
-                    <input name="configuration" value={formData.configuration} onChange={handleChange} className="form-input" placeholder="e.g. 3BHK" />
+                    <input name="configuration" list="config-options" value={formData.configuration} onChange={handleChange} className="form-input" placeholder="e.g. 3BHK" />
+                    <datalist id="config-options">
+                        <option value="1BHK" />
+                        <option value="2BHK" />
+                        <option value="3BHK" />
+                        <option value="4BHK" />
+                    </datalist>
                 </div>
 
                 <div className="form-group">
@@ -193,7 +192,7 @@ const PropertyForm = () => {
                     <input type="file" multiple onChange={handleFileChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {existingPhotos.map((photo, index) => (
-                            <img key={`exist-${index}`} src={`http://localhost:5000${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
+                            <img key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
                         ))}
                         {previewPhotos.map((photo, index) => (
                             <img key={`new-${index}`} src={photo} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} />
