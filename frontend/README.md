@@ -1,16 +1,31 @@
-# React + Vite
+# Propastra Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the Propastra Admin Dashboard.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Install dependencies: `npm install`
+2. Start development server: `npm run dev`
 
-## React Compiler
+## Environments & Building
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The frontend uses environment-specific build modes.
 
-## Expanding the ESLint configuration
+### Staging
+```bash
+npm run build:staging
+```
+This will build the application using `.env.staging` which points to `https://staging-api.propastra.com/api`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Production
+```bash
+npm run build:production
+```
+This will build the application using `.env.production` which points to `https://api.propastra.com/api`.
+
+## Technology Stack
+- **Framework**: React 19
+- **Build Tool**: Vite 7
+- **Styling**: Vanilla CSS (Modern design)
+- **State/Routing**: React Router
+- **Charts**: Chart.js

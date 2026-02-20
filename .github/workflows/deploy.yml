@@ -1,0 +1,70 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 18.60.43.76
+          username: ubuntu
+          key: |
+            -----BEGIN RSA PRIVATE KEY-----
+            (PASTE_YOUR_LONG_PEM_KEY_TEXT_HERE)
+            -----END RSA PRIVATE KEY-----
+          script: |
+            # ----------------------------------------------------
+            # 0. CREATE A BACKUP OF THE EXISTING FOLDER
+            # ----------------------------------------------------
+            echo "Creating a backup of the current Admin_dashboard..."
+            # Create a timestamp variable like 20240221_123000
+            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+            
+            # Zip the entire Admin_dashboard folder into the home directory, but exclude node_modules to save space
+            tar -czf /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz \
+                --exclude='node_modules' \
+                -C /home/ubuntu/ Admin_dashboard
+            echo "Backup saved as /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz"
+
+            # ----------------------------------------------------
+            # 1. PULL LATEST CODE
+            # ----------------------------------------------------
+            echo "Pulling latest code from GitHub..."
+            cd /home/ubuntu/Admin_dashboard
+            git pull origin main
+
+            # ----------------------------------------------------
+            # 2. DEPLOY BACKEND
+            # ----------------------------------------------------
+            echo "Deploying the Backend..."
+            cd backend
+            npm install
+            
+            # Restart backend PM2
+            npx pm2 restart backend || npx pm2 start src/server.js --name "backend"
+            npx pm2 save
+
+            # ----------------------------------------------------
+            # 3. DEPLOY FRONTEND
+            # ----------------------------------------------------
+            echo "Deploying the Frontend..."
+            cd ../frontend
+            
+            # Temporarily claim ownership to allow npm to build
+            sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/frontend/dist || true
+            
+            npm install
+            npm run build
+            
+            # Give ownership of the built files back to Apache (www-data)
+            sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
+            
+            echo "Deployment completed successfully!"
+
