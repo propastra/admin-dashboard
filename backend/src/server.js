@@ -43,5 +43,5 @@ sequelize.sync()
         });
     })
     .catch(err => {
-        logger.error('Unable to sync database: %s', err.message);
+        logger.error('Unable to sync database:', err);
     });
