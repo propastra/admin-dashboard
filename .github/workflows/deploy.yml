@@ -24,10 +24,8 @@ jobs:
             # 0. CREATE A BACKUP OF THE EXISTING FOLDER
             # ----------------------------------------------------
             echo "Creating a backup of the current Admin_dashboard..."
-            # Create a timestamp variable like 20240221_123000
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             
-            # Zip the entire Admin_dashboard folder into the home directory, but exclude node_modules to save space
             tar -czf /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz \
                 --exclude='node_modules' \
                 -C /home/ubuntu/ Admin_dashboard
@@ -47,7 +45,6 @@ jobs:
             cd backend
             npm install
             
-            # Restart backend PM2
             npx pm2 restart backend || npx pm2 start src/server.js --name "backend"
             npx pm2 save
 
@@ -57,14 +54,11 @@ jobs:
             echo "Deploying the Frontend..."
             cd ../frontend
             
-            # Temporarily claim ownership to allow npm to build
             sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/frontend/dist || true
             
             npm install
             npm run build
             
-            # Give ownership of the built files back to Apache (www-data)
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
             
             echo "Deployment completed successfully!"
-
