@@ -43,5 +43,10 @@ sequelize.sync()
         });
     })
     .catch(err => {
-        logger.error('Unable to sync database:', err);
+        console.error('------- DATABASE ERROR -------');
+        console.error(err);
+        if (err.errors) {
+            console.error('Validation specifics:', JSON.stringify(err.errors, null, 2));
+        }
+        console.error('------------------------------');
     });
