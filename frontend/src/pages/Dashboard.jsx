@@ -96,7 +96,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
+            <div className="grid-2-cols">
                 <div className="card">
                     <h3>Top Properties by Views</h3>
                     <div style={{ height: '300px', width: '100%' }}>
@@ -115,9 +115,9 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <div className="card">
+            <div className="card table-container">
                 <h3>Recent Activity Log</h3>
-                <div style={{ overflowX: 'auto' }}>
+                <div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
                         <thead>
                             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>

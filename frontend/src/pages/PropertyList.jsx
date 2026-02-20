@@ -66,7 +66,7 @@ const PropertyList = () => {
                 ))}
             </div>
 
-            <div className="card" style={{ overflowX: 'auto' }}>
+            <div className="card table-container">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>

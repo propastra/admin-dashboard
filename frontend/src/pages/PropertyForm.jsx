@@ -114,7 +114,7 @@ const PropertyForm = () => {
         <div className="card">
             <h2>{isEdit ? 'Edit Property' : 'Add New Property'}</h2>
             {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <form onSubmit={handleSubmit} className="form-grid">
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Property Name</label>
                     <input name="propertyName" value={formData.propertyName} onChange={handleChange} className="form-input" required />
@@ -135,9 +135,9 @@ const PropertyForm = () => {
 
                 <div className="form-group">
                     <label className="form-label">Price</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} className="form-input" required style={{ flex: 2 }} />
-                        <select name="priceUnit" value={formData.priceUnit} onChange={handleChange} className="form-select" style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} className="form-input" required style={{ flex: '1 1 60%' }} />
+                        <select name="priceUnit" value={formData.priceUnit} onChange={handleChange} className="form-select" style={{ flex: '1 1 30%' }}>
                             <option value="Lakhs">Lakhs</option>
                             <option value="Cr">Cr</option>
                             <option value="Thousands">Thousands</option>
