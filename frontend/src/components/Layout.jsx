@@ -19,7 +19,7 @@ const Layout = () => {
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
             <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-            <div style={{ flex: 1, width: '100%', marginLeft: window.innerWidth > 768 ? '250px' : '0', transition: 'margin-left 0.3s' }}>
+            <div className="main-content-layout">
                 <div className="mobile-header">
                     <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Propastra_admin</span>
                     <button className="hamburger-btn" onClick={toggleSidebar}>

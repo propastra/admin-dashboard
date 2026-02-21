@@ -30,29 +30,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             ></div>
 
             {/* Sidebar */}
-            <div style={{
-                width: '250px',
-                backgroundColor: '#1e293b',
-                color: 'white',
-                height: '100vh',
-                position: 'fixed',
-                left: 0,
-                top: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: 50,
-                transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
-                transition: 'transform 0.3s ease-in-out'
-            }}>
+            <div className={`sidebar-container ${isOpen ? 'open' : ''}`}>
                 <div style={{ padding: '20px', fontSize: '20px', fontWeight: 'bold', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Propastra_admin
                     {/* Close button for mobile */}
-                    <button className="hamburger-btn" style={{ display: window.innerWidth <= 768 ? 'block' : 'none', color: '#cbd5e1', fontSize: '20px' }} onClick={toggleSidebar}>
+                    <button className="hamburger-btn mobile-only-btn" style={{ color: '#cbd5e1', fontSize: '20px' }} onClick={toggleSidebar}>
                         ✕
                     </button>
                 </div>
                 <nav style={{ flex: 1, padding: '20px 10px' }}>
-                    <Link to="/" style={linkStyle('/')} onClick={() => window.innerWidth <= 768 && toggleSidebar()}>
+                    <Link to="/" style={linkStyle('/')} onClick={() => { if (window.innerWidth <= 768) toggleSidebar() }}>
                         <FaHome style={{ marginRight: '10px' }} /> Dashboard
                     </Link>
                     <Link to="/properties" style={linkStyle('/properties')}>
