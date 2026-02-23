@@ -22,6 +22,10 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (e.g. mobile apps, curl)
         if (!origin) return callback(null, true);
+        // Allow all *.propastra.com subdomains
+        if (/^https?:\/\/([a-z0-9-]+\.)?propastra\.com$/i.test(origin)) {
+            return callback(null, true);
+        }
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             return callback(null, true);
         }

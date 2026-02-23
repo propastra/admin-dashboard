@@ -73,6 +73,19 @@ jobs:
             npx pm2 save
 
             # ----------------------------------------------------
+            # 2b. SEED DATA (runs only once)
+            # ----------------------------------------------------
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded ]; then
+                echo "Seeding property data..."
+                sleep 3
+                node src/seedProperties.js
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded
+                echo "Seeding complete!"
+            else
+                echo "Data already seeded, skipping..."
+            fi
+
+            # ----------------------------------------------------
             # 3. DEPLOY FRONTEND
             # ----------------------------------------------------
             echo "Deploying the Frontend..."
