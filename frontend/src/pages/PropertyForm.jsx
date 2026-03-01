@@ -17,13 +17,23 @@ const PropertyForm = () => {
         dimensions: '',
         configuration: '',
         amenities: '', // comma separatedString
-        status: 'Available'
+        status: 'Available',
+        latitude: '',
+        longitude: '',
+        possessionTime: '',
+        developerName: '',
+        landParcel: '',
+        floor: '',
+        units: '',
+        investmentType: 'Self Use',
+        reraNumber: ''
     });
     const [photos, setPhotos] = useState([]); // For new files
     const [existingPhotos, setExistingPhotos] = useState([]); // For displaying existing images in edit mode
     const [previewPhotos, setPreviewPhotos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [modalImage, setModalImage] = useState(null);
 
     useEffect(() => {
         if (isEdit) {
@@ -41,7 +51,16 @@ const PropertyForm = () => {
                         dimensions: data.dimensions,
                         configuration: data.configuration,
                         amenities: data.amenities ? data.amenities.join(', ') : '',
-                        status: data.status
+                        status: data.status,
+                        latitude: data.latitude || '',
+                        longitude: data.longitude || '',
+                        possessionTime: data.possessionTime || '',
+                        developerName: data.developerName || '',
+                        landParcel: data.landParcel || '',
+                        floor: data.floor || '',
+                        units: data.units || '',
+                        investmentType: data.investmentType || 'Self Use',
+                        reraNumber: data.reraNumber || ''
                     });
                     setExistingPhotos(data.photos || []);
                 } catch (err) {
@@ -59,11 +78,19 @@ const PropertyForm = () => {
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
-        setPhotos(files);
+        setPhotos(prev => [...prev, ...files]);
 
         // Create previews
-        const previews = files.map(file => URL.createObjectURL(file));
-        setPreviewPhotos(previews);
+        const newPreviews = files.map(file => ({
+            url: URL.createObjectURL(file),
+            type: file.type
+        }));
+        setPreviewPhotos(prev => [...prev, ...newPreviews]);
+    };
+
+    const handleClearNewPhotos = () => {
+        setPhotos([]);
+        setPreviewPhotos([]);
     };
 
     const handleSubmit = async (e) => {
@@ -151,6 +178,54 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group">
+                    <label className="form-label">Latitude</label>
+                    <input name="latitude" type="number" step="any" value={formData.latitude} onChange={handleChange} className="form-input" placeholder="e.g. 12.9716" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Longitude</label>
+                    <input name="longitude" type="number" step="any" value={formData.longitude} onChange={handleChange} className="form-input" placeholder="e.g. 77.5946" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Possession Time (Position Time)</label>
+                    <input name="possessionTime" value={formData.possessionTime} onChange={handleChange} className="form-input" placeholder="e.g. Dec 2024" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">RERA Number</label>
+                    <input name="reraNumber" value={formData.reraNumber} onChange={handleChange} className="form-input" placeholder="e.g. PRM/KA/RERA/..." />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Developer Name</label>
+                    <input name="developerName" value={formData.developerName} onChange={handleChange} className="form-input" placeholder="e.g. Prestige Group" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Land Parcel</label>
+                    <input name="landParcel" value={formData.landParcel} onChange={handleChange} className="form-input" placeholder="e.g. 5 Acres" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Floor</label>
+                    <input name="floor" value={formData.floor} onChange={handleChange} className="form-input" placeholder="e.g. 5th Floor" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Units</label>
+                    <input name="units" value={formData.units} onChange={handleChange} className="form-input" placeholder="e.g. 100" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Looking for Investment</label>
+                    <select name="investmentType" value={formData.investmentType} onChange={handleChange} className="form-select">
+                        <option value="Self Use">Self Use</option>
+                        <option value="Investment">Investment</option>
+                    </select>
+                </div>
+
+                <div className="form-group">
                     <label className="form-label">Dimensions</label>
                     <input name="dimensions" value={formData.dimensions} onChange={handleChange} className="form-input" placeholder="e.g. 1200 sqft" />
                 </div>
@@ -188,14 +263,28 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label">Photos</label>
-                    <input type="file" multiple onChange={handleFileChange} className="form-input" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Photos & Videos (Endless upload)</label>
+                        {previewPhotos.length > 0 && (
+                            <button type="button" onClick={handleClearNewPhotos} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
+                        )}
+                    </div>
+                    <input type="file" multiple accept="image/*,video/*" onChange={handleFileChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {existingPhotos.map((photo, index) => (
-                            <img key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
-                        ))}
+                        {existingPhotos.map((photo, index) => {
+                            const isVideo = photo.match(/\.(mp4|webm|ogg|mov)$/i);
+                            return isVideo ? (
+                                <video key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} controls style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
+                            ) : (
+                                <img key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${photo}`)} />
+                            );
+                        })}
                         {previewPhotos.map((photo, index) => (
-                            <img key={`new-${index}`} src={photo} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} />
+                            photo.type.startsWith('video/') ? (
+                                <video key={`new-${index}`} src={photo.url} controls style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} />
+                            ) : (
+                                <img key={`new-${index}`} src={photo.url} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setModalImage(photo.url)} />
+                            )
                         ))}
                     </div>
                 </div>
@@ -209,6 +298,24 @@ const PropertyForm = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Image Modal for Fullscreen Preview */}
+            {modalImage && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <img src={modalImage} alt="Fullscreen Preview" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', borderRadius: '8px' }} />
+                    <button type="button" onClick={() => setModalImage(null)} style={{
+                        position: 'absolute', top: '20px', right: '30px',
+                        background: 'transparent', border: 'none', color: 'white',
+                        fontSize: '40px', cursor: 'pointer'
+                    }}>
+                        &times;
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

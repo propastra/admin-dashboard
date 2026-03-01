@@ -55,9 +55,9 @@ router.get('/:id', async (req, res) => {
 // @route   POST api/properties
 // @desc    Add new property
 // @access  Private
-router.post('/', [auth, upload.array('photos', 10)], async (req, res) => {
+router.post('/', [auth, upload.array('photos', 100)], async (req, res) => {
     try {
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
 
         const photos = req.files.map(file => `/uploads/${file.filename}`);
         const parsedAmenities = amenities ? JSON.parse(amenities) : []; // Expecting JSON string from frontend
@@ -74,7 +74,22 @@ router.post('/', [auth, upload.array('photos', 10)], async (req, res) => {
             photos,
             projectName,
             amenities: parsedAmenities,
-            status
+            status,
+            reraNumber,
+            builderInfo,
+            isVerified: isVerified === 'true' || isVerified === true,
+            projectHighlights: projectHighlights ? JSON.parse(projectHighlights) : [],
+            possessionStatus,
+            furnishingStatus,
+            bhk,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
+            possessionTime,
+            developerName,
+            landParcel,
+            floor,
+            units,
+            investmentType
         });
 
         res.json(newProperty);
@@ -87,12 +102,12 @@ router.post('/', [auth, upload.array('photos', 10)], async (req, res) => {
 // @route   PUT api/properties/:id
 // @desc    Update property
 // @access  Private
-router.put('/:id', [auth, upload.array('photos', 10)], async (req, res) => {
+router.put('/:id', [auth, upload.array('photos', 100)], async (req, res) => {
     try {
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
 
         let photos = property.photos;
 
@@ -129,7 +144,22 @@ router.put('/:id', [auth, upload.array('photos', 10)], async (req, res) => {
             photos,
             projectName,
             amenities: parsedAmenities,
-            status
+            status,
+            reraNumber,
+            builderInfo,
+            isVerified: isVerified === 'true' || isVerified === true,
+            projectHighlights: projectHighlights ? typeof projectHighlights === 'string' ? JSON.parse(projectHighlights) : projectHighlights : property.projectHighlights,
+            possessionStatus,
+            furnishingStatus,
+            bhk,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
+            possessionTime,
+            developerName,
+            landParcel,
+            floor,
+            units,
+            investmentType
         });
 
         res.json(property);

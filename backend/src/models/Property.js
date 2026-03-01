@@ -51,6 +51,57 @@ const Property = sequelize.define('Property', {
         type: DataTypes.ENUM('Available', 'Sold', 'Pending', 'EOI', 'RTMI'),
         defaultValue: 'Available',
     },
+    latitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+    },
+    longitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+    },
+    reraNumber: {
+        type: DataTypes.STRING,
+    },
+    builderInfo: {
+        type: DataTypes.STRING,
+    },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    projectHighlights: {
+        type: DataTypes.JSON,
+        defaultValue: [],
+    },
+    possessionStatus: {
+        type: DataTypes.ENUM('Ready to Move', 'Under Construction', 'Pre Launch'),
+        defaultValue: 'Ready to Move',
+    },
+    furnishingStatus: {
+        type: DataTypes.ENUM('Unfurnished', 'Semi-Furnished', 'Fully Furnished'),
+        defaultValue: 'Unfurnished',
+    },
+    bhk: {
+        type: DataTypes.INTEGER,
+    },
+    possessionTime: {
+        type: DataTypes.STRING,
+    },
+    developerName: {
+        type: DataTypes.STRING,
+    },
+    landParcel: {
+        type: DataTypes.STRING,
+    },
+    floor: {
+        type: DataTypes.STRING,
+    },
+    units: {
+        type: DataTypes.STRING,
+    },
+    investmentType: {
+        type: DataTypes.STRING,
+    },
 }, {
     timestamps: true,
 });
