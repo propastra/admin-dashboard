@@ -11,12 +11,6 @@ const Inquiry = sequelize.define('Inquiry', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    email: {
-        type: DataTypes.STRING,
-        validate: {
-            isEmail: true
-        }
-    },
     phone: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -25,8 +19,24 @@ const Inquiry = sequelize.define('Inquiry', {
         type: DataTypes.TEXT,
     },
     status: {
-        type: DataTypes.ENUM('New', 'Contacted', 'Closed'),
+        type: DataTypes.ENUM('New', 'Contacted', 'Visit Scheduled', 'Closed'),
         defaultValue: 'New',
+    },
+    assignedTo: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'Users',
+            key: 'id'
+        }
+    },
+    visitDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    followUpDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
     }
 }, {
     timestamps: true,

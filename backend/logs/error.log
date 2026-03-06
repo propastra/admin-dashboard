@@ -1,0 +1,1 @@
+{"level":"error","message":"Unable to sync database: SQLITE_CONSTRAINT: FOREIGN KEY constraint failed","service":"backend-service","timestamp":"2026-03-01 12:00:31"}

@@ -71,8 +71,7 @@ const InquiryList = () => {
                                 </td>
                                 <td style={{ padding: '12px' }}>{inquiry.name}</td>
                                 <td style={{ padding: '12px' }}>
-                                    <div>{inquiry.email}</div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{inquiry.phone}</div>
+                                    <div style={{ fontSize: '14px' }}>{inquiry.phone}</div>
                                 </td>
                                 <td style={{ padding: '12px' }}>
                                     {inquiry.Property ? (

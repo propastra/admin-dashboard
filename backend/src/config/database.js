@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
 require('dotenv').config();
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -10,7 +11,7 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST || 'localhost',
         dialect: 'sqlite',
-        storage: './database.sqlite', // Use SQLite file storage
+        storage: path.join(__dirname, '../../database.sqlite'), // Use absolute path
         logging: false,
     }
 );
