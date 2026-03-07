@@ -69,7 +69,10 @@ jobs:
             cd backend
             npm install
             
-            npx pm2 restart backend || npx pm2 start src/server.js --name "backend"
+            # Since we migrated to TypeScript, the old pm2 process looking for server.js will crash.
+            # Delete the old pm2 context if it exists, and start using npm start (which runs ts-node)
+            npx pm2 delete backend || true
+            npx pm2 start npm --name "backend" -- run start
             npx pm2 save
 
             # ----------------------------------------------------
@@ -78,7 +81,7 @@ jobs:
             if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded ]; then
                 echo "Seeding property data..."
                 sleep 3
-                node src/seedProperties.js
+                npx ts-node src/seedProperties.ts
                 touch /home/ubuntu/Admin_dashboard/backend/.seeded
                 echo "Seeding complete!"
             else
