@@ -68,9 +68,10 @@ jobs:
             echo "Deploying the Backend..."
             cd backend
             npm install
+            npm run build
             
             # Since we migrated to TypeScript, the old pm2 process looking for server.js will crash.
-            # Delete the old pm2 context if it exists, and start using npm start (which runs ts-node)
+            # Delete the old pm2 context if it exists, and start using npm start (which runs dist/server.js)
             npx pm2 delete backend || true
             npx pm2 start npm --name "backend" -- run start
             npx pm2 save
@@ -81,11 +82,11 @@ jobs:
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_all ]; then
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_249 ]; then
                 echo "Seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
                 sleep 3
                 npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_all
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_249
                 echo "Full seeding complete!"
             else
                 echo "Data already seeded, skipping..."
