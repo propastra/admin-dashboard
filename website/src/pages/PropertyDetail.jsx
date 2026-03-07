@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
-import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, loginUser } from '../services/api';
+import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, loginUser, trackInteraction } from '../services/api';
 import { getCoordinates, calculateRoute } from '../utils/mapUtils';
 import { useAuth } from '../context/AuthContext';
 import PropertyCard from '../components/PropertyCard';
@@ -171,6 +171,13 @@ const PropertyDetail = () => {
         try {
             const res = await getPropertyById(id);
             setProperty(res.data);
+
+            // Track the property view interaction
+            trackInteraction({
+                interactionType: 'View',
+                propertyId: id
+            }).catch(err => console.error("Tracking error", err));
+
         } catch (err) {
             console.error('Failed to load property:', err);
         } finally {
