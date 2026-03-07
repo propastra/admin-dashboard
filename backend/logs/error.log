@@ -1,2 +1,8 @@
 {"level":"error","message":"Unable to sync database: SQLITE_CONSTRAINT: FOREIGN KEY constraint failed","service":"backend-service","timestamp":"2026-03-01 12:00:31"}
 {"level":"error","message":"Unable to sync database: SQLITE_ERROR: table Properties_backup has 24 columns but 30 values were supplied","service":"backend-service","timestamp":"2026-03-07 19:34:02"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: duplicate column name: brochure","service":"backend-service","timestamp":"2026-03-07 20:18:47"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: duplicate column name: brochure","service":"backend-service","timestamp":"2026-03-07 20:18:47"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: duplicate column name: brochure","service":"backend-service","timestamp":"2026-03-07 20:18:47"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: table Properties_backup has 24 columns but 32 values were supplied","service":"backend-service","timestamp":"2026-03-07 20:18:47"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: table Properties_backup has 24 columns but 32 values were supplied","service":"backend-service","timestamp":"2026-03-07 20:18:52"}
+{"level":"error","message":"Unable to sync database: SQLITE_ERROR: table Properties_backup has 24 columns but 32 values were supplied","service":"backend-service","timestamp":"2026-03-07 20:19:17"}

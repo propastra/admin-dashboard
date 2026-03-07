@@ -81,6 +81,7 @@ app.get('/', (req, res) => {
 });
 
 // Sync Database and Start Server
+// Remove { alter: true } and { force: true } so SQLite never drops or attempts to automatically alter tables after they've been successfully created.
 sequelize.sync()
     .then(() => {
         logger.info('Database synced');
