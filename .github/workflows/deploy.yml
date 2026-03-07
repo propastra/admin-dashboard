@@ -67,8 +67,15 @@ jobs:
             # ----------------------------------------------------
             echo "Deploying the Backend..."
             cd backend
+            set -e
             npm install
             npm run build
+            
+            # Verify build output
+            if [ ! -f dist/server.js ]; then
+                echo "Error: Backend build failed (dist/server.js missing)"
+                exit 1
+            fi
             
             # Since we migrated to TypeScript, the old pm2 process looking for server.js will crash.
             # Delete the old pm2 context if it exists, and start using npm start (which runs dist/server.js)
@@ -82,11 +89,12 @@ jobs:
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_249 ]; then
+            # Use a fresh flag to force reseeding of the 249 properties
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2 ]; then
                 echo "Seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
                 sleep 3
                 npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_249
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2
                 echo "Full seeding complete!"
             else
                 echo "Data already seeded, skipping..."
@@ -102,6 +110,12 @@ jobs:
             
             npm install
             npm run build
+            
+            # Verify frontend build
+            if [ ! -f dist/index.html ]; then
+                echo "Error: Frontend build failed (dist/index.html missing)"
+                exit 1
+            fi
             
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
             
