@@ -177,7 +177,7 @@ const PropertyForm = () => {
             <form onSubmit={handleSubmit} className="form-grid">
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Property Name</label>
-                    <input name="propertyName" value={formData.propertyName} onChange={handleChange} className="form-input" required />
+                    <input name="propertyName" value={formData.propertyName} onChange={handleChange} className="form-input" />
                 </div>
 
                 <div className="form-group">
@@ -196,7 +196,7 @@ const PropertyForm = () => {
                 <div className="form-group">
                     <label className="form-label">Price</label>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} className="form-input" required style={{ flex: '1 1 60%' }} />
+                        <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} className="form-input" style={{ flex: '1 1 60%' }} />
                         <select name="priceUnit" value={formData.priceUnit} onChange={handleChange} className="form-select" style={{ flex: '1 1 30%' }}>
                             <option value="Lakhs">Lakhs</option>
                             <option value="Cr">Cr</option>
@@ -207,7 +207,7 @@ const PropertyForm = () => {
 
                 <div className="form-group">
                     <label className="form-label">Location</label>
-                    <input name="location" value={formData.location} onChange={handleChange} className="form-input" required />
+                    <input name="location" value={formData.location} onChange={handleChange} className="form-input" />
                 </div>
 
                 <div className="form-group">

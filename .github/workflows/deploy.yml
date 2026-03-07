@@ -76,14 +76,17 @@ jobs:
             npx pm2 save
 
             # ----------------------------------------------------
-            # 2b. SEED DATA (runs only once)
+            # 2b. MIGRATE AND SEED DATA
             # ----------------------------------------------------
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded ]; then
-                echo "Seeding property data..."
+            echo "Running database migration (allowing NULLs)..."
+            npm run migrate
+            
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_all ]; then
+                echo "Seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
                 sleep 3
-                npx ts-node src/seedProperties.ts
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded
-                echo "Seeding complete!"
+                npm run seed:all
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_all
+                echo "Full seeding complete!"
             else
                 echo "Data already seeded, skipping..."
             fi

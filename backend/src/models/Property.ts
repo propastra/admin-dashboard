@@ -9,22 +9,22 @@ const Property = sequelize.define('Property', {
     },
     propertyName: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
     description: {
         type: DataTypes.TEXT,
     },
     category: {
         type: DataTypes.ENUM('Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Rental'),
-        allowNull: false,
+        allowNull: true,
     },
     location: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
     price: {
         type: DataTypes.DECIMAL(15, 2),
-        allowNull: false,
+        allowNull: true,
     },
     priceUnit: {
         type: DataTypes.ENUM('Cr', 'Lakhs', 'Thousands'),
