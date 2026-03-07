@@ -31,6 +31,15 @@ const PropertyForm = () => {
     const [photos, setPhotos] = useState([]); // For new files
     const [existingPhotos, setExistingPhotos] = useState([]); // For displaying existing images in edit mode
     const [previewPhotos, setPreviewPhotos] = useState([]);
+
+    const [brochure, setBrochure] = useState([]);
+    const [existingBrochure, setExistingBrochure] = useState([]);
+    const [previewBrochure, setPreviewBrochure] = useState([]);
+
+    const [floorPlan, setFloorPlan] = useState([]);
+    const [existingFloorPlan, setExistingFloorPlan] = useState([]);
+    const [previewFloorPlan, setPreviewFloorPlan] = useState([]);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [modalImage, setModalImage] = useState(null);
@@ -63,6 +72,8 @@ const PropertyForm = () => {
                         reraNumber: data.reraNumber || ''
                     });
                     setExistingPhotos(data.photos || []);
+                    setExistingBrochure(data.brochure || []);
+                    setExistingFloorPlan(data.floorPlan || []);
                 } catch (err) {
                     console.error("Error fetching property", err);
                     setError("Failed to load property details");
@@ -88,9 +99,31 @@ const PropertyForm = () => {
         setPreviewPhotos(prev => [...prev, ...newPreviews]);
     };
 
+    const handleBrochureChange = (e) => {
+        const files = Array.from(e.target.files);
+        setBrochure(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => ({ url: URL.createObjectURL(file), type: file.type, name: file.name }));
+        setPreviewBrochure(prev => [...prev, ...newPreviews]);
+    };
+
+    const handleFloorPlanChange = (e) => {
+        const files = Array.from(e.target.files);
+        setFloorPlan(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => ({ url: URL.createObjectURL(file), type: file.type, name: file.name }));
+        setPreviewFloorPlan(prev => [...prev, ...newPreviews]);
+    };
+
     const handleClearNewPhotos = () => {
         setPhotos([]);
         setPreviewPhotos([]);
+    };
+    const handleClearNewBrochure = () => {
+        setBrochure([]);
+        setPreviewBrochure([]);
+    };
+    const handleClearNewFloorPlan = () => {
+        setFloorPlan([]);
+        setPreviewFloorPlan([]);
     };
 
     const handleSubmit = async (e) => {
@@ -108,14 +141,14 @@ const PropertyForm = () => {
             }
         });
 
-        photos.forEach(file => {
-            data.append('photos', file);
-        });
+        photos.forEach(file => data.append('photos', file));
+        brochure.forEach(file => data.append('brochure', file));
+        floorPlan.forEach(file => data.append('floorPlan', file));
 
         if (isEdit) {
-            existingPhotos.forEach(photo => {
-                data.append('existingPhotos', photo);
-            });
+            existingPhotos.forEach(photo => data.append('existingPhotos', photo));
+            existingBrochure.forEach(b => data.append('existingBrochure', b));
+            existingFloorPlan.forEach(f => data.append('existingFloorPlan', f));
         }
 
         try {
@@ -156,7 +189,7 @@ const PropertyForm = () => {
                         <option value="Commercial">Commercial</option>
                         <option value="Residential">Residential</option>
                         <option value="Resale">Resale</option>
-                        <option value="Retail">Retail</option>
+                        <option value="Rental">Rental</option>
                     </select>
                 </div>
 
@@ -285,6 +318,63 @@ const PropertyForm = () => {
                             ) : (
                                 <img key={`new-${index}`} src={photo.url} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setModalImage(photo.url)} />
                             )
+                        ))}
+                    </div>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Floor Plans (Images or PDFs)</label>
+                        {previewFloorPlan.length > 0 && (
+                            <button type="button" onClick={handleClearNewFloorPlan} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
+                        )}
+                    </div>
+                    <input type="file" multiple accept="image/*,application/pdf" onChange={handleFloorPlanChange} className="form-input" />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {existingFloorPlan.map((file, index) => {
+                            const isPdf = file.match(/\.pdf$/i);
+                            return isPdf ? (
+                                <a key={`exist-fp-${index}`} href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+                                    <span style={{ fontSize: '24px' }}>📄</span>
+                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing PDF</span>
+                                </a>
+                            ) : (
+                                <img key={`exist-fp-${index}`} src={`${API_BASE_URL}${file}`} alt="Existing Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${file}`)} />
+                            );
+                        })}
+                        {previewFloorPlan.map((file, index) => (
+                            file.type === 'application/pdf' ? (
+                                <div key={`new-fp-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '24px' }}>📄</span>
+                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                                </div>
+                            ) : (
+                                <img key={`new-fp-${index}`} src={file.url} alt="Preview Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setModalImage(file.url)} />
+                            )
+                        ))}
+                    </div>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Brochures (PDFs)</label>
+                        {previewBrochure.length > 0 && (
+                            <button type="button" onClick={handleClearNewBrochure} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
+                        )}
+                    </div>
+                    <input type="file" multiple accept="application/pdf" onChange={handleBrochureChange} className="form-input" />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {existingBrochure.map((file, index) => (
+                            <a key={`exist-b-${index}`} href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+                                <span style={{ fontSize: '24px' }}>📕</span>
+                                <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing Brochure</span>
+                            </a>
+                        ))}
+                        {previewBrochure.map((file, index) => (
+                            <div key={`new-b-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px' }}>
+                                <span style={{ fontSize: '24px' }}>📕</span>
+                                <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                            </div>
                         ))}
                     </div>
                 </div>

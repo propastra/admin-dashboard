@@ -47,7 +47,7 @@ const PropertyList = () => {
             </div>
 
             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {['All', 'Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Retail'].map(cat => (
+                {['All', 'Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Rental'].map(cat => (
                     <button
                         key={cat}
                         onClick={() => setFilter(cat)}

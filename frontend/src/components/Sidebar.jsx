@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaBuilding, FaUsers, FaSignOutAlt, FaPlus, FaEnvelope } from 'react-icons/fa';
+import { FaHome, FaBuilding, FaUsers, FaSignOutAlt, FaPlus, FaEnvelope, FaBolt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -50,6 +50,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                     </Link>
                     <Link to="/inquiries" style={linkStyle('/inquiries')}>
                         <FaEnvelope style={{ marginRight: '10px' }} /> Inquiries
+                    </Link>
+                    <Link to="/leads" style={linkStyle('/leads')}>
+                        <FaBolt style={{ marginRight: '10px', color: '#f59e0b' }} /> Live Leads
                     </Link>
                 </nav>
                 <div style={{ padding: '20px', borderTop: '1px solid #334155' }}>

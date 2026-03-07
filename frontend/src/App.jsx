@@ -7,6 +7,7 @@ import PropertyList from './pages/PropertyList';
 import PropertyForm from './pages/PropertyForm';
 import VisitorList from './pages/VisitorList';
 import InquiryList from './pages/InquiryList';
+import LeadList from './pages/LeadList';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/properties/edit/:id" element={<PropertyForm />} />
         <Route path="/visitors" element={<VisitorList />} />
         <Route path="/inquiries" element={<InquiryList />} />
+        <Route path="/leads" element={<LeadList />} />
       </Route>
     </Routes>
   );

@@ -31,7 +31,7 @@ const propertyTypes = {
     others: [
         { label: 'Farm Land', value: 'Farm Land', type: 'category' },
         { label: 'Resale', value: 'Resale', type: 'category' },
-        { label: 'Retail', value: 'Retail', type: 'category' },
+        { label: 'Rental', value: 'Rental', type: 'category' },
     ]
 };
 
