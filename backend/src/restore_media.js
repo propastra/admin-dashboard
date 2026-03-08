@@ -37,43 +37,68 @@ function run(db, sql, params = []) {
 
 async function start() {
     try {
-        const backupProperties = await query(backupDb, "SELECT * FROM Properties WHERE photos != '[]' AND photos IS NOT NULL");
-        console.log(`Found ${backupProperties.length} properties with photos in backup.`);
+        const backupProperties = await query(backupDb, "SELECT * FROM Properties");
+        console.log(`Found ${backupProperties.length} properties in backup.`);
 
         const targetProperties = await query(targetDb, "SELECT id, propertyName, projectName, dimensions FROM Properties");
 
         let updatedCount = 0;
+        let insertedCount = 0;
+        
         for (const bp of backupProperties) {
             const bpName = (bp.propertyName || "").trim().toLowerCase();
             const bpProj = (bp.projectName || "").trim().toLowerCase();
             
-            // Try exact name match
+            if (!bpName && !bpProj) continue;
+
+            // Strategy 1: Exact Name Match
             let match = targetProperties.find(tp => tp.propertyName.trim().toLowerCase() === bpName);
             
-            // Fallback: Project match
+            // Strategy 2: Project match
             if (!match && bpProj) {
-                // If the backup name has standard plot/premium plot, we might need more logic
-                // For now, let's match by project name if title fails
                 const projectMatches = targetProperties.filter(tp => tp.projectName?.trim().toLowerCase() === bpProj);
                 if (projectMatches.length > 0) {
-                    // Update all records for this project if they are missing photos
                     for (const tp of projectMatches) {
-                         await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, tp.id]);
-                         console.log(`[OK] Updated media for: ${tp.propertyName} (Project Match: ${bp.projectName})`);
-                         updatedCount++;
+                         // Only update if target has NO photos or if backup has data
+                         if (bp.photos && bp.photos !== '[]') {
+                            await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, tp.id]);
+                            if (bp.brochure) await run(targetDb, "UPDATE Properties SET brochure = ? WHERE id = ?", [bp.brochure, tp.id]);
+                            console.log(`[UPD] Restored media for: ${tp.propertyName} (Matched: ${bp.propertyName})`);
+                            updatedCount++;
+                         }
                     }
-                    continue; // Already handled this project
+                    continue;
                 }
             }
 
             if (match) {
-                await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, match.id]);
-                console.log(`[OK] Updated media for: ${match.propertyName} (Exact Match)`);
-                updatedCount++;
+                if (bp.photos && bp.photos !== '[]') {
+                    await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, match.id]);
+                    if (bp.brochure) await run(targetDb, "UPDATE Properties SET brochure = ? WHERE id = ?", [bp.brochure, match.id]);
+                    console.log(`[UPD] Restored media for: ${match.propertyName} (Exact Match)`);
+                    updatedCount++;
+                }
+            } else {
+                // Strategy 3: INSERT if not found (This is a manual property)
+                console.log(`[INS] Found manual property in backup: ${bp.propertyName}. Inserting...`);
+                
+                // Construct dynamic insert to handle schema differences
+                const columns = Object.keys(bp).filter(k => k !== 'id'); // Use new ID
+                const values = columns.map(c => bp[c]);
+                const placeholders = columns.map(() => '?').join(',');
+                
+                try {
+                    const newId = require('crypto').randomUUID();
+                    await run(targetDb, `INSERT INTO Properties (id, ${columns.join(',')}) VALUES (?, ${placeholders})`, [newId, ...values]);
+                    console.log(`[OK] Successfully inserted: ${bp.propertyName}`);
+                    insertedCount++;
+                } catch (insErr) {
+                    console.error(`[ERR] Failed to insert ${bp.propertyName}:`, insErr.message);
+                }
             }
         }
 
-        console.log(`Successfully restored media for ${updatedCount} records.`);
+        console.log(`Summary: Updated ${updatedCount} records, Inserted ${insertedCount} records.`);
         
         targetDb.close();
         backupDb.close();

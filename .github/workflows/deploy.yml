@@ -45,22 +45,8 @@ jobs:
             -----END RSA PRIVATE KEY-----
           script: |
             set -e
-            # RECOVERY: Restore manual property media from ZIP backup
-            if [ -f "backend/backend_data_backup.zip" ]; then
-              echo "Restoring manual property media from backup..."
-              mkdir -p /tmp/recovery_restoration
-              unzip -o backend/backend_data_backup.zip "uploads/*" -d /tmp/recovery_restoration/
-              unzip -o backend/backend_data_backup.zip "database.sqlite" -d /tmp/recovery_restoration/
-              
-              # Sync missing files
-              cp -vn /tmp/recovery_restoration/uploads/* backend/uploads/ || true
-              
-              # Run surgical database merge
-              node backend/src/restore_media.js /tmp/recovery_restoration/database.sqlite
-              
-              # Cleanup
-              rm -rf /tmp/recovery_restoration
-            fi
+            # Ensure backend uploads directory exists
+            mkdir -p backend/uploads
 
             # ----------------------------------------------------
             # 0. FREE UP DISK SPACE
@@ -148,14 +134,44 @@ jobs:
             # npm run seed:all
             # echo "Fresh seeding complete!"
             
-            # Verify total property count
-            echo "Verifying property count..."
-            sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;"
-            
-            # Start/Restart the backend
-            npx pm2 delete backend || true
-            npx pm2 start npm --name "backend" -- run start
-            npx pm2 save
+            # Verify total property count and seed if empty
+echo "Verifying property count..."
+COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;")
+echo "Current total properties: $COUNT"
+
+if [ "$COUNT" -eq 0 ]; then
+  echo "Database is empty, running fresh seeding of 249 standard properties..."
+  npm run seed:all
+fi
+
+# ----------------------------------------------------
+# 4. FINAL DATA RECOVERY (Restore manual properties & media)
+# ----------------------------------------------------
+if [ -f "backend_data_backup.zip" ]; then
+  echo "Executing surgical restoration of manual properties from ZIP backup..."
+  mkdir -p /tmp/recovery_restoration
+  unzip -o backend_data_backup.zip "uploads/*" -d /tmp/recovery_restoration/
+  unzip -o backend_data_backup.zip "database.sqlite" -d /tmp/recovery_restoration/
+  
+  # Sync missing files
+  cp -vn /tmp/recovery_restoration/uploads/* uploads/ || true
+  
+  # Run surgical database merge/insert
+  node src/restore_media.js /tmp/recovery_restoration/database.sqlite
+  
+  # Cleanup
+  rm -rf /tmp/recovery_restoration
+  echo "Data recovery completed!"
+fi
+
+# Verify finalized count
+echo "Final property count:"
+sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;"
+
+# Start/Restart the backend
+npx pm2 delete backend || true
+npx pm2 start npm --name "backend" -- run start
+npx pm2 save
 
             # ----------------------------------------------------
             # 3. DEPLOY FRONTEND
