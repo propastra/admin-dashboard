@@ -101,7 +101,7 @@ jobs:
 
             # ----------------------------------------------------
             # 3. DEPLOY FRONTEND
-            # ----------------------------------------------------
+            # ------------------------------------
             echo "Deploying the Frontend..."
             cd ../frontend
             
@@ -109,6 +109,13 @@ jobs:
             
             npm install
             npm run build
+            
+            # Create a public debug file to verify DB state without needing GitHub Logs
+            echo "Creating debug file..."
+            echo "Deployment Time: $(date)" > dist/debug.txt
+            echo "DB Count: $(sqlite3 ../backend/database.sqlite "SELECT COUNT(*) FROM Properties;")" >> dist/debug.txt
+            echo "DB Path Check: $(ls -l ../backend/database.sqlite)" >> dist/debug.txt
+            echo "All DB Files: $(find /home/ubuntu/Admin_dashboard -name "database.sqlite")" >> dist/debug.txt
             
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
             
