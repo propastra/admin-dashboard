@@ -46,40 +46,36 @@ jobs:
           script: |
             set -e
             # ----------------------------------------------------
-            # DEEP INVESTIGATION: Surgical Audit of all potential data
+            # SURGICAL INVESTIGATION: Audit the most promising backup
             # ----------------------------------------------------
-            echo "--- START DEEP INVESTIGATION ---"
-            echo "Searching for all potential data sources on server..."
-            find /home/ubuntu -name "*.sqlite*" -o -name "*.db" -o -name "*.bak" -not -path "*/node_modules/*" || true
-            find /home/ubuntu -name "*.zip" || true
-            find /home/ubuntu -name "*.tar.gz" || true
-            
-            # Inventory all sqlite files
-            find /home/ubuntu -name "*.sqlite" -not -path "*/node_modules/*" | while read -r db; do
-              echo "--- ANALYZING: $db ---"
-              # Check for Properties and Properties_new
-              TABLES=$(sqlite3 "$db" ".tables" 2>/dev/null || echo "")
-              echo "Tables: $TABLES"
-              
-              for table in Properties Properties_new; do
-                if echo "$TABLES" | grep -q "$table"; then
-                  echo "Found $table table. Investigating..."
-                  sqlite3 "$db" "SELECT 'Total: ' || COUNT(*) FROM $table;" || true
-                  sqlite3 "$db" "SELECT 'Resale: ' || COUNT(*) FROM $table WHERE category LIKE '%Resale%';" || true
-                  sqlite3 "$db" "SELECT 'Residential: ' || COUNT(*) FROM $table WHERE category LIKE '%Residential%';" || true
-                  sqlite3 "$db" "SELECT 'With Media: ' || COUNT(*) FROM $table WHERE (photos != '[]' AND photos IS NOT NULL) OR (brochure != '[]' AND brochure IS NOT NULL);" || true
-                  
-                  # Schema richness check
-                  sqlite3 "$db" "PRAGMA table_info($table);" | grep -E "brochure|floorPlan" || echo "Media columns missing in $table."
-                fi
-              done
-            done
+            echo "--- START SURGICAL INVESTIGATION ---"
+            PROM_BACKUP="/home/ubuntu/database_backup_20260308_220524.tar.gz"
+            if [ -f "$PROM_BACKUP" ]; then
+              echo "Inspecting PROMISING BACKUP: $PROM_BACKUP"
+              mkdir -p /tmp/promising_inspect
+              tar -xzf "$PROM_BACKUP" -C /tmp/promising_inspect/
+              DB_FILE="/tmp/promising_inspect/database.sqlite"
+              if [ -f "$DB_FILE" ]; then
+                echo "Detailed Audit of Promising DB..."
+                sqlite3 "$DB_FILE" "SELECT 'Total: ' || COUNT(*) FROM Properties;" || true
+                sqlite3 "$DB_FILE" "SELECT 'Resale: ' || COUNT(*) FROM Properties WHERE category LIKE '%Resale%';" || true
+                sqlite3 "$DB_FILE" "SELECT 'Residential: ' || COUNT(*) FROM Properties WHERE category LIKE '%Residential%';" || true
+                sqlite3 "$DB_FILE" "SELECT 'With Brochure: ' || COUNT(*) FROM Properties WHERE brochure != '[]' AND brochure IS NOT NULL;" || true
+                sqlite3 "$DB_FILE" "SELECT 'With Photos: ' || COUNT(*) FROM Properties WHERE photos != '[]' AND photos IS NOT NULL;" || true
+                
+                # Check for table snapshots
+                sqlite3 "$DB_FILE" ".tables" || true
+              fi
+              # rm -rf /tmp/promising_inspect
+            else
+              echo "Promising backup $PROM_BACKUP not found."
+            fi
 
-            echo "Auditing uploads folder for recent files..."
-            find /home/ubuntu/Admin_dashboard/backend/uploads -maxdepth 1 -type f -exec ls -lt --time-style=long-iso {} + | head -n 50 || true
-            echo "Total files in uploads: $(find /home/ubuntu/Admin_dashboard/backend/uploads -type f | wc -l)"
+            echo "Auditing uploads folder for specific missing types..."
+            find /home/ubuntu/Admin_dashboard/backend/uploads -name "*.pdf" -printf "%T+ %p\n" | sort -r | head -n 20 || true
+            find /home/ubuntu/Admin_dashboard/backend/uploads -name "*.jpeg" -o -name "*.png" -printf "%T+ %p\n" | sort -r | head -n 20 || true
             
-            echo "--- END DEEP INVESTIGATION ---"
+            echo "--- END SURGICAL INVESTIGATION ---"
 
             # Ensure backend uploads directory exists
             mkdir -p backend/uploads
