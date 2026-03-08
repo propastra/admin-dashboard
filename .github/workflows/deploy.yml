@@ -72,22 +72,23 @@ jobs:
             npm install
             npm run build
             
-            # Reset production database to ensure clean seeding
-            echo "Resetting production database..."
-            rm -f database.sqlite
-            rm -f .seeded_*
+            # Reset production database (COMMENTED OUT TO PREVENT DATA LOSS)
+            # echo "Resetting production database..."
+            # rm -f database.sqlite
+            # rm -f .seeded_*
             
             # Run migration and seeding BEFORE starting the backend
             echo "Running database migration (allowing NULLs)..."
-            npm run migrate
+            npm run migrate || true
             
             echo "Force seeding admin user..."
-            node dist/seed.js
+            node dist/seed.js || true
             
-            echo "Force fresh seeding (249 properties)..."
-            sleep 2
-            npm run seed:all
-            echo "Fresh seeding complete!"
+            # Force fresh seeding (COMMENTED OUT TO PREVENT DATA LOSS ON RE-DEPLOY)
+            # echo "Force fresh seeding (249 properties)..."
+            # sleep 2
+            # npm run seed:all
+            # echo "Fresh seeding complete!"
             
             # Verify total property count
             echo "Verifying property count..."
