@@ -45,6 +45,11 @@ jobs:
             -----END RSA PRIVATE KEY-----
           script: |
             set -e
+            # INVESTIGATION: List all files to find old backups/databases
+            echo "Listing files in /home/ubuntu for recovery check..."
+            ls -lh /home/ubuntu/
+            find /home/ubuntu/Admin_dashboard -name "*.sqlite*" -ls || true
+            
             # ----------------------------------------------------
             # 0. FREE UP DISK SPACE
             # ----------------------------------------------------
@@ -62,14 +67,27 @@ jobs:
             
                         # 1. CREATE A LEAN BACKUP (Only critical database)
             # ----------------------------------------------------
-            echo "Creating a backup of the database..."
+            echo "Creating a backup of the current database..."
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             
-            # Backup ONLY the database (uploads and dist are too large for current disk space)
-            tar -czf /home/ubuntu/database_backup_$TIMESTAMP.tar.gz \
-                -C /home/ubuntu/Admin_dashboard/backend database.sqlite || [ $? -eq 1 ]
+            # Backup ONLY the database before we touch anything
+            if [ -f "/home/ubuntu/Admin_dashboard/backend/database.sqlite" ]; then
+              tar -czf /home/ubuntu/database_backup_$TIMESTAMP.tar.gz \
+                  -C /home/ubuntu/Admin_dashboard/backend database.sqlite || [ $? -eq 1 ]
+            fi
+
+            # ----------------------------------------------------
+            # 1. DATA SAFETY: PROTECT PRODUCTION DATABASE & UPLOADS
+            # ----------------------------------------------------
+            echo "Moving production database and uploads to temporary safe storage..."
+            mkdir -p /home/ubuntu/prod_data_safe_tmp
             
-            echo "Backup saved as /home/ubuntu/database_backup_$TIMESTAMP.tar.gz"
+            # Move the database and uploads out of the repo before git reset
+            cp /home/ubuntu/Admin_dashboard/backend/database.sqlite /home/ubuntu/prod_data_safe_tmp/database.sqlite.bak || true
+            mv /home/ubuntu/Admin_dashboard/backend/database.sqlite /home/ubuntu/prod_data_safe_tmp/database.sqlite || true
+            
+            # Since uploads can be large, we'll move the whole folder if it exists
+            mv /home/ubuntu/Admin_dashboard/backend/uploads /home/ubuntu/prod_data_safe_tmp/uploads || true
 
             # ----------------------------------------------------
             # 2. PULL LATEST CODE
@@ -77,7 +95,16 @@ jobs:
             echo "Pulling latest code from GitHub..."
             cd /home/ubuntu/Admin_dashboard
             git fetch --all
+            # This WILL remove database.sqlite and uploads/ from the working dir since they are now untracked/ignored
             git reset --hard origin/main
+            
+            # ----------------------------------------------------
+            # 3. RESTORE PRODUCTION DATA
+            # ----------------------------------------------------
+            echo "Restoring production database and uploads..."
+            mv /home/ubuntu/prod_data_safe_tmp/database.sqlite /home/ubuntu/Admin_dashboard/backend/database.sqlite || true
+            mv /home/ubuntu/prod_data_safe_tmp/uploads /home/ubuntu/Admin_dashboard/backend/uploads || true
+            rm -rf /home/ubuntu/prod_data_safe_tmp
 
             # ----------------------------------------------------
             # 2. DEPLOY BACKEND

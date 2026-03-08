@@ -8,12 +8,7 @@ yarn-debug.log
 yarn-error.log
 backend/database.sqlite
 backend/uploads/
-backend/dist/
 admin-dashboard/
 backend/logs/
-website/dist/
-frontend/dist/
 node_modules/
 backend/node_modules/
-frontend/node_modules/
-website/node_modules/
