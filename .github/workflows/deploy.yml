@@ -81,6 +81,9 @@ jobs:
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
+            echo "Force seeding admin user..."
+            node dist/seed.js
+            
             echo "Force fresh seeding (249 properties)..."
             sleep 2
             npm run seed:all
