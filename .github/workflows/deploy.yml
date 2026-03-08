@@ -202,10 +202,8 @@ jobs:
               echo "Data recovery completed!"
             fi
             
-            # Re-link uploads to properties by SESSION (files within 15 min = same property). --reset clears wrong links and re-attaches.
-            echo "Re-linking uploads to properties (session-based)..."
-            node src/link_uploads_to_properties.js --reset || true
-            
+            # Do NOT run link_uploads_to_properties on deploy - it would clear/overwrite media. Keep all manual data (photos, brochures, properties) intact.
+
             # Verify finalized count
             echo "Final property count:"
             sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;"
