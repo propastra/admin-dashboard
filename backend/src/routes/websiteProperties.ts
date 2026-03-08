@@ -53,7 +53,17 @@ router.get('/', async (req, res) => {
         }
 
         if (city) {
-            where.location = { [Op.like]: `%${city}%` };
+            // Normalize Bangalore/Bengaluru
+            if (city.toLowerCase().includes('bangalore') || city.toLowerCase().includes('bengaluru')) {
+                where.location = {
+                    [Op.or]: [
+                        { [Op.like]: `%Bangalore%` },
+                        { [Op.like]: `%Bengaluru%` }
+                    ]
+                };
+            } else {
+                where.location = { [Op.like]: `%${city}%` };
+            }
         }
 
         if (category) {
@@ -119,9 +129,19 @@ router.get('/', async (req, res) => {
         }
 
         if (search) {
+            let locationSearch: any = { [Op.like]: `%${search}%` };
+            if (search.toLowerCase().includes('bangalore') || search.toLowerCase().includes('bengaluru')) {
+                locationSearch = {
+                    [Op.or]: [
+                        { [Op.like]: `%Bangalore%` },
+                        { [Op.like]: `%Bengaluru%` }
+                    ]
+                };
+            }
+
             where[Op.or] = [
                 { propertyName: { [Op.like]: `%${search}%` } },
-                { location: { [Op.like]: `%${search}%` } },
+                { location: locationSearch },
                 { description: { [Op.like]: `%${search}%` } },
                 { projectName: { [Op.like]: `%${search}%` } },
             ];
@@ -172,17 +192,65 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/featured', async (req, res) => {
     try {
-        const { city } = req.query;
+        const { city, category, excludeCity } = req.query;
         let where: any = { status: { [Op.in]: ['Available', 'Sold', 'EOI', 'RTMI'] } };
 
         if (city && city !== 'All' && city !== 'Current Location' && city !== 'Your Area') {
-            where.location = { [Op.like]: `%${city}%` };
+            if (city.toLowerCase().includes('bangalore') || city.toLowerCase().includes('bengaluru')) {
+                where.location = {
+                    [Op.or]: [
+                        { [Op.like]: `%Bangalore%` },
+                        { [Op.like]: `%Bengaluru%` }
+                    ]
+                };
+            } else {
+                where.location = { [Op.like]: `%${city}%` };
+            }
+        }
+
+        if (excludeCity && excludeCity !== 'All' && excludeCity !== 'Current Location' && excludeCity !== 'Your Area') {
+            const isBangalore = excludeCity.toLowerCase().includes('bangalore') || excludeCity.toLowerCase().includes('bengaluru');
+
+            if (where.location) {
+                // If both are somehow passed, use Op.and (unlikely but safe)
+                if (isBangalore) {
+                    where.location = {
+                        [Op.and]: [
+                            where.location,
+                            { [Op.notLike]: `%Bangalore%` },
+                            { [Op.notLike]: `%Bengaluru%` }
+                        ]
+                    };
+                } else {
+                    where.location = {
+                        [Op.and]: [
+                            where.location,
+                            { [Op.notLike]: `%${excludeCity}%` }
+                        ]
+                    };
+                }
+            } else {
+                if (isBangalore) {
+                    where.location = {
+                        [Op.and]: [
+                            { [Op.notLike]: `%Bangalore%` },
+                            { [Op.notLike]: `%Bengaluru%` }
+                        ]
+                    };
+                } else {
+                    where.location = { [Op.notLike]: `%${excludeCity}%` };
+                }
+            }
+        }
+
+        if (category && category !== 'All') {
+            const categoryList = (category as string).split(',');
+            where.category = { [Op.in]: categoryList };
         }
 
         const properties = await Property.findAll({
             where,
-            order: [['createdAt', 'DESC']],
-            limit: 6,
+            order: [['createdAt', 'DESC']]
         });
         res.json(properties);
     } catch (err) {
@@ -201,8 +269,11 @@ router.get('/cities', async (req, res) => {
             group: ['location'],
         });
 
+        // Use a map to aggregate counts so we can group Bangalore variations
+        const cityMap = new Map();
+
         // Count properties per location
-        const cities = await Promise.all(
+        await Promise.all(
             properties.map(async (p) => {
                 const count = await Property.count({
                     where: {
@@ -210,9 +281,24 @@ router.get('/cities', async (req, res) => {
                         status: { [Op.in]: ['Available', 'Sold', 'EOI', 'RTMI'] }
                     },
                 });
-                return { name: p.location, propertyCount: count };
+
+                if (count > 0) {
+                    const loc = p.location.trim();
+                    const isBglr = loc.toLowerCase().includes('bangalore') || loc.toLowerCase().includes('bengaluru');
+                    const finalLoc = isBglr ? 'Bangalore' : loc;
+
+                    if (cityMap.has(finalLoc)) {
+                        cityMap.set(finalLoc, cityMap.get(finalLoc) + count);
+                    } else {
+                        cityMap.set(finalLoc, count);
+                    }
+                }
             })
         );
+
+        // Convert map back to array and sort by count descending so Top Locations is accurate
+        const cities = Array.from(cityMap, ([name, propertyCount]) => ({ name, propertyCount }))
+            .sort((a, b) => b.propertyCount - a.propertyCount);
 
         res.json(cities);
     } catch (err) {

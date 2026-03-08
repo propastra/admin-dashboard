@@ -9,6 +9,46 @@ import './Home.css';
 
 const categories = ['Buy', 'Rent', 'Sell', 'Invest'];
 
+const groupProperties = (apiData) => {
+    if (!apiData || !Array.isArray(apiData)) return [];
+
+    const grouped = {};
+
+    apiData.forEach(prop => {
+        const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
+        const projName = projNameRaw.split('  ')[0].trim();
+
+        if (!grouped[projName]) {
+            grouped[projName] = { ...prop };
+            grouped[projName].isProject = true;
+            grouped[projName].displayTitle = projName;
+            grouped[projName].configurations = [];
+            grouped[projName].minPrice = parseFloat(prop.price);
+            grouped[projName].maxPrice = parseFloat(prop.price);
+            grouped[projName].priceUnit = prop.priceUnit;
+        }
+
+        if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
+            grouped[projName].configurations.push(prop.configuration);
+        }
+
+        const price = parseFloat(prop.price);
+        if (price < grouped[projName].minPrice) grouped[projName].minPrice = price;
+        if (price > grouped[projName].maxPrice) grouped[projName].maxPrice = price;
+    });
+
+    Object.values(grouped).forEach(proj => {
+        proj.configurations.sort();
+        proj.priceRange = {
+            min: proj.minPrice,
+            max: proj.maxPrice,
+            unit: proj.priceUnit
+        };
+    });
+
+    return Object.values(grouped);
+};
+
 const Home = () => {
     const navigate = useNavigate();
     const { selectedCity, setSelectedCity } = useCity();
@@ -22,6 +62,7 @@ const Home = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadingNearby, setLoadingNearby] = useState(false);
+    const [showAllLocations, setShowAllLocations] = useState(false);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -99,11 +140,14 @@ const Home = () => {
         setLoading(true);
         try {
             const actualCity = city === "Current Location" || city === "Your Area" || !city ? '' : city;
+            // The main tabs are ['Buy', 'Rent', 'Sell', 'Invest'].
+            // We pass null for the requested city but pass 'actualCity' to 'excludeCity' so we get properties outside the current area.
             const [propRes, cityRes] = await Promise.all([
-                getFeaturedProperties(actualCity),
+                getFeaturedProperties(null, activeCategory === 'Buy' ? null : activeCategory, actualCity),
                 getCities(),
             ]);
-            setProperties(propRes.data);
+            const groupedProps = groupProperties(propRes.data);
+            setProperties(groupedProps.slice(0, 6)); // Ensure we only show 6 cards total
             setCities(cityRes.data);
         } catch (err) {
             console.error('Failed to load data:', err);
@@ -112,10 +156,12 @@ const Home = () => {
         }
     };
 
-    const loadNearbyProperties = async (city, lat = null, lng = null, category = 'All') => {
+    const loadNearbyProperties = async (city = null, lat = null, lng = null, category = null) => { // Modified function signature
         setLoadingNearby(true);
         try {
-            const params = { limit: 6 };
+            // Set limit extremely high so we get all active properties for gathering/grouping.
+            // (Since the home page requires fetching all units to compress them into project cards)
+            const params = { limit: 1000 };
             if (lat && lng) {
                 params.lat = lat;
                 params.lng = lng;
@@ -124,7 +170,7 @@ const Home = () => {
                 params.city = city;
             }
 
-            if (category !== 'All') {
+            if (category && category !== 'All') {
                 params.category = category;
             }
 
@@ -142,7 +188,8 @@ const Home = () => {
                 });
             }
 
-            setNearbyProperties(props);
+            const groupedNearbyProps = groupProperties(props);
+            setNearbyProperties(groupedNearbyProps.slice(0, 6)); // Ensure we only show 6 cards total
         } catch (err) {
             console.error('Failed to load nearby properties:', err);
         } finally {
@@ -267,24 +314,24 @@ const Home = () => {
                 {(selectedCity || userCoords) && (
                     <section className="home-section animate-section">
                         <div className="section-header">
-                            <h2>Properties in <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
-                            <a className="see-all" onClick={() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`)}>
+                            <h2>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`)} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
+                            <a className="see-all" style={{ cursor: 'pointer' }} onClick={() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`)}>
                                 See all <ArrowRight size={16} />
                             </a>
                         </div>
 
                         {/* Sub-category Filter for Nearby */}
                         <div className="nearby-filters">
-                            {['All', 'Villa', 'Plot', 'Commercial'].map(cat => (
+                            {['All', 'Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Rental'].map(cat => (
                                 <button
                                     key={cat}
                                     className={`nearby-filter-chip ${nearbyCategory === cat ? 'active' : ''}`}
                                     onClick={() => {
                                         setNearbyCategory(cat);
                                         if (userCoords) {
-                                            loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat);
+                                            loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
                                         } else {
-                                            loadNearbyProperties(selectedCity, null, null, cat);
+                                            loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
                                         }
                                     }}
                                 >
@@ -308,8 +355,9 @@ const Home = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="empty-state-small">
-                                <p>No properties found in {displayCity || selectedCity} yet.</p>
+                            <div className="empty-state-small" style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+                                <p style={{ fontSize: '18px', fontWeight: '500' }}>We are coming soon...</p>
+                                <p style={{ fontSize: '14px', marginTop: '8px' }}>No {nearbyCategory !== 'All' ? nearbyCategory : ''} properties available in {displayCity || selectedCity} yet.</p>
                             </div>
                         )}
                     </section>
@@ -318,7 +366,7 @@ const Home = () => {
                 {/* Featured Estates */}
                 <section className="home-section animate-section">
                     <div className="section-header">
-                        <h2>Featured Estates</h2>
+                        <h2>Explore properties outside <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
                         <a className="see-all" onClick={() => navigate('/search')}>
                             See all <ArrowRight size={16} />
                         </a>
@@ -339,10 +387,10 @@ const Home = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="empty-state">
-                            <div className="empty-icon">🏠</div>
-                            <p>No properties available yet</p>
-                            <span>Check back soon for amazing listings!</span>
+                        <div className="empty-state" style={{ textAlign: 'center', padding: '60px 20px' }}>
+                            <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+                            <h3 style={{ fontSize: '24px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>We are coming soon...</h3>
+                            <p style={{ color: '#6b7280' }}>Amazing properties will be listed here shortly.</p>
                         </div>
                     )}
                 </section>
@@ -365,13 +413,20 @@ const Home = () => {
                 <section className="home-section animate-section">
                     <div className="section-header">
                         <h2>Top Locations</h2>
-                        <a className="see-all" onClick={() => navigate('/city')}>
-                            See all <ArrowRight size={16} />
-                        </a>
+                        {!showAllLocations && cities.length > 5 && (
+                            <button className="see-all" onClick={() => setShowAllLocations(true)} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>
+                                See all <ArrowRight size={16} />
+                            </button>
+                        )}
+                        {showAllLocations && (
+                            <button className="see-all" onClick={() => setShowAllLocations(false)} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>
+                                Show less
+                            </button>
+                        )}
                     </div>
 
                     <div className="locations-grid">
-                        {cities.map((city, index) => (
+                        {(showAllLocations ? cities : cities.slice(0, 5)).map((city, index) => (
                             <button
                                 key={city.name}
                                 className="location-card"
