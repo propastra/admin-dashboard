@@ -45,11 +45,24 @@ jobs:
             -----END RSA PRIVATE KEY-----
           script: |
             set -e
-            # INVESTIGATION: List all files to find old backups/databases
-            echo "Listing files in /home/ubuntu for recovery check..."
-            ls -lh /home/ubuntu/
-            find /home/ubuntu/Admin_dashboard -name "*.sqlite*" -ls || true
+            # RECOVERY DIAGNOSTIC: Scan all sqlite files for manual data
+            echo "--- START RECOVERY SCAN ---"
+            find /home/ubuntu -name "*.sqlite*" -not -path "*/node_modules/*" | while read -r db; do
+              echo "Checking Database: $db"
+              ls -lh "$db"
+              sqlite3 "$db" "SELECT 'Count: ' || COUNT(*) FROM Properties;" || echo "No Properties table"
+              sqlite3 "$db" "SELECT 'Sample: ' || propertyName FROM Properties LIMIT 3;" || true
+              echo "-----------------------"
+            done
             
+            # SCAN TARBACKUPS
+            find /home/ubuntu -name "*.tar.gz" | while read -r tar; do
+              echo "Inspecting Compressed Backup: $tar"
+              tar -tvf "$tar"
+              echo "-----------------------"
+            done
+            echo "--- END RECOVERY SCAN ---"
+
             # ----------------------------------------------------
             # 0. FREE UP DISK SPACE
             # ----------------------------------------------------
