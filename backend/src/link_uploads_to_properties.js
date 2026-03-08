@@ -13,7 +13,8 @@ const sqlite3 = require('sqlite3').verbose();
 const dbPath = path.resolve(__dirname, '../database.sqlite');
 const customUploads = process.argv[2];
 const UPLOADS_BASE = customUploads ? path.resolve(customUploads) : path.resolve(__dirname, '../uploads');
-const TIME_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours before/after property updatedAt
+const TIME_WINDOW_STRICT_MS = 2 * 60 * 60 * 1000;       // 2 hours - prefer same session
+const TIME_WINDOW_LOOSE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days - fallback
 
 if (!fs.existsSync(UPLOADS_BASE)) {
     console.error('Uploads directory not found:', UPLOADS_BASE);
@@ -101,49 +102,78 @@ async function main() {
     let linked = 0;
     const usedPaths = new Set();
 
-    for (const file of files) {
-        if (usedPaths.has(file.path)) continue;
+    function hasRoomFor(p, isPdf, isImage) {
+        if (isPdf) return p.brochure.length === 0 || p.floorPlan.length === 0;
+        if (isImage) return p.photos.length < 20;
+        return false;
+    }
+
+    function assignFileToProperty(file, best) {
         const isPdf = file.ext === '.pdf';
         const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(file.ext);
-
-        // Find best property: updated within TIME_WINDOW_MS of file mtime, with empty or minimal media
-        let best = null;
-        let bestScore = -1;
-        for (const p of properties) {
-            const dt = Math.abs(p.updatedAtMs - file.mtimeMs);
-            if (dt > TIME_WINDOW_MS) continue;
-            const score = -dt;
-            if (score <= bestScore) continue;
-            if (isPdf) {
-                const hasRoom = p.brochure.length === 0 || p.floorPlan.length === 0;
-                if (hasRoom) best = p;
-            } else if (isImage) {
-                if (p.photos.length < 20) best = p;
-            }
-            if (best === p) bestScore = score;
-        }
-        if (!best) continue;
-
-        const updates = [];
-        const params = [];
-
         if (isPdf) {
-            if (best.brochure.length === 0) {
-                best.brochure = [...best.brochure, file.path];
-            } else if (best.floorPlan.length === 0) {
-                best.floorPlan = [...best.floorPlan, file.path];
-            } else continue;
+            if (best.brochure.length === 0) best.brochure = [...best.brochure, file.path];
+            else if (best.floorPlan.length === 0) best.floorPlan = [...best.floorPlan, file.path];
+            else return false;
         } else if (isImage) {
             best.photos = [...best.photos, file.path];
         }
+        return true;
+    }
 
-        // Always write all three media columns so we don't overwrite previous updates to same property
-        updates.push('photos = ?', 'brochure = ?', 'floorPlan = ?');
-        params.push(JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id);
-        await run(db, `UPDATE Properties SET ${updates.join(', ')} WHERE id = ?`, params);
+    /** Find property with room for this file type; optionally within maxWindowMs (null = no limit). Prefer closest updatedAt to file mtime. */
+    function findBest(file, maxWindowMs) {
+        const isPdf = file.ext === '.pdf';
+        const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(file.ext);
+        let best = null;
+        let bestDt = Infinity;
+        for (const p of properties) {
+            const dt = Math.abs(p.updatedAtMs - file.mtimeMs);
+            if (maxWindowMs != null && dt > maxWindowMs) continue;
+            if (!hasRoomFor(p, isPdf, isImage)) continue;
+            if (dt < bestDt) {
+                bestDt = dt;
+                best = p;
+            }
+        }
+        return best;
+    }
+
+    const unlinked = [];
+    for (const file of files) {
+        if (usedPaths.has(file.path)) continue;
+        let best = findBest(file, TIME_WINDOW_STRICT_MS);
+        if (!best) {
+            unlinked.push(file);
+            continue;
+        }
+        if (!assignFileToProperty(file, best)) continue;
         usedPaths.add(file.path);
         linked++;
+        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
         console.log('[LINK]', file.path, '->', best.propertyName);
+    }
+
+    for (const file of unlinked) {
+        if (usedPaths.has(file.path)) continue;
+        const best = findBest(file, TIME_WINDOW_LOOSE_MS);
+        if (!best) continue;
+        if (!assignFileToProperty(file, best)) continue;
+        usedPaths.add(file.path);
+        linked++;
+        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
+        console.log('[LINK 30d]', file.path, '->', best.propertyName);
+    }
+
+    const stillUnlinked = unlinked.filter((f) => !usedPaths.has(f.path));
+    for (const file of stillUnlinked) {
+        const best = findBest(file, null);
+        if (!best) continue;
+        if (!assignFileToProperty(file, best)) continue;
+        usedPaths.add(file.path);
+        linked++;
+        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
+        console.log('[LINK fallback]', file.path, '->', best.propertyName);
     }
 
     console.log('Linked', linked, 'files to properties.');
