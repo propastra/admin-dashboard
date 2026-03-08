@@ -149,6 +149,13 @@ jobs:
             # ----------------------------------------------------
             if [ -f "backend_data_backup.zip" ]; then
               echo "Executing surgical restoration of manual properties from ZIP backup..."
+              
+              # Ensure unzip is installed
+              if ! command -v unzip &> /dev/null; then
+                echo "Installing unzip..."
+                sudo apt-get update && sudo apt-get install -y unzip
+              fi
+
               mkdir -p /tmp/recovery_restoration
               unzip -o backend_data_backup.zip "uploads/*" -d /tmp/recovery_restoration/
               unzip -o backend_data_backup.zip "database.sqlite" -d /tmp/recovery_restoration/
