@@ -45,6 +45,22 @@ jobs:
             -----END RSA PRIVATE KEY-----
           script: |
             set -e
+            # ----------------------------------------------------
+            # DEEP INVESTIGATION: Scan for ALL potential backups
+            # ----------------------------------------------------
+            echo "--- START DEEP INVESTIGATION ---"
+            echo "Searching for all SQLite/ZIP/TAR files on server..."
+            find /home/ubuntu -name "*.sqlite*" -not -path "*/node_modules/*" || true
+            find /home/ubuntu -name "*.zip" || true
+            find /home/ubuntu -name "*.tar.gz" || true
+            
+            # Inspect any found sqlite files for 'Sattva' or 'One Goa'
+            find /home/ubuntu -name "*.sqlite" -not -path "*/node_modules/*" | while read -r db; do
+              echo "Checking $db for manual entries..."
+              sqlite3 "$db" "SELECT 'Count: ' || COUNT(*) FROM Properties WHERE projectName = 'One Goa';" || true
+            done
+            echo "--- END DEEP INVESTIGATION ---"
+
             # Ensure backend uploads directory exists
             mkdir -p backend/uploads
 
