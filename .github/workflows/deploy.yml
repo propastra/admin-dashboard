@@ -74,17 +74,17 @@ jobs:
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2 ]; then
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v3 ]; then
                 echo "Force re-seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
                 sleep 2
                 npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v3
                 echo "Full seeding complete!"
             fi
             
             # Verify total property count in the database
             echo "Verifying property count in production database..."
-            sqlite3 ../database.sqlite "SELECT COUNT(*) FROM Properties;" || echo "Properties table not found yet"
+            sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" || echo "Properties table not found yet"
             
             # Start/Restart the backend using the built dist folder
             npx pm2 delete backend || true
