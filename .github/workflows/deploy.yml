@@ -63,14 +63,18 @@ jobs:
             git pull origin main
 
             # ----------------------------------------------------
-            # 2. DEPLOY BACKEND (FRESH DATABASE RESET)
+            # 2. DEPLOY BACKEND (DEBUGGING PATHS)
             # ----------------------------------------------------
             echo "Deploying the Backend..."
             cd backend
             npm install
             npm run build
             
-            # Delete old DB to ensure clean seeding (Nuclear fix for desync)
+            # Debug: Find all sqlite files to see if there's a desync
+            echo "Searching for all database.sqlite files..."
+            find /home/ubuntu/Admin_dashboard -name "database.sqlite"
+            
+            # Delete old DB to ensure clean seeding
             echo "Resetting production database..."
             rm -f database.sqlite
             
@@ -78,11 +82,11 @@ jobs:
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v4 ]; then
-                echo "Force fresh seeding all property batches..."
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v5 ]; then
+                echo "Force fresh seeding batch v5..."
                 sleep 2
                 npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v4
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v5
                 echo "Fresh seeding complete!"
             fi
             
