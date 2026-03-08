@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const crypto = require('crypto');
 
 // Database configuration - Use absolute paths
 const dbPath = path.resolve(__dirname, '../database.sqlite');
@@ -37,6 +38,12 @@ function run(db, sql, params = []) {
 
 async function start() {
     try {
+        // Check schemas
+        const backupCols = (await query(backupDb, "PRAGMA table_info(Properties)")).map(c => c.name);
+        const targetCols = (await query(targetDb, "PRAGMA table_info(Properties)")).map(c => c.name);
+        
+        console.log(`Backup columns: ${backupCols.join(', ')}`);
+        
         const backupProperties = await query(backupDb, "SELECT * FROM Properties");
         console.log(`Found ${backupProperties.length} properties in backup.`);
 
@@ -47,49 +54,61 @@ async function start() {
         
         for (const bp of backupProperties) {
             const bpName = (bp.propertyName || "").trim().toLowerCase();
-            const bpProj = (bp.projectName || "").trim().toLowerCase();
+            const bpDims = (bp.dimensions || "").trim().toLowerCase();
             
-            if (!bpName && !bpProj) continue;
+            if (!bpName) continue;
 
-            // Strategy 1: Exact Name Match
-            let match = targetProperties.find(tp => tp.propertyName.trim().toLowerCase() === bpName);
-            
-            // Strategy 2: Project match
-            if (!match && bpProj) {
-                const projectMatches = targetProperties.filter(tp => tp.projectName?.trim().toLowerCase() === bpProj);
-                if (projectMatches.length > 0) {
-                    for (const tp of projectMatches) {
-                         // Only update if target has NO photos or if backup has data
-                         if (bp.photos && bp.photos !== '[]') {
-                            await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, tp.id]);
-                            if (bp.brochure) await run(targetDb, "UPDATE Properties SET brochure = ? WHERE id = ?", [bp.brochure, tp.id]);
-                            console.log(`[UPD] Restored media for: ${tp.propertyName} (Matched: ${bp.propertyName})`);
-                            updatedCount++;
-                         }
-                    }
-                    continue;
-                }
+            // Strategy 1: Exact Name + Dimensions Match (High Confidence)
+            let match = targetProperties.find(tp => 
+                tp.propertyName.trim().toLowerCase() === bpName && 
+                (tp.dimensions || "").trim().toLowerCase() === bpDims
+            );
+
+            // Strategy 2: Name match only
+            if (!match) {
+                match = targetProperties.find(tp => tp.propertyName.trim().toLowerCase() === bpName);
             }
 
             if (match) {
+                const updates = [];
+                const params = [];
+                
+                // Update photos if available in backup
                 if (bp.photos && bp.photos !== '[]') {
-                    await run(targetDb, "UPDATE Properties SET photos = ? WHERE id = ?", [bp.photos, match.id]);
-                    if (bp.brochure) await run(targetDb, "UPDATE Properties SET brochure = ? WHERE id = ?", [bp.brochure, match.id]);
-                    console.log(`[UPD] Restored media for: ${match.propertyName} (Exact Match)`);
+                    updates.push("photos = ?");
+                    params.push(bp.photos);
+                }
+                
+                // Update brochure if column exists in both
+                if (backupCols.includes('brochure') && targetCols.includes('brochure') && bp.brochure && bp.brochure !== '[]') {
+                    updates.push("brochure = ?");
+                    params.push(bp.brochure);
+                }
+                
+                // Update floorPlan if column exists in both
+                if (backupCols.includes('floorPlan') && targetCols.includes('floorPlan') && bp.floorPlan && bp.floorPlan !== '[]') {
+                    updates.push("floorPlan = ?");
+                    params.push(bp.floorPlan);
+                }
+
+                if (updates.length > 0) {
+                    params.push(match.id);
+                    await run(targetDb, `UPDATE Properties SET ${updates.join(', ')} WHERE id = ?`, params);
+                    console.log(`[UPD] Restored media for: ${match.propertyName} (${match.id})`);
                     updatedCount++;
                 }
             } else {
-                // Strategy 3: INSERT if not found (This is a manual property)
-                console.log(`[INS] Found manual property in backup: ${bp.propertyName}. Inserting...`);
+                // Strategy 3: INSERT if totally missing
+                console.log(`[INS] Found manual/new property: ${bp.propertyName}. Inserting...`);
                 
-                // Construct dynamic insert to handle schema differences
-                const columns = Object.keys(bp).filter(k => k !== 'id'); // Use new ID
-                const values = columns.map(c => bp[c]);
-                const placeholders = columns.map(() => '?').join(',');
+                // Map common columns that exist in BOTH
+                const commonCols = backupCols.filter(c => targetCols.includes(c) && c !== 'id');
+                const values = commonCols.map(c => bp[c]);
+                const placeholders = commonCols.map(() => '?').join(',');
                 
                 try {
-                    const newId = require('crypto').randomUUID();
-                    await run(targetDb, `INSERT INTO Properties (id, ${columns.join(',')}) VALUES (?, ${placeholders})`, [newId, ...values]);
+                    const newId = crypto.randomUUID();
+                    await run(targetDb, `INSERT INTO Properties (id, ${commonCols.join(',')}) VALUES (?, ${placeholders})`, [newId, ...values]);
                     console.log(`[OK] Successfully inserted: ${bp.propertyName}`);
                     insertedCount++;
                 } catch (insErr) {

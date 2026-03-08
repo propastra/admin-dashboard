@@ -46,7 +46,7 @@ jobs:
           script: |
             set -e
             # ----------------------------------------------------
-            # DEEP INVESTIGATION: Scan for ALL potential backups
+            # DEEP INVESTIGATION: Scan and Inspect potential backups
             # ----------------------------------------------------
             echo "--- START DEEP INVESTIGATION ---"
             echo "Searching for all SQLite/ZIP/TAR files on server..."
@@ -54,9 +54,24 @@ jobs:
             find /home/ubuntu -name "*.zip" || true
             find /home/ubuntu -name "*.tar.gz" || true
             
-            # Inspect any found sqlite files for 'Sattva' or 'One Goa'
+            # Inspect the specific recent backup if found
+            if [ -f "/home/ubuntu/database_backup_20260308_214416.tar.gz" ]; then
+              echo "Found recent System Backup: database_backup_20260308_214416.tar.gz"
+              mkdir -p /tmp/recent_backup_inspect
+              tar -xzf /home/ubuntu/database_backup_20260308_214416.tar.gz -C /tmp/recent_backup_inspect/
+              DB_FILE="/tmp/recent_backup_inspect/database.sqlite"
+              if [ -f "$DB_FILE" ]; then
+                echo "Inspecting System Backup DB..."
+                sqlite3 "$DB_FILE" "SELECT 'Total Count: ' || COUNT(*) FROM Properties;" || true
+                sqlite3 "$DB_FILE" "SELECT 'One Goa Count: ' || COUNT(*) FROM Properties WHERE projectName = 'One Goa';" || true
+                sqlite3 "$DB_FILE" "PRAGMA table_info(Properties);" | grep -E "brochure|floorPlan" || echo "Media columns missing in system backup."
+              fi
+              rm -rf /tmp/recent_backup_inspect
+            fi
+
+            # Inspect all other sqlite files
             find /home/ubuntu -name "*.sqlite" -not -path "*/node_modules/*" | while read -r db; do
-              echo "Checking $db for manual entries..."
+              echo "Checking $db..."
               sqlite3 "$db" "SELECT 'Count: ' || COUNT(*) FROM Properties WHERE projectName = 'One Goa';" || true
             done
             echo "--- END DEEP INVESTIGATION ---"
