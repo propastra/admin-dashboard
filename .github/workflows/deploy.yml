@@ -44,6 +44,7 @@ jobs:
             zUuE/sdT+RfLMe2y7UfNZlTQfsmOiUGV7jLDnqQv2WhEPVwoh2IcsQ==
             -----END RSA PRIVATE KEY-----
           script: |
+            set -e
             # ----------------------------------------------------
             # 0. CREATE A BACKUP OF THE EXISTING FOLDER
             # ----------------------------------------------------
@@ -68,29 +69,36 @@ jobs:
             echo "Deploying the Backend..."
             cd backend
             npm install
+            npm run build
             
-            # Since we migrated to TypeScript, the old pm2 process looking for server.js will crash.
-            # Delete the old pm2 context if it exists, and start using npm start (which runs ts-node)
+            # Reset production database to ensure clean seeding
+            echo "Resetting production database..."
+            rm -f database.sqlite
+            
+            # Run migration and seeding BEFORE starting the backend
+            echo "Running database migration (allowing NULLs)..."
+            npm run migrate
+            
+            if [ ! -f .seeded_final_v6 ]; then
+                echo "Force fresh seeding batch v6 (249 properties)..."
+                sleep 2
+                npm run seed:all
+                touch .seeded_final_v6
+                echo "Fresh seeding complete!"
+            fi
+            
+            # Verify total property count
+            echo "Verifying property count..."
+            sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;"
+            
+            # Start/Restart the backend
             npx pm2 delete backend || true
             npx pm2 start npm --name "backend" -- run start
             npx pm2 save
 
             # ----------------------------------------------------
-            # 2b. SEED DATA (runs only once)
-            # ----------------------------------------------------
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded ]; then
-                echo "Seeding property data..."
-                sleep 3
-                npx ts-node src/seedProperties.ts
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded
-                echo "Seeding complete!"
-            else
-                echo "Data already seeded, skipping..."
-            fi
-
-            # ----------------------------------------------------
             # 3. DEPLOY FRONTEND
-            # ----------------------------------------------------
+            # ------------------------------------
             echo "Deploying the Frontend..."
             cd ../frontend
             
@@ -98,6 +106,13 @@ jobs:
             
             npm install
             npm run build
+            
+            # Create a public debug file to verify DB state
+            echo "Creating debug file..."
+            echo "Deployment Time: $(date)" > dist/debug.txt
+            echo "DB Count: $(sqlite3 ../backend/database.sqlite "SELECT COUNT(*) FROM Properties;")" >> dist/debug.txt
+            echo "DB Path Check: $(ls -l ../backend/database.sqlite)" >> dist/debug.txt
+            echo "All DB Files: $(find /home/ubuntu/Admin_dashboard -name "database.sqlite")" >> dist/debug.txt
             
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
             
