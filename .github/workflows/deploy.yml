@@ -70,27 +70,26 @@ jobs:
             npm install
             npm run build
             
-            # Run migration BEFORE starting/restarting the backend
+            # Run migration and seeding BEFORE starting the backend to avoid locks
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
+            
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2 ]; then
+                echo "Force re-seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
+                sleep 2
+                npm run seed:all
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v2
+                echo "Full seeding complete!"
+            fi
+            
+            # Verify total property count in the database
+            echo "Verifying property count in production database..."
+            sqlite3 ../database.sqlite "SELECT COUNT(*) FROM Properties;" || echo "Properties table not found yet"
             
             # Start/Restart the backend using the built dist folder
             npx pm2 delete backend || true
             npx pm2 start npm --name "backend" -- run start
             npx pm2 save
-            
-            # ----------------------------------------------------
-            # 2b. SEED DATA (Forcing a re-seed for the 249 properties)
-            # ----------------------------------------------------
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v1 ]; then
-                echo "Force seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
-                sleep 3
-                npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v1
-                echo "Full seeding complete!"
-            else
-                echo "Data already seeded, skipping..."
-            fi
 
             # ----------------------------------------------------
             # 3. DEPLOY FRONTEND

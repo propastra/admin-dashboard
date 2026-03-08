@@ -434,6 +434,10 @@ async function seed() {
     try {
         await sequelize.authenticate();
         console.log('Database connected.');
+        console.log('Database path:', sequelize.options.storage);
+
+        // Sync to ensure table exists
+        await sequelize.sync();
 
         for (const plot of plots) {
             await Property.create(plot);
