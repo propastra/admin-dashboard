@@ -46,7 +46,7 @@ jobs:
           script: |
             set -e
             # ----------------------------------------------------
-            # DEEP INVESTIGATION: Scan and Audit potential backups
+            # DEEP INVESTIGATION: Surgical Audit of all potential data
             # ----------------------------------------------------
             echo "--- START DEEP INVESTIGATION ---"
             echo "Searching for all potential data sources on server..."
@@ -54,26 +54,29 @@ jobs:
             find /home/ubuntu -name "*.zip" || true
             find /home/ubuntu -name "*.tar.gz" || true
             
-            # Inventory all sqlite files for specific manual data
+            # Inventory all sqlite files
             find /home/ubuntu -name "*.sqlite" -not -path "*/node_modules/*" | while read -r db; do
               echo "--- ANALYZING: $db ---"
-              sqlite3 "$db" "SELECT 'Total Count: ' || COUNT(*) FROM Properties;" || true
-              sqlite3 "$db" "SELECT 'Resale Count: ' || COUNT(*) FROM Properties WHERE category = 'Resale';" || true
-              sqlite3 "$db" "SELECT 'Residential Count: ' || COUNT(*) FROM Properties WHERE category = 'Residential';" || true
-              sqlite3 "$db" "SELECT 'Media Records: ' || COUNT(*) FROM Properties WHERE (photos != '[]' AND photos IS NOT NULL) OR (projectName = 'One Goa');" || true
+              # Check for Properties and Properties_new
+              TABLES=$(sqlite3 "$db" ".tables" 2>/dev/null || echo "")
+              echo "Tables: $TABLES"
               
-              # Check for schema richness
-              COLS=$(sqlite3 "$db" "PRAGMA table_info(Properties);")
-              if echo "$COLS" | grep -q "brochure"; then
-                echo "SCHEMA: Rich (Has brochure)"
-                sqlite3 "$db" "SELECT 'With Brochure: ' || COUNT(*) FROM Properties WHERE brochure != '[]' AND brochure IS NOT NULL;" || true
-              else
-                echo "SCHEMA: Old (No brochure)"
-              fi
+              for table in Properties Properties_new; do
+                if echo "$TABLES" | grep -q "$table"; then
+                  echo "Found $table table. Investigating..."
+                  sqlite3 "$db" "SELECT 'Total: ' || COUNT(*) FROM $table;" || true
+                  sqlite3 "$db" "SELECT 'Resale: ' || COUNT(*) FROM $table WHERE category LIKE '%Resale%';" || true
+                  sqlite3 "$db" "SELECT 'Residential: ' || COUNT(*) FROM $table WHERE category LIKE '%Residential%';" || true
+                  sqlite3 "$db" "SELECT 'With Media: ' || COUNT(*) FROM $table WHERE (photos != '[]' AND photos IS NOT NULL) OR (brochure != '[]' AND brochure IS NOT NULL);" || true
+                  
+                  # Schema richness check
+                  sqlite3 "$db" "PRAGMA table_info($table);" | grep -E "brochure|floorPlan" || echo "Media columns missing in $table."
+                fi
+              done
             done
 
-            echo "Auditing uploads folder..."
-            find /home/ubuntu/Admin_dashboard/backend/uploads -maxdepth 2 -not -path "*/.*" || true
+            echo "Auditing uploads folder for recent files..."
+            find /home/ubuntu/Admin_dashboard/backend/uploads -maxdepth 1 -type f -exec ls -lt --time-style=long-iso {} + | head -n 50 || true
             echo "Total files in uploads: $(find /home/ubuntu/Admin_dashboard/backend/uploads -type f | wc -l)"
             
             echo "--- END DEEP INVESTIGATION ---"
@@ -82,17 +85,16 @@ jobs:
             mkdir -p backend/uploads
 
             # ----------------------------------------------------
-            # 0. FREE UP DISK SPACE
+            # 0. FREE UP DISK SPACE (Safer: No more deleting system backups)
             # ----------------------------------------------------
-            echo "Cleaning up all old backups and temporary files..."
-            rm -rf /home/ubuntu/Admin_dashboard_backup_*.tar.gz
-            rm -rf /home/ubuntu/database_backup_*.tar.gz
+            echo "Cleaning up temporary files..."
+            rm -rf /tmp/recovery_restoration
+            rm -rf /tmp/recent_backup_inspect
             
             # Show disk space to debug
             df -h
-            
-            # Prune npm cache and logs to free up space before building
-            npm cache clean --force || true
+
+            # Prune logs to free up space
             npx pm2 flush || true
             sudo journalctl --vacuum-time=1d || true
             
