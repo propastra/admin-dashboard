@@ -45,23 +45,22 @@ jobs:
             -----END RSA PRIVATE KEY-----
           script: |
             set -e
-            # RECOVERY DIAGNOSTIC: Scan all sqlite files for manual data
-            echo "--- START RECOVERY SCAN ---"
-            find /home/ubuntu -name "*.sqlite*" -not -path "*/node_modules/*" | while read -r db; do
-              echo "Checking Database: $db"
-              ls -lh "$db"
-              sqlite3 "$db" "SELECT 'Count: ' || COUNT(*) FROM Properties;" || echo "No Properties table"
-              sqlite3 "$db" "SELECT 'Sample: ' || propertyName FROM Properties LIMIT 3;" || true
-              echo "-----------------------"
-            done
-            
-            # SCAN TARBACKUPS
-            find /home/ubuntu -name "*.tar.gz" | while read -r tar; do
-              echo "Inspecting Compressed Backup: $tar"
-              tar -tvf "$tar"
-              echo "-----------------------"
-            done
-            echo "--- END RECOVERY SCAN ---"
+            # RECOVERY: Restore manual property media from ZIP backup
+            if [ -f "backend/backend_data_backup.zip" ]; then
+              echo "Restoring manual property media from backup..."
+              mkdir -p /tmp/recovery_restoration
+              unzip -o backend/backend_data_backup.zip "uploads/*" -d /tmp/recovery_restoration/
+              unzip -o backend/backend_data_backup.zip "database.sqlite" -d /tmp/recovery_restoration/
+              
+              # Sync missing files
+              cp -vn /tmp/recovery_restoration/uploads/* backend/uploads/ || true
+              
+              # Run surgical database merge
+              node backend/src/restore_media.js /tmp/recovery_restoration/database.sqlite
+              
+              # Cleanup
+              rm -rf /tmp/recovery_restoration
+            fi
 
             # ----------------------------------------------------
             # 0. FREE UP DISK SPACE
