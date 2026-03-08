@@ -46,34 +46,36 @@ jobs:
           script: |
             set -e
             # ----------------------------------------------------
-            # DEEP INVESTIGATION: Scan and Inspect potential backups
+            # DEEP INVESTIGATION: Scan and Audit potential backups
             # ----------------------------------------------------
             echo "--- START DEEP INVESTIGATION ---"
-            echo "Searching for all SQLite/ZIP/TAR files on server..."
-            find /home/ubuntu -name "*.sqlite*" -not -path "*/node_modules/*" || true
+            echo "Searching for all potential data sources on server..."
+            find /home/ubuntu -name "*.sqlite*" -o -name "*.db" -o -name "*.bak" -not -path "*/node_modules/*" || true
             find /home/ubuntu -name "*.zip" || true
             find /home/ubuntu -name "*.tar.gz" || true
             
-            # Inspect the specific recent backup if found
-            if [ -f "/home/ubuntu/database_backup_20260308_214416.tar.gz" ]; then
-              echo "Found recent System Backup: database_backup_20260308_214416.tar.gz"
-              mkdir -p /tmp/recent_backup_inspect
-              tar -xzf /home/ubuntu/database_backup_20260308_214416.tar.gz -C /tmp/recent_backup_inspect/
-              DB_FILE="/tmp/recent_backup_inspect/database.sqlite"
-              if [ -f "$DB_FILE" ]; then
-                echo "Inspecting System Backup DB..."
-                sqlite3 "$DB_FILE" "SELECT 'Total Count: ' || COUNT(*) FROM Properties;" || true
-                sqlite3 "$DB_FILE" "SELECT 'One Goa Count: ' || COUNT(*) FROM Properties WHERE projectName = 'One Goa';" || true
-                sqlite3 "$DB_FILE" "PRAGMA table_info(Properties);" | grep -E "brochure|floorPlan" || echo "Media columns missing in system backup."
-              fi
-              rm -rf /tmp/recent_backup_inspect
-            fi
-
-            # Inspect all other sqlite files
+            # Inventory all sqlite files for specific manual data
             find /home/ubuntu -name "*.sqlite" -not -path "*/node_modules/*" | while read -r db; do
-              echo "Checking $db..."
-              sqlite3 "$db" "SELECT 'Count: ' || COUNT(*) FROM Properties WHERE projectName = 'One Goa';" || true
+              echo "--- ANALYZING: $db ---"
+              sqlite3 "$db" "SELECT 'Total Count: ' || COUNT(*) FROM Properties;" || true
+              sqlite3 "$db" "SELECT 'Resale Count: ' || COUNT(*) FROM Properties WHERE category = 'Resale';" || true
+              sqlite3 "$db" "SELECT 'Residential Count: ' || COUNT(*) FROM Properties WHERE category = 'Residential';" || true
+              sqlite3 "$db" "SELECT 'Media Records: ' || COUNT(*) FROM Properties WHERE (photos != '[]' AND photos IS NOT NULL) OR (projectName = 'One Goa');" || true
+              
+              # Check for schema richness
+              COLS=$(sqlite3 "$db" "PRAGMA table_info(Properties);")
+              if echo "$COLS" | grep -q "brochure"; then
+                echo "SCHEMA: Rich (Has brochure)"
+                sqlite3 "$db" "SELECT 'With Brochure: ' || COUNT(*) FROM Properties WHERE brochure != '[]' AND brochure IS NOT NULL;" || true
+              else
+                echo "SCHEMA: Old (No brochure)"
+              fi
             done
+
+            echo "Auditing uploads folder..."
+            find /home/ubuntu/Admin_dashboard/backend/uploads -maxdepth 2 -not -path "*/.*" || true
+            echo "Total files in uploads: $(find /home/ubuntu/Admin_dashboard/backend/uploads -type f | wc -l)"
+            
             echo "--- END DEEP INVESTIGATION ---"
 
             # Ensure backend uploads directory exists
