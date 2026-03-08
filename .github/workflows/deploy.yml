@@ -61,7 +61,8 @@ jobs:
             # ----------------------------------------------------
             echo "Pulling latest code from GitHub..."
             cd /home/ubuntu/Admin_dashboard
-            git pull origin main
+            git fetch --all
+            git reset --hard origin/main
 
             # ----------------------------------------------------
             # 2. DEPLOY BACKEND
