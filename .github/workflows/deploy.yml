@@ -46,18 +46,28 @@ jobs:
           script: |
             set -e
             # ----------------------------------------------------
-            # 0. CREATE A BACKUP OF THE EXISTING FOLDER
+            # 0. FREE UP DISK SPACE
             # ----------------------------------------------------
-            echo "Creating a backup of the current Admin_dashboard..."
+            echo "Cleaning up all old backups and temporary files..."
+            rm -rf /home/ubuntu/Admin_dashboard_backup_*.tar.gz
+            
+            # ----------------------------------------------------
+            # 1. CREATE A TARGETED BACKUP
+            # ----------------------------------------------------
+            echo "Creating a backup of essential data (including DB and uploads)..."
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             
+            # Exclude node_modules, dist folders, and .git to save space
             tar -czf /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz \
                 --exclude='node_modules' \
+                --exclude='dist' \
+                --exclude='.git' \
                 -C /home/ubuntu/ Admin_dashboard
+            
             echo "Backup saved as /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz"
 
             # ----------------------------------------------------
-            # 1. PULL LATEST CODE
+            # 2. PULL LATEST CODE
             # ----------------------------------------------------
             echo "Pulling latest code from GitHub..."
             cd /home/ubuntu/Admin_dashboard
