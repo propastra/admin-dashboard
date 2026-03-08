@@ -50,23 +50,26 @@ jobs:
             # ----------------------------------------------------
             echo "Cleaning up all old backups and temporary files..."
             rm -rf /home/ubuntu/Admin_dashboard_backup_*.tar.gz
+            rm -rf /home/ubuntu/database_backup_*.tar.gz
             
+            # Show disk space to debug
+            df -h
+            
+            # Prune npm cache and logs to free up space before building
+            npm cache clean --force || true
+            npx pm2 flush || true
+            sudo journalctl --vacuum-time=1d || true
+            
+                        # 1. CREATE A LEAN BACKUP (Only critical database)
             # ----------------------------------------------------
-            # 1. CREATE A TARGETED BACKUP
-            # ----------------------------------------------------
-            echo "Creating a backup of essential data (including DB and uploads)..."
+            echo "Creating a backup of the database..."
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             
-            # Exclude node_modules, dist folders, .git, and logs to save space and prevent "file changed" errors
-            tar -czf /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz \
-                --exclude='node_modules' \
-                --exclude='dist' \
-                --exclude='.git' \
-                --exclude='*.log' \
-                --exclude='*.sqlite-journal' \
-                -C /home/ubuntu/ Admin_dashboard || [ $? -eq 1 ]
+            # Backup ONLY the database (uploads and dist are too large for current disk space)
+            tar -czf /home/ubuntu/database_backup_$TIMESTAMP.tar.gz \
+                -C /home/ubuntu/Admin_dashboard/backend database.sqlite || [ $? -eq 1 ]
             
-            echo "Backup saved as /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz"
+            echo "Backup saved as /home/ubuntu/database_backup_$TIMESTAMP.tar.gz"
 
             # ----------------------------------------------------
             # 2. PULL LATEST CODE
@@ -81,6 +84,10 @@ jobs:
             # ----------------------------------------------------
             echo "Deploying the Backend..."
             cd backend
+            
+            # Remove old node_modules and dist to save space before reinstalling
+            rm -rf node_modules dist
+            
             npm install
             npm run build
             
@@ -118,6 +125,9 @@ jobs:
             cd ../frontend
             
             sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/frontend/dist || true
+            
+            # Remove old node_modules to save space
+            rm -rf node_modules dist
             
             npm install
             npm run build
