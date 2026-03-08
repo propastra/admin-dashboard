@@ -10,6 +10,7 @@
     "start:staging": "NODE_ENV=staging node dist/server.js",
     "start:production": "NODE_ENV=production node dist/server.js",
     "migrate": "ts-node src/migrateNullable.ts",
+    "db:reset": "rm -f database.sqlite && npm run migrate && npm run seed:all",
     "seed:villas": "ts-node src/seedVillas.ts",
     "seed:plots": "ts-node src/seedPlots.ts",
     "seed:farmlands": "ts-node src/seedFarmLands.ts",

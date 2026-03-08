@@ -74,18 +74,16 @@ jobs:
             # Reset production database to ensure clean seeding
             echo "Resetting production database..."
             rm -f database.sqlite
+            rm -f .seeded_*
             
             # Run migration and seeding BEFORE starting the backend
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f .seeded_final_v6 ]; then
-                echo "Force fresh seeding batch v6 (249 properties)..."
-                sleep 2
-                npm run seed:all
-                touch .seeded_final_v6
-                echo "Fresh seeding complete!"
-            fi
+            echo "Force fresh seeding (249 properties)..."
+            sleep 2
+            npm run seed:all
+            echo "Fresh seeding complete!"
             
             # Verify total property count
             echo "Verifying property count..."
