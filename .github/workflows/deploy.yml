@@ -202,9 +202,9 @@ jobs:
               echo "Data recovery completed!"
             fi
             
-            # Re-link uploads on disk to properties (by mtime vs updatedAt) when DB media is empty
-            echo "Re-linking uploads to properties (time-based)..."
-            node src/link_uploads_to_properties.js || true
+            # Re-link uploads to properties by SESSION (files within 15 min = same property). --reset clears wrong links and re-attaches.
+            echo "Re-linking uploads to properties (session-based)..."
+            node src/link_uploads_to_properties.js --reset || true
             
             # Verify finalized count
             echo "Final property count:"

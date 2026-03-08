@@ -1,9 +1,12 @@
 /**
- * Re-link uploads folder files to properties when DB has empty photos/brochure/floorPlan
- * but files exist on disk. Matches by file mtime to property updatedAt (within time window).
+ * Re-link uploads folder files to properties. Uses SESSION-BASED grouping:
+ * files uploaded within 15 min of each other are treated as one "session" and
+ * assigned to the single property whose updatedAt is closest to that session.
+ * This keeps photos, brochure, and floor plan for one property together.
  *
- * Usage: node src/link_uploads_to_properties.js [uploadsDir]
- *   uploadsDir defaults to backend/uploads (relative to this script).
+ * Usage:
+ *   node src/link_uploads_to_properties.js           # assign only to properties with empty media
+ *   node src/link_uploads_to_properties.js --reset    # clear all media then re-link by session (fix wrong links)
  */
 
 const fs = require('fs');
@@ -11,10 +14,11 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
 const dbPath = path.resolve(__dirname, '../database.sqlite');
-const customUploads = process.argv[2];
+const customUploads = process.argv[2] && process.argv[2] !== '--reset' ? process.argv[2] : null;
+const RESET_MEDIA = process.argv.includes('--reset');
 const UPLOADS_BASE = customUploads ? path.resolve(customUploads) : path.resolve(__dirname, '../uploads');
-const TIME_WINDOW_STRICT_MS = 2 * 60 * 60 * 1000;       // 2 hours - prefer same session
-const TIME_WINDOW_LOOSE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days - fallback
+const SESSION_GAP_MS = 15 * 60 * 1000; // 15 min: files within this gap = same upload session
+const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // only consider properties updated in last 90 days (when matching sessions)
 
 if (!fs.existsSync(UPLOADS_BASE)) {
     console.error('Uploads directory not found:', UPLOADS_BASE);
@@ -80,13 +84,35 @@ function getFilesWithMtime(dir, basePath = '') {
     return out;
 }
 
+/** Group files into upload sessions: consecutive files (by mtime) within SESSION_GAP_MS. */
+function groupIntoSessions(files) {
+    if (files.length === 0) return [];
+    const sorted = [...files].sort((a, b) => a.mtimeMs - b.mtimeMs);
+    const sessions = [];
+    let current = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].mtimeMs - sorted[i - 1].mtimeMs <= SESSION_GAP_MS) {
+            current.push(sorted[i]);
+        } else {
+            sessions.push(current);
+            current = [sorted[i]];
+        }
+    }
+    sessions.push(current);
+    return sessions;
+}
+
 async function main() {
+    if (RESET_MEDIA) {
+        console.log('--reset: clearing all photos, brochure, floorPlan for all properties...');
+        await run(db, "UPDATE Properties SET photos = '[]', brochure = '[]', floorPlan = '[]'");
+    }
+
     const properties = await query(db, 'SELECT id, propertyName, updatedAt, photos, brochure, floorPlan FROM Properties');
     const files = getFilesWithMtime(UPLOADS_BASE);
 
     console.log('Properties:', properties.length, '| Files in uploads:', files.length);
 
-    // Parse updatedAt to ms (SQLite stores ISO or datetime)
     for (const p of properties) {
         const d = p.updatedAt ? new Date(p.updatedAt) : null;
         p.updatedAtMs = d && !isNaN(d.getTime()) ? d.getTime() : 0;
@@ -95,88 +121,81 @@ async function main() {
         p.floorPlan = parseJson(p.floorPlan);
     }
 
-    // Sort by updatedAt desc so we assign files to most recently updated properties first
-    properties.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
-    files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    const sessions = groupIntoSessions(files);
+    console.log('Upload sessions (files within 15 min):', sessions.length);
 
-    let linked = 0;
+    // Sort properties by updatedAt desc (most recently updated first)
+    properties.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+
+    let linkedCount = 0;
     const usedPaths = new Set();
 
-    function hasRoomFor(p, isPdf, isImage) {
-        if (isPdf) return p.brochure.length === 0 || p.floorPlan.length === 0;
-        if (isImage) return p.photos.length < 20;
-        return false;
-    }
+    for (const session of sessions) {
+        const sessionTimeMs = session.length ? session.reduce((s, f) => s + f.mtimeMs, 0) / session.length : 0;
+        const images = session.filter((f) => ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(f.ext)).sort((a, b) => a.mtimeMs - b.mtimeMs);
+        const pdfs = session.filter((f) => f.ext === '.pdf').sort((a, b) => a.mtimeMs - b.mtimeMs);
 
-    function assignFileToProperty(file, best) {
-        const isPdf = file.ext === '.pdf';
-        const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(file.ext);
-        if (isPdf) {
-            if (best.brochure.length === 0) best.brochure = [...best.brochure, file.path];
-            else if (best.floorPlan.length === 0) best.floorPlan = [...best.floorPlan, file.path];
-            else return false;
-        } else if (isImage) {
-            best.photos = [...best.photos, file.path];
-        }
-        return true;
-    }
-
-    /** Find property with room for this file type; optionally within maxWindowMs (null = no limit). Prefer closest updatedAt to file mtime. */
-    function findBest(file, maxWindowMs) {
-        const isPdf = file.ext === '.pdf';
-        const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(file.ext);
+        // Find property whose updatedAt is closest to this session (within 90 days), with room for this session
         let best = null;
         let bestDt = Infinity;
+        const now = Date.now();
         for (const p of properties) {
-            const dt = Math.abs(p.updatedAtMs - file.mtimeMs);
-            if (maxWindowMs != null && dt > maxWindowMs) continue;
-            if (!hasRoomFor(p, isPdf, isImage)) continue;
+            if (p.updatedAtMs <= 0) continue;
+            if (now - p.updatedAtMs > MAX_AGE_MS) continue; // skip very old properties for session match
+            const dt = Math.abs(p.updatedAtMs - sessionTimeMs);
+            const roomPhotos = p.photos.length + images.length <= 20;
+            const roomPdf = p.brochure.length + p.floorPlan.length + pdfs.length <= 10; // allow a few PDFs per property
+            if (!roomPhotos || !roomPdf) continue;
             if (dt < bestDt) {
                 bestDt = dt;
                 best = p;
             }
         }
-        return best;
-    }
 
-    const unlinked = [];
-    for (const file of files) {
-        if (usedPaths.has(file.path)) continue;
-        let best = findBest(file, TIME_WINDOW_STRICT_MS);
+        // Fallback: if no property in 90 days, use closest updatedAt overall (any age)
         if (!best) {
-            unlinked.push(file);
-            continue;
+            for (const p of properties) {
+                const dt = Math.abs(p.updatedAtMs - sessionTimeMs);
+                const roomPhotos = p.photos.length + images.length <= 20;
+                const roomPdf = p.brochure.length + p.floorPlan.length + pdfs.length <= 10;
+                if (!roomPhotos || !roomPdf) continue;
+                if (dt < bestDt) {
+                    bestDt = dt;
+                    best = p;
+                }
+            }
         }
-        if (!assignFileToProperty(file, best)) continue;
-        usedPaths.add(file.path);
-        linked++;
-        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
-        console.log('[LINK]', file.path, '->', best.propertyName);
-    }
 
-    for (const file of unlinked) {
-        if (usedPaths.has(file.path)) continue;
-        const best = findBest(file, TIME_WINDOW_LOOSE_MS);
         if (!best) continue;
-        if (!assignFileToProperty(file, best)) continue;
-        usedPaths.add(file.path);
-        linked++;
-        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
-        console.log('[LINK 30d]', file.path, '->', best.propertyName);
+
+        // Assign entire session to this property
+        for (const f of images) {
+            if (usedPaths.has(f.path)) continue;
+            best.photos.push(f.path);
+            usedPaths.add(f.path);
+            linkedCount++;
+        }
+        for (let i = 0; i < pdfs.length; i++) {
+            const f = pdfs[i];
+            if (usedPaths.has(f.path)) continue;
+            if (i % 2 === 0) best.brochure.push(f.path);
+            else best.floorPlan.push(f.path);
+            usedPaths.add(f.path);
+            linkedCount++;
+        }
+
+        if (images.length > 0 || pdfs.length > 0) {
+            await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [
+                JSON.stringify(best.photos),
+                JSON.stringify(best.brochure),
+                JSON.stringify(best.floorPlan),
+                best.id,
+            ]);
+            console.log('[SESSION]', session.length, 'files ->', best.propertyName, '(photos +' + images.length + ', brochure/floor +' + pdfs.length + ')');
+        }
     }
 
-    const stillUnlinked = unlinked.filter((f) => !usedPaths.has(f.path));
-    for (const file of stillUnlinked) {
-        const best = findBest(file, null);
-        if (!best) continue;
-        if (!assignFileToProperty(file, best)) continue;
-        usedPaths.add(file.path);
-        linked++;
-        await run(db, `UPDATE Properties SET photos = ?, brochure = ?, floorPlan = ? WHERE id = ?`, [JSON.stringify(best.photos), JSON.stringify(best.brochure), JSON.stringify(best.floorPlan), best.id]);
-        console.log('[LINK fallback]', file.path, '->', best.propertyName);
-    }
-
-    console.log('Linked', linked, 'files to properties.');
+    console.log('Linked', linkedCount, 'files to properties (session-based).');
     db.close();
 }
 
