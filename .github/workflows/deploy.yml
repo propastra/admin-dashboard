@@ -63,30 +63,34 @@ jobs:
             git pull origin main
 
             # ----------------------------------------------------
-            # 2. DEPLOY BACKEND
+            # 2. DEPLOY BACKEND (FRESH DATABASE RESET)
             # ----------------------------------------------------
             echo "Deploying the Backend..."
             cd backend
             npm install
             npm run build
             
-            # Run migration and seeding BEFORE starting the backend to avoid locks
+            # Delete old DB to ensure clean seeding (Nuclear fix for desync)
+            echo "Resetting production database..."
+            rm -f database.sqlite
+            
+            # Run migration and seeding BEFORE starting the backend
             echo "Running database migration (allowing NULLs)..."
             npm run migrate
             
-            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v3 ]; then
-                echo "Force re-seeding all property batches (Villas, Plots, Farm Lands, Apartments)..."
+            if [ ! -f /home/ubuntu/Admin_dashboard/backend/.seeded_final_v4 ]; then
+                echo "Force fresh seeding all property batches..."
                 sleep 2
                 npm run seed:all
-                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v3
-                echo "Full seeding complete!"
+                touch /home/ubuntu/Admin_dashboard/backend/.seeded_final_v4
+                echo "Fresh seeding complete!"
             fi
             
-            # Verify total property count in the database
-            echo "Verifying property count in production database..."
-            sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" || echo "Properties table not found yet"
+            # Verify total property count
+            echo "Verifying property count..."
+            sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" || echo "Properties table not found"
             
-            # Start/Restart the backend using the built dist folder
+            # Start/Restart the backend
             npx pm2 delete backend || true
             npx pm2 start npm --name "backend" -- run start
             npx pm2 save
