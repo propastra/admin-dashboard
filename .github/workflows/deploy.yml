@@ -57,12 +57,14 @@ jobs:
             echo "Creating a backup of essential data (including DB and uploads)..."
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             
-            # Exclude node_modules, dist folders, and .git to save space
+            # Exclude node_modules, dist folders, .git, and logs to save space and prevent "file changed" errors
             tar -czf /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz \
                 --exclude='node_modules' \
                 --exclude='dist' \
                 --exclude='.git' \
-                -C /home/ubuntu/ Admin_dashboard
+                --exclude='*.log' \
+                --exclude='*.sqlite-journal' \
+                -C /home/ubuntu/ Admin_dashboard || [ $? -eq 1 ]
             
             echo "Backup saved as /home/ubuntu/Admin_dashboard_backup_$TIMESTAMP.tar.gz"
 
