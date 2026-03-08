@@ -20,13 +20,20 @@ const PropertyForm = () => {
         status: 'Available',
         latitude: '',
         longitude: '',
+        projectName: '',
+        builderInfo: '',
+        isVerified: false,
+        projectHighlights: '',
+        bhk: '',
         possessionTime: '',
         developerName: '',
         landParcel: '',
         floor: '',
         units: '',
         investmentType: 'Self Use',
-        reraNumber: ''
+        reraNumber: '',
+        possessionStatus: 'Ready to Move',
+        furnishingStatus: 'Unfurnished'
     });
     const [photos, setPhotos] = useState([]); // For new files
     const [existingPhotos, setExistingPhotos] = useState([]); // For displaying existing images in edit mode
@@ -47,20 +54,21 @@ const PropertyForm = () => {
     useEffect(() => {
         if (isEdit) {
             const fetchProperty = async () => {
+                setLoading(true);
                 try {
                     const res = await api.get(`/properties/${id}`);
                     const data = res.data;
                     setFormData({
-                        propertyName: data.propertyName,
-                        description: data.description,
-                        category: data.category,
-                        location: data.location,
-                        price: data.price,
+                        propertyName: data.propertyName || '',
+                        description: data.description || '',
+                        category: data.category || 'Residential',
+                        location: data.location || '',
+                        price: data.price || '',
                         priceUnit: data.priceUnit || 'Lakhs',
-                        dimensions: data.dimensions,
-                        configuration: data.configuration,
-                        amenities: data.amenities ? data.amenities.join(', ') : '',
-                        status: data.status,
+                        dimensions: data.dimensions || '',
+                        configuration: data.configuration || '',
+                        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities.join(', ') : data.amenities) : '',
+                        status: data.status || 'Available',
                         latitude: data.latitude || '',
                         longitude: data.longitude || '',
                         possessionTime: data.possessionTime || '',
@@ -69,14 +77,24 @@ const PropertyForm = () => {
                         floor: data.floor || '',
                         units: data.units || '',
                         investmentType: data.investmentType || 'Self Use',
-                        reraNumber: data.reraNumber || ''
+                        reraNumber: data.reraNumber || '',
+                        possessionStatus: data.possessionStatus || 'Ready to Move',
+                        furnishingStatus: data.furnishingStatus || 'Unfurnished',
+                        projectName: data.projectName || '',
+                        builderInfo: data.builderInfo || '',
+                        isVerified: data.isVerified || false,
+                        bhk: data.bhk || '',
+                        projectHighlights: data.projectHighlights ? (Array.isArray(data.projectHighlights) ? data.projectHighlights.join(', ') : data.projectHighlights) : ''
                     });
                     setExistingPhotos(data.photos || []);
                     setExistingBrochure(data.brochure || []);
                     setExistingFloorPlan(data.floorPlan || []);
                 } catch (err) {
                     console.error("Error fetching property", err);
-                    setError("Failed to load property details");
+                    const msg = err.response?.data?.message || "Failed to load property details. The server might be experiencing issues.";
+                    setError(msg);
+                } finally {
+                    setLoading(false);
                 }
             };
             fetchProperty();
@@ -126,6 +144,18 @@ const PropertyForm = () => {
         setPreviewFloorPlan([]);
     };
 
+    const handleRemoveExistingPhoto = (photoPath) => {
+        setExistingPhotos(prev => prev.filter(p => p !== photoPath));
+    };
+
+    const handleRemoveExistingBrochure = (brochurePath) => {
+        setExistingBrochure(prev => prev.filter(b => b !== brochurePath));
+    };
+
+    const handleRemoveExistingFloorPlan = (fpPath) => {
+        setExistingFloorPlan(prev => prev.filter(f => f !== fpPath));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -133,9 +163,9 @@ const PropertyForm = () => {
 
         const data = new FormData();
         Object.keys(formData).forEach(key => {
-            if (key === 'amenities') {
-                const amenitiesArray = formData.amenities.split(',').map(item => item.trim()).filter(i => i);
-                data.append('amenities', JSON.stringify(amenitiesArray));
+            if (key === 'amenities' || key === 'projectHighlights') {
+                const array = formData[key].split(',').map(item => item.trim()).filter(i => i);
+                data.append(key, JSON.stringify(array));
             } else {
                 data.append(key, formData[key]);
             }
@@ -164,7 +194,8 @@ const PropertyForm = () => {
             navigate('/properties');
         } catch (err) {
             console.error("Error saving property", err);
-            setError("Failed to save property");
+            const msg = err.response?.data?.message || err.response?.data?.error || "Failed to save property. Please check if all fields are correct and the server is running.";
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -178,6 +209,11 @@ const PropertyForm = () => {
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Property Name</label>
                     <input name="propertyName" value={formData.propertyName} onChange={handleChange} className="form-input" />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">Project Name</label>
+                    <input name="projectName" value={formData.projectName} onChange={handleChange} className="form-input" />
                 </div>
 
                 <div className="form-group">
@@ -251,10 +287,43 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group">
+                    <label className="form-label">BHK (Number)</label>
+                    <input name="bhk" type="number" value={formData.bhk} onChange={handleChange} className="form-input" placeholder="e.g. 3" />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Builder Info</label>
+                    <input name="builderInfo" value={formData.builderInfo} onChange={handleChange} className="form-input" placeholder="e.g. Grade A Builder" />
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input name="isVerified" type="checkbox" checked={formData.isVerified} onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })} id="isVerified" />
+                    <label htmlFor="isVerified" className="form-label" style={{ marginBottom: 0 }}>Is Verified</label>
+                </div>
+
+                <div className="form-group">
                     <label className="form-label">Looking for Investment</label>
                     <select name="investmentType" value={formData.investmentType} onChange={handleChange} className="form-select">
                         <option value="Self Use">Self Use</option>
                         <option value="Investment">Investment</option>
+                    </select>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Possession Status</label>
+                    <select name="possessionStatus" value={formData.possessionStatus} onChange={handleChange} className="form-select">
+                        <option value="Ready to Move">Ready to Move</option>
+                        <option value="Under Construction">Under Construction</option>
+                        <option value="Pre Launch">Pre Launch</option>
+                    </select>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Furnishing Status</label>
+                    <select name="furnishingStatus" value={formData.furnishingStatus} onChange={handleChange} className="form-select">
+                        <option value="Unfurnished">Unfurnished</option>
+                        <option value="Semi-Furnished">Semi-Furnished</option>
+                        <option value="Fully Furnished">Fully Furnished</option>
                     </select>
                 </div>
 
@@ -291,6 +360,11 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">Project Highlights (comma separated)</label>
+                    <input name="projectHighlights" value={formData.projectHighlights} onChange={handleChange} className="form-input" placeholder="Luxury Living, Prime Location" />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Description</label>
                     <textarea name="description" value={formData.description} onChange={handleChange} className="form-textarea" rows="4" />
                 </div>
@@ -306,10 +380,15 @@ const PropertyForm = () => {
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {existingPhotos.map((photo, index) => {
                             const isVideo = photo.match(/\.(mp4|webm|ogg|mov)$/i);
-                            return isVideo ? (
-                                <video key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} controls style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
-                            ) : (
-                                <img key={`exist-${index}`} src={`${API_BASE_URL}${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${photo}`)} />
+                            return (
+                                <div key={`exist-${index}`} style={{ position: 'relative' }}>
+                                    {isVideo ? (
+                                        <video src={`${API_BASE_URL}${photo}`} controls style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6' }} />
+                                    ) : (
+                                        <img src={`${API_BASE_URL}${photo}`} alt="Existing" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${photo}`)} />
+                                    )}
+                                    <button type="button" onClick={() => handleRemoveExistingPhoto(photo)} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
+                                </div>
                             );
                         })}
                         {previewPhotos.map((photo, index) => (
@@ -333,13 +412,18 @@ const PropertyForm = () => {
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {existingFloorPlan.map((file, index) => {
                             const isPdf = file.match(/\.pdf$/i);
-                            return isPdf ? (
-                                <a key={`exist-fp-${index}`} href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
-                                    <span style={{ fontSize: '24px' }}>📄</span>
-                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing PDF</span>
-                                </a>
-                            ) : (
-                                <img key={`exist-fp-${index}`} src={`${API_BASE_URL}${file}`} alt="Existing Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${file}`)} />
+                            return (
+                                <div key={`exist-fp-${index}`} style={{ position: 'relative' }}>
+                                    {isPdf ? (
+                                        <a href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+                                            <span style={{ fontSize: '24px' }}>📄</span>
+                                            <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing PDF</span>
+                                        </a>
+                                    ) : (
+                                        <img src={`${API_BASE_URL}${file}`} alt="Existing Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${file}`)} />
+                                    )}
+                                    <button type="button" onClick={() => handleRemoveExistingFloorPlan(file)} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
+                                </div>
                             );
                         })}
                         {previewFloorPlan.map((file, index) => (
@@ -365,10 +449,13 @@ const PropertyForm = () => {
                     <input type="file" multiple accept="application/pdf" onChange={handleBrochureChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {existingBrochure.map((file, index) => (
-                            <a key={`exist-b-${index}`} href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
-                                <span style={{ fontSize: '24px' }}>📕</span>
-                                <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing Brochure</span>
-                            </a>
+                            <div key={`exist-b-${index}`} style={{ position: 'relative' }}>
+                                <a href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+                                    <span style={{ fontSize: '24px' }}>📕</span>
+                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing Brochure</span>
+                                </a>
+                                <button type="button" onClick={() => handleRemoveExistingBrochure(file)} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
+                            </div>
                         ))}
                         {previewBrochure.map((file, index) => (
                             <div key={`new-b-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px' }}>
