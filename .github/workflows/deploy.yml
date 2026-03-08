@@ -202,6 +202,10 @@ jobs:
               echo "Data recovery completed!"
             fi
             
+            # Re-link uploads on disk to properties (by mtime vs updatedAt) when DB media is empty
+            echo "Re-linking uploads to properties (time-based)..."
+            node src/link_uploads_to_properties.js || true
+            
             # Verify finalized count
             echo "Final property count:"
             sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;"

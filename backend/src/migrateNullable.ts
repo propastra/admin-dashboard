@@ -6,13 +6,53 @@ const db = new sqlite3.Database(dbPath);
 
 console.log('Starting migration to allow NULL values in core fields...');
 
-db.serialize(() => {
-    db.run('PRAGMA foreign_keys=OFF;');
+function run(db: any, sql: string, params: any[] = []): Promise<void> {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, (err: Error | null) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
 
-    db.run('BEGIN TRANSACTION;');
+function get(db: any, sql: string, params: any[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err: Error | null, row: any) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
 
-    // Create new table with relaxed constraints
-    db.run(`
+async function migrate() {
+    await run(db, 'PRAGMA foreign_keys=OFF;');
+
+    // Idempotent: drop leftover Properties_new from a previous failed run
+    const newTableExists = await get(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='Properties_new'");
+    if (newTableExists) {
+        console.log('Dropping leftover Properties_new table from previous run...');
+        await run(db, 'DROP TABLE "Properties_new";');
+    }
+
+    // If Properties already has brochure/floorPlan, migration was already applied
+    const propsExists = await get(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='Properties'");
+    if (propsExists) {
+        const cols = await new Promise<any[]>((resolve, reject) => {
+            db.all('PRAGMA table_info(Properties)', (err: Error | null, rows: any[]) => (err ? reject(err) : resolve(rows || [])));
+        });
+        const hasBrochure = cols.some((c: any) => c.name === 'brochure');
+        const hasFloorPlan = cols.some((c: any) => c.name === 'floorPlan');
+        if (hasBrochure && hasFloorPlan) {
+            console.log('Migration already applied (Properties has brochure and floorPlan).');
+            db.close();
+            process.exit(0);
+        }
+    }
+
+    await run(db, 'BEGIN TRANSACTION;');
+
+    try {
+        await run(db, `
         CREATE TABLE "Properties_new" (
             "id" UUID PRIMARY KEY, 
             "propertyName" VARCHAR(255), 
@@ -49,32 +89,24 @@ db.serialize(() => {
         );
     `);
 
-    // Check if Properties table exists before moving data
-    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='Properties'", (err, row) => {
-        if (row) {
-            db.run('INSERT INTO "Properties_new" SELECT * FROM "Properties";', (err) => {
-                if (err) {
-                    console.error('Error copying data:', err.message);
-                    db.run('ROLLBACK;');
-                    process.exit(1);
-                }
-
-                db.run('DROP TABLE "Properties";');
-                db.run('ALTER TABLE "Properties_new" RENAME TO "Properties";');
-                db.run('COMMIT;', (err) => {
-                    if (err) {
-                        console.error('Error committing transaction:', err.message);
-                        process.exit(1);
-                    }
-                    console.log('Migration successful: core fields are now nullable.');
-                    db.close();
-                });
-            });
-        } else {
-            db.run('ALTER TABLE "Properties_new" RENAME TO "Properties";');
-            db.run('COMMIT;');
-            console.log('Migration successful: Properties table created with nullable fields.');
-            db.close();
+        const propsRow = await get(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='Properties'");
+        if (propsRow) {
+            await run(db, 'INSERT INTO "Properties_new" SELECT * FROM "Properties";');
+            await run(db, 'DROP TABLE "Properties";');
         }
-    });
+        await run(db, 'ALTER TABLE "Properties_new" RENAME TO "Properties";');
+        await run(db, 'COMMIT;');
+        console.log('Migration successful: core fields are now nullable.');
+    } catch (err: any) {
+        await run(db, 'ROLLBACK;').catch(() => {});
+        console.error('Migration failed:', err?.message || err);
+        process.exit(1);
+    } finally {
+        db.close();
+    }
+}
+
+migrate().catch((err) => {
+    console.error('Migration error:', err);
+    process.exit(1);
 });
