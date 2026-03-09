@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
                     // Create new user if not exists
                     const tempPassword = `welcome_${Math.random().toString(36).slice(-8)}`;
                     const userEmail = email ? String(email).trim() : `${phone}@mobile.propastra.com`;
-                    
+
                     user = await WebsiteUser.create({
                         name: String(name).trim(),
                         email: userEmail,
@@ -52,6 +52,7 @@ router.post('/', async (req, res) => {
                     // Optionally update name if it was generic before
                     if (name && (user.name.startsWith('User ') || user.name !== String(name).trim())) {
                         await user.update({ name: String(name).trim() });
+
                     }
                 }
 
@@ -95,7 +96,7 @@ router.post('/', async (req, res) => {
         let newInquiry;
         let retryCount = 0;
         let success = false;
-        
+
         while (!success && retryCount < 5) {
             try {
                 newInquiry = await Inquiry.create(payload);
@@ -103,11 +104,11 @@ router.post('/', async (req, res) => {
             } catch (createErr: any) {
                 const msg = createErr.message || '';
                 console.error(`Inquiry create attempt ${retryCount + 1} failed:`, msg);
-                
+
                 // If it's a column error, strip the problematic field and try again
                 if (msg.includes('no column named') || msg.includes('SQLITE_ERROR') || msg.includes('column')) {
                     let stripped = false;
-                    
+
                     // Match the specific column name from the error message if possible
                     const columnMatch = msg.match(/column (\w+) /) || msg.match(/no column named (\w+)/);
                     if (columnMatch && columnMatch[1]) {
@@ -126,7 +127,7 @@ router.post('/', async (req, res) => {
                         // If we can't identify the column but it's a column error, we must fail
                         throw createErr;
                     }
-                    
+
                     retryCount++;
                     console.log(`Retrying inquiry creation (${retryCount}) with stripped payload:`, payload);
                 } else {
