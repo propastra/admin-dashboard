@@ -7,7 +7,10 @@ const { Op } = require('sequelize');
 // @desc    Track user interaction (View/Click/Search)
 // @access  Public
 router.post('/track', async (req, res) => {
-    const { interactionType, propertyId, ipAddress, userAgent, metadata } = req.body;
+    const { interactionType, propertyId, ipAddress: bodyIp, userAgent: bodyUserAgent, metadata } = req.body;
+    // Always resolve ip and userAgent: from body, request, or fallback (frontend often sends only interactionType + propertyId)
+    const ipAddress = (bodyIp && String(bodyIp).trim()) || req.ip || (req.headers['x-forwarded-for'] && String(req.headers['x-forwarded-for']).split(',')[0].trim()) || 'anonymous';
+    const userAgent = (bodyUserAgent && String(bodyUserAgent).trim()) || req.get('User-Agent') || 'unknown';
 
     try {
         // Find or Create Visitor
@@ -15,8 +18,8 @@ router.post('/track', async (req, res) => {
         if (!visitor) {
             visitor = await Visitor.create({ ipAddress, userAgent });
         } else {
-            // Update last visit
-            visitor.changed('lastVisit', true);
+            visitor.userAgent = userAgent;
+            visitor.lastVisit = new Date();
             await visitor.save();
         }
 
@@ -24,18 +27,30 @@ router.post('/track', async (req, res) => {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        // Create Interaction
-        await Interaction.create({
-            interactionType,
-            propertyId,
+        // Create Interaction (propertyId optional for e.g. Search/Click without property)
+        const interactionPayload = {
+            interactionType: interactionType || 'View',
             visitorId: visitor.id,
-            metadata
-        });
+            metadata: metadata && typeof metadata === 'object' ? metadata : undefined
+        };
+        if (propertyId) interactionPayload.propertyId = propertyId;
+
+        try {
+            await Interaction.create(interactionPayload);
+        } catch (createErr) {
+            const msg = (createErr && createErr.message) || '';
+            if (propertyId && (msg.includes('propertyId') || msg.includes('SQLITE_ERROR') || msg.includes('column') || msg.includes('FOREIGN KEY') || msg.includes('SQLITE_CONSTRAINT'))) {
+                delete interactionPayload.propertyId;
+                await Interaction.create(interactionPayload);
+            } else {
+                throw createErr;
+            }
+        }
 
         res.json({ success: true });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        console.error('Analytics track error:', err.message);
+        res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV !== 'production' ? err.message : undefined });
     }
 });
 

@@ -472,6 +472,87 @@
     padding: 0 24px;
 }
 
+.brochure-preview-container {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #f8faff;
+    border: 1px solid #e2e8f0;
+    height: 250px;
+    display: flex;
+}
+
+.brochure-images {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.brochure-img-main {
+    flex: 2;
+    object-fit: cover;
+    height: 100%;
+    border-right: 2px solid white;
+}
+
+.brochure-img-main.full-width {
+    flex: 1;
+    border-right: none;
+}
+
+.brochure-img-sub {
+    flex: 1;
+    object-fit: cover;
+    height: 100%;
+    border-right: 2px solid white;
+}
+
+.brochure-img-sub:last-child {
+    border-right: none;
+}
+
+.brochure-overlay-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(1px);
+    transition: all 0.3s;
+}
+
+.view-brochure-btn {
+    background: white;
+    color: var(--gray-900);
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+
+.brochure-preview-container:hover .brochure-overlay-center {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.brochure-preview-container:hover .view-brochure-btn {
+    transform: scale(1.05);
+}
+
+.download-large-btn {
+    transition: all 0.2s;
+}
+
+.download-large-btn:hover {
+    background: #2563eb !important; /* Darker Blue */
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3); /* Darker Blue shadow */
+}
+
 /* Map Section */
 .detail-section {
     margin-bottom: 40px;
@@ -798,12 +879,92 @@
 }
 
 .result-label {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--gray-500);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+}
+
+/* ===========================
+   7. New Features Styles
+   =========================== */
+
+/* Brochure Button */
+.download-brochure-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.download-brochure-btn:hover {
+    background-color: var(--brand-light, #e0e7ff) !important;
+    border-color: var(--brand, #4f46e5) !important;
+    color: var(--brand, #4f46e5) !important;
+    transform: translateY(-1px);
+}
+
+/* Floor Plans */
+.floor-plans-card {
+    margin-top: 32px;
+}
+
+.floor-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+}
+
+.floor-plan-item {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    aspect-ratio: 4/3;
+    background: #f8faff;
+}
+
+.floor-plan-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+    transition: transform 0.3s ease;
+}
+
+.floor-plan-item:hover img {
+    transform: scale(1.05);
+}
+
+.plan-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.floor-plan-item:hover .plan-overlay {
+    opacity: 1;
+}
+
+.plan-overlay span {
+    margin-top: 8px;
     font-weight: 600;
-    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+@media (max-width: 640px) {
+    .floor-plans-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .result-value {

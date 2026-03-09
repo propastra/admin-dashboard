@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, LogOut, ChevronRight, Settings, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,7 @@ import './Profile.css';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, loadUser } = useAuth();
     const { selectedCity } = useCity();
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -16,6 +16,31 @@ const Profile = () => {
         phone: user?.phone || '',
         city: user?.city || selectedCity || '',
     });
+
+    // Always load fresh user data when profile page opens
+    useEffect(() => {
+        if (user) {
+            loadUser();
+        }
+    }, []);
+
+    // Sync form data when user loads
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                name: user.name || '',
+                phone: user.phone || '',
+                city: user.city || selectedCity || '',
+            });
+        }
+    }, [user]);
+
+    // Check if email is auto-generated (hide it from UI)
+    const isAutoEmail = user?.email && (
+        user.email.includes('@mobile.propastra.com') ||
+        user.email.includes('@noemail.propastra.com')
+    );
+    const displayEmail = isAutoEmail ? null : user?.email;
 
     if (!user) {
         return (
@@ -36,6 +61,7 @@ const Profile = () => {
     const handleSave = async () => {
         try {
             await updateProfile(formData);
+            await loadUser(); // Refresh user data from server after save
             setEditing(false);
         } catch (err) {
             console.error('Failed to update profile:', err);
@@ -61,7 +87,8 @@ const Profile = () => {
                     <User size={32} />
                 </div>
                 <h2 className="profile-name">{user.name}</h2>
-                <p className="profile-email">{user.email}</p>
+                {displayEmail && <p className="profile-email">{displayEmail}</p>}
+                {user.phone && <p className="profile-email" style={{ opacity: 0.7 }}>{user.phone}</p>}
             </div>
 
             {editing ? (

@@ -4,11 +4,25 @@ import { Heart, Share2, Star, Phone, MessageCircle, Maximize } from 'lucide-reac
 import { BiBed } from 'react-icons/bi';
 import { addFavorite, removeFavorite, API_BASE } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useInquiryPopup } from '../context/InquiryPopupContext';
 import './PropertyCard.css';
 
 const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showActions = true }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { ensureIdentified } = useInquiryPopup();
+    
+    const displayTitle = property.projectName || property.propertyName.split('-')[0].trim();
+
+    const openPropertyWithInquiry = (e) => {
+        if (e) e.stopPropagation();
+        
+        // Use ensureIdentified to either navigate immediately (if logged in)
+        // or open the popup and navigate after submission.
+        ensureIdentified(() => {
+            navigate(`/property/${property.id}`);
+        }, `To view ${displayTitle}, we'd love to know you better`);
+    };
 
     const photoUrl = property.photos && property.photos.length > 0
         ? (property.photos[0].startsWith('http') ? property.photos[0] : `${API_BASE}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
@@ -17,25 +31,23 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     const handleFavorite = async (e) => {
         e.stopPropagation();
 
-        // If not logged in, redirect to auth
-        if (!user) {
-            navigate('/auth');
-            return;
-        }
+        const toggle = async () => {
+            try {
+                if (isFavorited) {
+                    await removeFavorite(property.id);
+                } else {
+                    await addFavorite(property.id);
+                }
+                if (onFavoriteToggle) onFavoriteToggle(property.id);
+            } catch (err) {
+                console.error('Favorite action failed:', err);
+            }
+        };
 
-        try {
-            if (isFavorited) {
-                await removeFavorite(property.id);
-            } else {
-                await addFavorite(property.id);
-            }
-            if (onFavoriteToggle) onFavoriteToggle(property.id);
-        } catch (err) {
-            console.error('Favorite action failed:', err);
-            // If unauthorized, redirect to auth
-            if (err.response?.status === 401) {
-                navigate('/auth');
-            }
+        if (user) {
+            toggle();
+        } else {
+            ensureIdentified(toggle, 'To save favorites, we\'d love to know you better');
         }
     };
 
@@ -49,9 +61,9 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     const rating = (4 + Math.random()).toFixed(1);
 
     return (
-        <div className="property-card" onClick={() => window.open(`/property/${property.id}`, '_blank')}>
+        <div className="property-card" onClick={openPropertyWithInquiry}>
             <div className="property-card-image">
-                <img src={photoUrl} alt={property.propertyName} />
+                <img src={photoUrl} alt={displayTitle} />
                 <div className="property-card-badges">
                     <span className="badge-category">{property.category}</span>
                     {property.distance && (
@@ -73,7 +85,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
 
             <div className="property-card-body">
                 <div className="property-card-header">
-                    <h3 className="property-card-title">{property.propertyName}</h3>
+                    <h3 className="property-card-title">{displayTitle}</h3>
                     <div className="property-card-rating">
                         <Star size={14} fill="#FFB703" color="#FFB703" />
                         <span>{rating}</span>
@@ -102,10 +114,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                         }}>
                             <Phone size={14} /> Call us
                         </button>
-                        <button className="cta-message" onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/property/${property.id}?inquiry=true`);
-                        }}>
+                        <button className="cta-message" onClick={openPropertyWithInquiry}>
                             <MessageCircle size={14} /> Message
                         </button>
                     </div>

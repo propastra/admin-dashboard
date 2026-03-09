@@ -1,48 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X, Download } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
 import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, loginUser, trackInteraction } from '../services/api';
 import { getCoordinates, calculateRoute } from '../utils/mapUtils';
 import { useAuth } from '../context/AuthContext';
+import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
 import './PropertyDetail.css';
 
 const PropertyDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, login } = useAuth();
+    const { ensureIdentified } = useInquiryPopup();
     const [property, setProperty] = useState(null);
+    const [projectProperties, setProjectProperties] = useState([]);
+    const [activeConfig, setActiveConfig] = useState(null);
     const [similarProperties, setSimilarProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activePhoto, setActivePhoto] = useState(0);
     const [showInquiry, setShowInquiry] = useState(false);
-    const [inquiryForm, setInquiryForm] = useState({ name: '', phone: '', message: '', visitDate: '' });
+    const [inquiryForm, setInquiryForm] = useState({ 
+        name: user?.name || '', 
+        email: user?.email || '', 
+        phone: user?.phone || '', 
+        message: '', 
+        visitDate: '' 
+    });
     const [inquirySent, setInquirySent] = useState(false);
+    const [showComparisonModal, setShowComparisonModal] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-    const [showComparisonModal, setShowComparisonModal] = useState(false);
 
-    // Auth Wall State
-    const { login } = useAuth();
-    const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-    const [showPassword, setShowPassword] = useState(false);
-    const [loginError, setLoginError] = useState('');
-    const [loginLoading, setLoginLoading] = useState(false);
-
-    const handleWallLogin = async (e) => {
-        e.preventDefault();
-        setLoginError('');
-        setLoginLoading(true);
-        try {
-            const res = await loginUser(loginForm);
-            login(res.data.token, res.data.user);
-        } catch (err) {
-            setLoginError(err.response?.data?.message || 'Login failed. Please try again.');
-        } finally {
-            setLoginLoading(false);
+    // Sync user details with inquiry form
+    useEffect(() => {
+        if (user) {
+            setInquiryForm(prev => ({
+                ...prev,
+                name: user.name || prev.name,
+                email: user.email || prev.email,
+                phone: user.phone || prev.phone
+            }));
         }
-    };
+    }, [user]);
+
 
     // Check if favorite on load
     useEffect(() => {
@@ -57,29 +59,34 @@ const PropertyDetail = () => {
     }, [user, property]);
 
     const handleToggleFavorite = async () => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
-        try {
-            if (isFavorite) {
-                await removeFavorite(property.id);
-                setIsFavorite(false);
-            } else {
-                await addFavorite(property.id);
-                setIsFavorite(true);
+        const toggle = async () => {
+            try {
+                if (isFavorite) {
+                    await removeFavorite(property.id);
+                    setIsFavorite(false);
+                } else {
+                    await addFavorite(property.id);
+                    setIsFavorite(true);
+                }
+            } catch (error) {
+                console.error('Favorite action failed:', error);
             }
-        } catch (error) {
-            console.error('Failed to toggle favorite', error);
+        };
+
+        if (user) {
+            toggle();
+        } else {
+            ensureIdentified(toggle, 'To save this property, we\'d love to know you better');
         }
     };
+
 
     const handleShare = async () => {
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: property.propertyName,
-                    text: `Check out ${property.propertyName} on Ayora`,
+                    title: getDisplayTitle(property),
+                    text: `Check out ${getDisplayTitle(property)} on Ayora`,
                     url: window.location.href,
                 });
             } catch (err) {
@@ -185,50 +192,97 @@ const PropertyDetail = () => {
         }
     };
 
+    // Helper to extract project name for display
+    const getDisplayTitle = (p) => {
+        if (!p) return '';
+        if (p.projectName && p.projectName.trim()) return p.projectName.trim();
+        // Heuristic: take first part before hyphen
+        if (p.propertyName) {
+            const beforeHyphen = p.propertyName.split('-')[0].trim();
+            if (beforeHyphen) return beforeHyphen;
+            return p.propertyName.split(' ').slice(0, 2).join(' ').trim();
+        }
+        return 'Unknown Project';
+    };
+
     const loadSimilarProperties = async () => {
         try {
-            const res = await getProperties({
-                category: property.category,
-                city: property.location ? property.location.split(',')[0].trim() : undefined,
-                limit: 30 // fetch more to allow filtering for diversity
+            const currentProject = getDisplayTitle(property);
+
+            // 1. Load all properties for this PROJECT specifically (ignore category, just match name)
+            const projectRes = await getProperties({
+                search: currentProject,
+                limit: 50 // Get enough to find all units
             });
 
-            // Filter out the current property
-            const filtered = (res.data.properties || []).filter(p => p.id !== property.id);
+            // Filter strictly for the same project name to avoid "similar" name contamination
+            const allProjProps = (projectRes.data.properties || []).filter(p => {
+                const pName = getDisplayTitle(p);
+                return pName.toLowerCase() === currentProject.toLowerCase();
+            });
 
-            // Extract project name to group/filter
-            const getProjectName = (p) => p.projectName || p.propertyName.split('-')[0].split(' ')[0].trim();
-            const currentProject = getProjectName(property);
+            // ALWAYS include the current property in its own project list
+            if (!allProjProps.find(p => p.id === property.id)) {
+                allProjProps.push(property);
+            }
 
-            const seenProjects = new Set([currentProject]);
+            // Sort project units by price
+            allProjProps.sort((a, b) => {
+                const getVal = x => parseFloat(x.price) * (x.priceUnit === 'Cr' ? 100 : 1);
+                return getVal(a) - getVal(b);
+            });
+            
+            setProjectProperties(allProjProps);
+            
+            // Default active config to current property's ID
+            setActiveConfig(property.id);
+
+            // 2. Load SIMILAR properties for the diversity section at the bottom
+            const cityPart = property.location ? property.location.split(',').pop().trim().replace(/\.$/, '') : undefined;
+            const similarRes = await getProperties({
+                category: property.category,
+                city: cityPart,
+                limit: 30 // Increase limit to have more to choose from after filtering
+            });
+
+            const filtered = (similarRes.data.properties || []).filter(p => p.id !== property.id);
+            const currentProjLower = currentProject.toLowerCase();
+            const seenProjects = new Set([currentProjLower]);
             const diverseProperties = [];
-            const remainingProperties = [];
+            const otherProjectsProperties = [];
 
             for (const p of filtered) {
-                const proj = getProjectName(p);
-                // Prefer properties that are from different projects
+                const proj = getDisplayTitle(p).toLowerCase();
+                
+                // STRICT EXCLUSION: Never show anything from the same project
+                if (proj === currentProjLower) continue;
+
                 if (!seenProjects.has(proj)) {
                     seenProjects.add(proj);
                     diverseProperties.push(p);
                 } else {
-                    remainingProperties.push(p);
+                    otherProjectsProperties.push(p);
                 }
             }
 
-            // Combine diverse properties first, fill with remaining if needed, up to 4
-            const finalSimilar = [...diverseProperties, ...remainingProperties].slice(0, 4);
-
-            setSimilarProperties(finalSimilar);
+            // Fill with diverse properties first, then others (all from different projects than the current one)
+            setSimilarProperties([...diverseProperties, ...otherProjectsProperties].slice(0, 4));
         } catch (err) {
-            console.error('Failed to load similar properties:', err);
+            console.error('Failed to load similar/project properties:', err);
         }
     };
 
     const handleInquiry = async (e) => {
         e.preventDefault();
         try {
-            await submitInquiry({ ...inquiryForm, propertyId: id });
+            const res = await submitInquiry({ ...inquiryForm, propertyId: id });
             setInquirySent(true);
+
+            // Handle auto-login if token is returned (for guest-to-user conversion)
+            if (res.data.token && res.data.user && !user) {
+                login(res.data.token, res.data.user);
+            }
+
             setTimeout(() => {
                 setShowInquiry(false);
                 setInquirySent(false);
@@ -290,7 +344,7 @@ const PropertyDetail = () => {
                     <div className="header-main-flex" style={{ alignItems: 'center' }}>
                         <div className="header-left-info">
                             <h1 className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                {property.propertyName}
+                                {getDisplayTitle(property)}
                                 {property.isVerified && (
                                     <span style={{ backgroundColor: '#10b981', color: 'white', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <Check size={12} /> Verified
@@ -317,14 +371,22 @@ const PropertyDetail = () => {
                 {/* 2. Masonry Gallery */}
                 <div className="detail-masonry-gallery">
                     {/* Main large image */}
-                    <div className="col-main image-wrap" onClick={() => { setActivePhoto(0); setIsGalleryOpen(true); }}>
+                    <div className="col-main image-wrap" onClick={() => {
+                        const open = () => { setActivePhoto(0); setIsGalleryOpen(true); };
+                        if (user) open();
+                        else ensureIdentified(open, 'To view individual photos, we\'d love to know you better');
+                    }}>
                         <img src={photos[0]} alt="Main view" className="masonry-img main-img" />
                     </div>
 
                     {/* 2x2 Grid of smaller images */}
                     <div className="col-grid">
                         {photos.slice(1, 5).map((photo, idx) => (
-                            <div key={idx} className="image-wrap" onClick={() => { setActivePhoto(idx + 1); setIsGalleryOpen(true); }}>
+                            <div key={idx} className="image-wrap" onClick={() => {
+                                const open = () => { setActivePhoto(idx + 1); setIsGalleryOpen(true); };
+                                if (user) open();
+                                else ensureIdentified(open, 'To view more photos, we\'d love to know you better');
+                            }}>
                                 <img src={photo} alt={`View ${idx + 2}`} className="masonry-img" />
                                 {/* If it's the 4th thumbnail and there are more photos, show an overlay */}
                                 {idx === 3 && photos.length > 5 && (
@@ -390,15 +452,34 @@ const PropertyDetail = () => {
                             <span className="metric-label">Possession</span>
                             <span className="metric-value">{property.possessionStatus || 'Ready to Move'}</span>
                         </div>
+                        {property.floor && (
+                            <div className="metric-cell">
+                                <span className="metric-label">Floor</span>
+                                <span className="metric-value">{property.floor}</span>
+                            </div>
+                        )}
+                        {property.units && (
+                            <div className="metric-cell">
+                                <span className="metric-label">Total Units</span>
+                                <span className="metric-value">{property.units}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Main Card CTA Row */}
                     <div className="card-bottom-cta">
-                        <button className="btn btn-accent btn-wide" onClick={() => setShowInquiry(true)}>
+                        <button className="btn btn-accent btn-wide" onClick={() => {
+                            if (user) setShowInquiry(true);
+                            else ensureIdentified(() => setShowInquiry(true), `To message about ${getDisplayTitle(property)}, we'd love to know you better`);
+                        }}>
                             <MessageCircle size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Message
                         </button>
-                        <button className="btn btn-outline btn-wide" onClick={() => window.location.href = 'tel:8147069579'}>
+                        <button className="btn btn-outline btn-wide" onClick={() => {
+                            const callUs = () => window.location.href = 'tel:8147069579';
+                            if (user) callUs();
+                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better');
+                        }}>
                             <Phone size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Call us
                         </button>
@@ -462,6 +543,205 @@ const PropertyDetail = () => {
                             </div>
                         </div>
                     )}
+
+                    {property.brochure && property.brochure.length > 0 && (
+                        <div className="info-card brochure-card">
+                            <h3>Project Brochure</h3>
+                            <div className="brochure-preview-container" onClick={() => {
+                                const openBrochure = () => {
+                                    const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                    window.open(brochureUrl, '_blank');
+                                };
+                                if (user) openBrochure();
+                                else ensureIdentified(openBrochure, 'To view the project brochure, we\'d love to know you better');
+                            }}>
+                                <div className="brochure-images">
+                                    {(() => {
+                                        const bFiles = property.brochure.map(p => p.startsWith('http') ? p : `${API_BASE}${p.startsWith('/') ? '' : '/'}${p}`);
+                                        if (bFiles.length === 0) {
+                                            return (
+                                                <>
+                                                    <img src={photos[0]} alt="Brochure preview 1" className="brochure-img-main" />
+                                                    {photos.length > 1 && <img src={photos[1]} alt="Brochure preview 2" className="brochure-img-sub" />}
+                                                    {photos.length > 2 && <img src={photos[2]} alt="Brochure preview 3" className="brochure-img-sub" />}
+                                                </>
+                                            );
+                                        }
+
+                                        const renderFile = (url, className, alt) => {
+                                            if (url.toLowerCase().endsWith('.pdf')) {
+                                                return <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0`} title={alt} className={className} style={{ pointerEvents: 'none', border: 'none', overflow: 'hidden' }} />;
+                                            }
+                                            return <img src={url} alt={alt} className={className} />;
+                                        };
+
+                                        return (
+                                            <>
+                                                {renderFile(bFiles[0], bFiles.length === 1 ? "brochure-img-main full-width" : "brochure-img-main", "Brochure preview 1")}
+                                                {bFiles.length > 1 && renderFile(bFiles[1], "brochure-img-sub", "Brochure preview 2")}
+                                                {bFiles.length > 2 && renderFile(bFiles[2], "brochure-img-sub", "Brochure preview 3")}
+                                                {bFiles.length === 1 && photos.length > 0 && <img src={photos[0]} alt="Brochure fallback 1" className="brochure-img-sub" />}
+                                                {bFiles.length <= 2 && photos.length > 1 && <img src={photos[1]} alt="Brochure fallback 2" className="brochure-img-sub" />}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                                <div className="brochure-overlay-center">
+                                    <span className="view-brochure-btn">View Brochure</span>
+                                </div>
+                            </div>
+                            <div className="brochure-download-container" style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => {
+                                        const downloadBrochure = () => {
+                                            const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                            window.open(brochureUrl, '_blank');
+                                        };
+                                        if (user) downloadBrochure();
+                                        else ensureIdentified(downloadBrochure, 'To download the brochure, we\'d love to know you better');
+                                    }}
+                                    className="btn btn-primary download-large-btn"
+                                    style={{ background: '#3b82f6', color: '#ffffff', border: 'none', height: '44px', padding: '0 24px', fontSize: '15px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '8px', cursor: 'pointer' }}
+                                >
+                                    <Download size={18} />
+                                    Download Brochure
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {(() => {
+                        // Detect data structure
+                        const isInternalUnits = property.floorPlan && 
+                                              property.floorPlan.length > 0 && 
+                                              typeof property.floorPlan[0] === 'object' && 
+                                              (property.floorPlan[0].configurations || property.floorPlan[0].type);
+
+                        // If not internal units, we use the projectProperties (Brigade style)
+                        const units = isInternalUnits ? property.floorPlan : projectProperties;
+
+                        if (units.length === 0) return null;
+
+                        return (
+                            <div className="info-card floor-plans-card project-units-card" style={{ marginTop: '32px' }}>
+                                <h3>Price & Floor Plan</h3>
+                                
+                                <div className="units-tabs" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
+                                    {units.map((unit, idx) => {
+                                        const id = isInternalUnits ? `idx-${idx}` : unit.id;
+                                        const name = isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`);
+                                        const price = isInternalUnits ? (unit.priceRange || unit.price) : formatPrice(unit.price, unit.priceUnit);
+                                        const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
+
+                                        return (
+                                            <button 
+                                                key={id} 
+                                                className={`unit-tab ${isActive ? 'active' : ''}`}
+                                                onClick={() => setActiveConfig(id)}
+                                                style={{
+                                                    padding: '12px 24px',
+                                                    border: isActive ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                                                    backgroundColor: isActive ? '#eff6ff' : '#fff',
+                                                    borderRadius: '12px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'flex-start',
+                                                    minWidth: '160px',
+                                                    transition: 'all 0.2s',
+                                                    textAlign: 'left'
+                                                }}
+                                            >
+                                                <div className="unit-tab-title" style={{ fontSize: '14px', fontWeight: '700', color: isActive ? '#1e40af' : '#4b5563', marginBottom: '4px' }}>
+                                                    {name}
+                                                </div>
+                                                <div className="unit-tab-price" style={{ fontSize: '13px', color: '#6b7280' }}>
+                                                    {price}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="unit-tab-content">
+                                    {units.map((unit, idx) => {
+                                        const id = isInternalUnits ? `idx-${idx}` : unit.id;
+                                        const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
+                                        if (!isActive) return null;
+
+                                        if (isInternalUnits) {
+                                            // Nambiar style rendering
+                                            return (
+                                                <div key={id} className="unit-content-inner">
+                                                    <div className="unit-content-header" style={{ marginBottom: '24px' }}>
+                                                        <span className="unit-content-price" style={{ fontSize: '28px', fontWeight: '800', color: '#111827' }}>
+                                                            {unit.priceRange || unit.price}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {unit.configurations && unit.configurations.map((config, cIdx) => (
+                                                        <div key={cIdx} style={{ marginBottom: '32px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                                                <span style={{ fontSize: '16px', fontWeight: '700', color: '#3b82f6', background: '#eff6ff', padding: '4px 12px', borderRadius: '20px' }}>{config.size}</span>
+                                                                <span style={{ color: '#6b7280' }}>{config.price}</span>
+                                                            </div>
+                                                            <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                                                                {[config.image3d, config.image2d].filter(Boolean).map((img, iIdx) => (
+                                                                    <div key={iIdx} className="floor-plan-item" onClick={() => window.open(img, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9' }}>
+                                                                        <img src={img} alt={`Floor Plan ${iIdx}`} style={{ width: '100%', maxHeight: '450px', objectFit: 'contain' }} />
+                                                                        <div className="plan-overlay">
+                                                                            <Maximize size={20} />
+                                                                            <span>View {iIdx === 0 ? '3D' : '2D'} Plan</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        } else {
+                                            // Brigade style rendering
+                                            const plans = unit.floorPlan && unit.floorPlan.length > 0 ? unit.floorPlan : [unit.photos[0]].filter(Boolean);
+                                            return (
+                                                <div key={id} className="unit-content-inner">
+                                                    <div className="unit-content-header" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center' }}>
+                                                        <span className="unit-content-price" style={{ fontSize: '28px', fontWeight: '800', color: '#111827' }}>
+                                                            {formatPrice(unit.price, unit.priceUnit)}
+                                                        </span>
+                                                        {unit.dimensions && (
+                                                            <span className="unit-content-dim" style={{ marginLeft: '16px', color: '#9ca3af', fontSize: '18px' }}>
+                                                                {unit.dimensions}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+                                                        {plans.length > 0 ? plans.map((fp, fpIdx) => {
+                                                            const url = fp.startsWith('http') ? fp : `${API_BASE}${fp.startsWith('/') ? '' : '/'}${fp}`;
+                                                            return (
+                                                                <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                                     <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
+                                                                     <div className="plan-overlay">
+                                                                        <Maximize size={20} />
+                                                                        <span>View Plan</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }) : (
+                                                            <div className="no-floor-plan" style={{ padding: '60px', textAlign: 'center', background: '#f9fafb', borderRadius: '16px', color: '#9ca3af', width: '100%' }}>
+                                                                No preview available for this configuration.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Bottom Full Width Sections */}
@@ -477,9 +757,11 @@ const PropertyDetail = () => {
                                 height="350"
                                 style={{ border: 0, borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                                 loading="lazy"
-                                src={`https://www.google.com/maps?q=${encodeURIComponent(property.propertyName + ', ' + property.location)}&output=embed`}
+                                src={`https://www.google.com/maps?q=${encodeURIComponent(getDisplayTitle(property) + ', ' + property.location)}&output=embed`}
+                                allowFullScreen=""
+                                referrerPolicy="no-referrer-when-downgrade"
                             ></iframe>
-                            <div className="map-overlay-btn" onClick={() => window.open(`https://www.google.com/maps?q=${encodeURIComponent(property.propertyName + ', ' + property.location)}`, '_blank')}>
+                            <div className="map-overlay-btn" onClick={() => window.open(`https://www.google.com/maps?q=${encodeURIComponent(getDisplayTitle(property) + ', ' + property.location)}`, '_blank')}>
                                 <Maximize size={16} />
                                 <span>View in Google Maps</span>
                             </div>
@@ -487,9 +769,10 @@ const PropertyDetail = () => {
                     </div>
 
                     <div className="detail-section">
-                        <h3>Nearby Destinations</h3>
-                        <div className="nearby-calculator-container">
-                            <p className="calculator-subtitle">Enter any destination to check driving distance from {property.propertyName}</p>
+                        <div className="calculator-header">
+                            <h3 className="calculator-title">Nearby Destinations</h3>
+                            <p className="calculator-subtitle">Enter any destination to check driving distance from {getDisplayTitle(property)}</p>
+                        </div>
                             <form onSubmit={handleCalculateDistance} className="distance-calc-form">
                                 <div className="calc-input-wrapper">
                                     <Search size={18} className="calc-search-icon" />
@@ -560,7 +843,6 @@ const PropertyDetail = () => {
                         </div>
                     </div>
 
-                </div>
 
                 {/* Inquiry Modal */}
                 {
@@ -576,24 +858,36 @@ const PropertyDetail = () => {
                                 ) : (
                                     <>
                                         <h3>Send Inquiry</h3>
-                                        <p className="inquiry-for">About: {property.propertyName}</p>
+                                        <p className="inquiry-for">About: {getDisplayTitle(property)}</p>
                                         <form onSubmit={handleInquiry}>
-                                            <div className="input-group">
-                                                <label>Name</label>
-                                                <div className="input-field">
-                                                    <input type="text" placeholder="Your name" required
-                                                        value={inquiryForm.name}
-                                                        onChange={(e) => setInquiryForm({ ...inquiryForm, name: e.target.value })} />
-                                                </div>
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Phone</label>
-                                                <div className="input-field">
-                                                    <input type="tel" placeholder="Your phone" required
-                                                        value={inquiryForm.phone}
-                                                        onChange={(e) => setInquiryForm({ ...inquiryForm, phone: e.target.value })} />
-                                                </div>
-                                            </div>
+                                            {!user && (
+                                                <>
+                                                    <div className="input-group">
+                                                        <label>Name</label>
+                                                        <div className="input-field">
+                                                            <input type="text" placeholder="Your name" required
+                                                                value={inquiryForm.name}
+                                                                onChange={(e) => setInquiryForm({ ...inquiryForm, name: e.target.value })} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="input-group">
+                                                        <label>Email</label>
+                                                        <div className="input-field">
+                                                            <input type="email" placeholder="Your email" required
+                                                                value={inquiryForm.email}
+                                                                onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="input-group">
+                                                        <label>Phone</label>
+                                                        <div className="input-field">
+                                                            <input type="tel" placeholder="Your phone" required
+                                                                value={inquiryForm.phone}
+                                                                onChange={(e) => setInquiryForm({ ...inquiryForm, phone: e.target.value })} />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="input-group">
                                                 <label>Message</label>
                                                 <div className="input-field" style={{ alignItems: 'flex-start' }}>
@@ -710,17 +1004,17 @@ const PropertyDetail = () => {
                                         <th className="feature-column">Features</th>
                                         <th className="property-column current-property text-center">
                                             <div className="prop-img-wrap">
-                                                <img src={photos[0]} alt={property.propertyName} />
+                                                <img src={photos[0]} alt={getDisplayTitle(property)} />
                                             </div>
-                                            <h4 className="compare-prop-name">{property.propertyName}</h4>
+                                            <h4 className="compare-prop-name">{getDisplayTitle(property)}</h4>
                                             <span className="badge badge-current">Current Property</span>
                                         </th>
                                         {similarProperties.map(prop => (
                                             <th key={prop.id} className="property-column text-center">
                                                 <div className="prop-img-wrap">
-                                                    <img src={prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${API_BASE}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'} alt={prop.propertyName} />
+                                                    <img src={prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${API_BASE}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'} alt={getDisplayTitle(prop)} />
                                                 </div>
-                                                <h4 className="compare-prop-name">{prop.propertyName}</h4>
+                                                <h4 className="compare-prop-name">{getDisplayTitle(prop)}</h4>
                                             </th>
                                         ))}
                                     </tr>

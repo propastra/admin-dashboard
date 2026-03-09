@@ -4,6 +4,7 @@ import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight } fro
 import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
+import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
 import './Home.css';
 
@@ -53,6 +54,7 @@ const Home = () => {
     const navigate = useNavigate();
     const { selectedCity, setSelectedCity } = useCity();
     const { user } = useAuth();
+    const { ensureIdentified, showFirstVisitPopup } = useInquiryPopup();
     const [properties, setProperties] = useState([]);
     const [nearbyProperties, setNearbyProperties] = useState([]);
     const [nearbyCategory, setNearbyCategory] = useState('All');
@@ -70,6 +72,7 @@ const Home = () => {
 
     useEffect(() => {
         loadData();
+        showFirstVisitPopup(user);
         trackInteraction({
             interactionType: 'View',
             ipAddress: 'website-user',
@@ -232,9 +235,11 @@ const Home = () => {
     };
 
     const handleSearch = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (searchQuery.trim()) {
-            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+            ensureIdentified(() => {
+                navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+            }, 'To search properties, we\'d love to know you better');
         }
     };
 
@@ -256,7 +261,10 @@ const Home = () => {
                         <div className="home-header-right">
                             <button
                                 className="avatar-btn"
-                                onClick={() => navigate(user ? '/profile' : '/auth')}
+                                onClick={() => {
+                                    if (user) navigate('/profile');
+                                    else ensureIdentified(() => navigate('/profile'), 'Sign in to see your profile');
+                                }}
                             >
                                 {user?.avatar ? (
                                     <img src={user.avatar} alt="Avatar" className="user-avatar-img" />
@@ -282,10 +290,10 @@ const Home = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <button type="button" className="map-btn" onClick={() => navigate('/map')}>
+                        <button type="button" className="map-btn" onClick={() => ensureIdentified(() => navigate('/map'), 'Explore homes on map')}>
                             <MapPin size={18} />
                         </button>
-                        <button type="button" className="filter-btn" onClick={() => navigate('/search')}>
+                        <button type="button" className="filter-btn" onClick={() => ensureIdentified(() => navigate('/search'), 'Find your perfect match')}>
                             <SlidersHorizontal size={18} />
                         </button>
                     </form>
@@ -303,7 +311,10 @@ const Home = () => {
                         <button
                             key={cat}
                             className={`category-tab ${activeCategory === cat ? 'active' : ''}`}
-                            onClick={() => setActiveCategory(cat)}
+                            onClick={() => {
+                                if (user) setActiveCategory(cat);
+                                else ensureIdentified(() => setActiveCategory(cat), 'Select a category to explore');
+                            }}
                         >
                             {cat}
                         </button>
@@ -314,8 +325,8 @@ const Home = () => {
                 {(selectedCity || userCoords) && (
                     <section className="home-section animate-section">
                         <div className="section-header">
-                            <h2>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`)} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
-                            <a className="see-all" style={{ cursor: 'pointer' }} onClick={() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`)}>
+                            <h2>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
+                            <a className="see-all" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))}>
                                 See all <ArrowRight size={16} />
                             </a>
                         </div>
@@ -327,12 +338,17 @@ const Home = () => {
                                     key={cat}
                                     className={`nearby-filter-chip ${nearbyCategory === cat ? 'active' : ''}`}
                                     onClick={() => {
-                                        setNearbyCategory(cat);
-                                        if (userCoords) {
-                                            loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
-                                        } else {
-                                            loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
-                                        }
+                                        const updateFilter = () => {
+                                            setNearbyCategory(cat);
+                                            if (userCoords) {
+                                                loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
+                                            } else {
+                                                loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
+                                            }
+                                        };
+
+                                        if (user) updateFilter();
+                                        else ensureIdentified(updateFilter, 'Filter properties by type');
                                     }}
                                 >
                                     {cat}
@@ -367,7 +383,7 @@ const Home = () => {
                 <section className="home-section animate-section">
                     <div className="section-header">
                         <h2>Explore properties outside <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
-                        <a className="see-all" onClick={() => navigate('/search')}>
+                        <a className="see-all" onClick={() => ensureIdentified(() => navigate('/search'), 'Explore more properties')}>
                             See all <ArrowRight size={16} />
                         </a>
                     </div>
@@ -403,7 +419,10 @@ const Home = () => {
                     </div>
                     <button
                         className="cta-banner-btn"
-                        onClick={() => window.location.href = 'tel:8147069579'}
+                        onClick={() => {
+                            if (user) window.location.href = 'tel:8147069579';
+                            else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
+                        }}
                     >
                         Contact Us Now
                     </button>
@@ -431,8 +450,10 @@ const Home = () => {
                                 key={city.name}
                                 className="location-card"
                                 onClick={() => {
-                                    setSelectedCity(city.name);
-                                    navigate(`/search?city=${city.name}`);
+                                    ensureIdentified(() => {
+                                        setSelectedCity(city.name);
+                                        navigate(`/search?city=${city.name}`);
+                                    }, `Explore properties in ${city.name}`);
                                 }}
                                 style={{ animationDelay: `${index * 0.08}s` }}
                             >

@@ -15,6 +15,7 @@
     "seed:plots": "ts-node src/seedPlots.ts",
     "seed:farmlands": "ts-node src/seedFarmLands.ts",
     "seed:apartments": "ts-node src/seedApartments.ts",
+    "seed:admin": "ts-node src/seed.ts",
     "seed:all": "npm run seed:villas && npm run seed:plots && npm run seed:farmlands && npm run seed:apartments",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

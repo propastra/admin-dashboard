@@ -237,3 +237,21 @@ jobs:
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
             
             echo "Deployment completed successfully!"
+
+            # ----------------------------------------------------
+            # 5. DEPLOY WEBSITE (Customer-facing propastra.com)
+            # ----------------------------------------------------
+            echo "Deploying the Website (customer-facing)..."
+            cd /home/ubuntu/Admin_dashboard/website
+            
+            sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/website/dist || true
+            
+            # Remove old node_modules and dist
+            rm -rf node_modules dist
+            
+            npm install
+            npm run build
+            
+            sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/website/dist
+            
+            echo "Website deployment completed successfully!"

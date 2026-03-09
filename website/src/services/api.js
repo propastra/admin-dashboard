@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const envUrl = import.meta.env.VITE_API_URL || '';
+// Use the env URL if set; otherwise auto-detect (useful when running on a server)
+const API_BASE = envUrl || `http://${window.location.hostname}:5001`;
+
+console.log('[API] Using backend:', API_BASE);
+
 
 const api = axios.create({
     baseURL: API_BASE,
@@ -28,7 +33,7 @@ export const verifyOtp = (data) => api.post('/api/website/auth/verify-otp', data
 
 // ======= PROPERTIES =======
 export const getProperties = (params) => api.get('/api/website/properties', { params });
-export const getFeaturedProperties = (city) => api.get('/api/website/properties/featured', { params: { city } });
+export const getFeaturedProperties = (city, category, excludeCity) => api.get('/api/website/properties/featured', { params: { city, category, excludeCity } });
 export const getCities = () => api.get('/api/website/properties/cities');
 export const getPropertyById = (id) => api.get(`/api/website/properties/${id}`);
 

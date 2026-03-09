@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : (window.location.hostname === 'localhost' ? 'http://localhost:5001' : '');
+const envUrl = import.meta.env.VITE_API_URL || '';
+const fallbackUrl = `http://${window.location.hostname}:5001/api`;
+export const API_BASE_URL = (envUrl && !envUrl.includes('localhost')) ? envUrl.replace(/\/api$/, '') : `http://${window.location.hostname}:5001`;
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api'),
+    baseURL: (envUrl && !envUrl.includes('localhost')) ? envUrl : fallbackUrl,
     headers: {
         'Content-Type': 'application/json',
     },

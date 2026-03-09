@@ -11,12 +11,24 @@ const Inquiry = sequelize.define('Inquiry', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     phone: {
         type: DataTypes.STRING,
         allowNull: false,
     },
     message: {
         type: DataTypes.TEXT,
+    },
+    propertyId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'Properties',
+            key: 'id'
+        }
     },
     status: {
         type: DataTypes.ENUM('New', 'Contacted', 'Visit Scheduled', 'Closed'),
@@ -37,6 +49,14 @@ const Inquiry = sequelize.define('Inquiry', {
     followUpDate: {
         type: DataTypes.DATE,
         allowNull: true,
+    },
+    websiteUserId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'WebsiteUsers',
+            key: 'id'
+        }
     }
 }, {
     timestamps: true,

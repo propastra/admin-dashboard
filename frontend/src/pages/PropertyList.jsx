@@ -75,6 +75,7 @@ const PropertyList = () => {
                             <th style={{ padding: '12px' }}>Category</th>
                             <th style={{ padding: '12px' }}>Location</th>
                             <th style={{ padding: '12px' }}>Price</th>
+                            <th style={{ padding: '12px' }}>Brochure</th>
                             <th style={{ padding: '12px' }}>Status</th>
                             <th style={{ padding: '12px' }}>Actions</th>
                         </tr>
@@ -93,6 +94,15 @@ const PropertyList = () => {
                                 <td style={{ padding: '12px' }}>{property.category}</td>
                                 <td style={{ padding: '12px' }}>{property.location}</td>
                                 <td style={{ padding: '12px' }}>{property.price} {property.priceUnit}</td>
+                                <td style={{ padding: '12px' }}>
+                                    {property.brochure && property.brochure.length > 0 ? (
+                                        <a href={`${API_BASE_URL}${property.brochure[0]}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                            View Brochure
+                                        </a>
+                                    ) : (
+                                        <span style={{ color: '#9ca3af' }}>None</span>
+                                    )}
+                                </td>
                                 <td style={{ padding: '12px' }}>
                                     <span style={{
                                         padding: '4px 8px',

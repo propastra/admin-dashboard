@@ -211,34 +211,26 @@ router.get('/featured', async (req, res) => {
         if (excludeCity && excludeCity !== 'All' && excludeCity !== 'Current Location' && excludeCity !== 'Your Area') {
             const isBangalore = excludeCity.toLowerCase().includes('bangalore') || excludeCity.toLowerCase().includes('bengaluru');
 
-            if (where.location) {
-                // If both are somehow passed, use Op.and (unlikely but safe)
-                if (isBangalore) {
-                    where.location = {
-                        [Op.and]: [
-                            where.location,
-                            { [Op.notLike]: `%Bangalore%` },
-                            { [Op.notLike]: `%Bengaluru%` }
-                        ]
-                    };
+            if (isBangalore) {
+                // If excluding Bangalore, exclude all variations
+                const exclusion = {
+                    [Op.and]: [
+                        { [Op.notLike]: `%Bangalore%` },
+                        { [Op.notLike]: `%Bengaluru%` },
+                        { [Op.notLike]: `%Banglore%` } // Added common typo
+                    ]
+                };
+                if (where.location) {
+                    where.location = { [Op.and]: [where.location, exclusion] };
                 } else {
-                    where.location = {
-                        [Op.and]: [
-                            where.location,
-                            { [Op.notLike]: `%${excludeCity}%` }
-                        ]
-                    };
+                    where.location = exclusion;
                 }
             } else {
-                if (isBangalore) {
-                    where.location = {
-                        [Op.and]: [
-                            { [Op.notLike]: `%Bangalore%` },
-                            { [Op.notLike]: `%Bengaluru%` }
-                        ]
-                    };
+                const exclusion = { [Op.notLike]: `%${excludeCity}%` };
+                if (where.location) {
+                    where.location = { [Op.and]: [where.location, exclusion] };
                 } else {
-                    where.location = { [Op.notLike]: `%${excludeCity}%` };
+                    where.location = exclusion;
                 }
             }
         }
