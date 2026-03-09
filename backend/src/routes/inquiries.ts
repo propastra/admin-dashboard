@@ -95,10 +95,18 @@ router.post('/', async (req, res) => {
         let newInquiry;
         try {
             newInquiry = await Inquiry.create(payload);
-        } catch (createErr) {
+        } catch (createErr: any) {
             const msg = createErr.message || '';
-            if (payload.propertyId && (msg.includes('propertyId') || msg.includes('SQLITE_ERROR') || msg.includes('column') || msg.includes('FOREIGN KEY') || msg.includes('SQLITE_CONSTRAINT'))) {
-                delete payload.propertyId;
+            console.error('Initial Inquiry create attempt failed:', msg);
+            
+            // Self-healing: If DB is missing columns (email, websiteUserId, etc)
+            // strip them and try again so the inquiry at least gets saved.
+            if (msg.includes('no column named') || msg.includes('SQLITE_ERROR') || msg.includes('column')) {
+                if (msg.includes('email')) delete payload.email;
+                if (msg.includes('websiteUserId')) delete payload.websiteUserId;
+                if (msg.includes('propertyId')) delete payload.propertyId;
+                
+                console.log('Retrying inquiry creation with stripped payload:', payload);
                 newInquiry = await Inquiry.create(payload);
             } else {
                 throw createErr;
