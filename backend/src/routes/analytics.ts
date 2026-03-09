@@ -28,7 +28,7 @@ router.post('/track', async (req, res) => {
         }
 
         // Create Interaction (propertyId optional for e.g. Search/Click without property)
-        const interactionPayload = {
+        const interactionPayload: any = {
             interactionType: interactionType || 'View',
             visitorId: visitor.id,
             metadata: metadata && typeof metadata === 'object' ? metadata : undefined
