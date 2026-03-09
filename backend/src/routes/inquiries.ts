@@ -93,23 +93,45 @@ router.post('/', async (req, res) => {
         };
 
         let newInquiry;
-        try {
-            newInquiry = await Inquiry.create(payload);
-        } catch (createErr: any) {
-            const msg = createErr.message || '';
-            console.error('Initial Inquiry create attempt failed:', msg);
-            
-            // Self-healing: If DB is missing columns (email, websiteUserId, etc)
-            // strip them and try again so the inquiry at least gets saved.
-            if (msg.includes('no column named') || msg.includes('SQLITE_ERROR') || msg.includes('column')) {
-                if (msg.includes('email')) delete payload.email;
-                if (msg.includes('websiteUserId')) delete payload.websiteUserId;
-                if (msg.includes('propertyId')) delete payload.propertyId;
-                
-                console.log('Retrying inquiry creation with stripped payload:', payload);
+        let retryCount = 0;
+        let success = false;
+        
+        while (!success && retryCount < 5) {
+            try {
                 newInquiry = await Inquiry.create(payload);
-            } else {
-                throw createErr;
+                success = true;
+            } catch (createErr: any) {
+                const msg = createErr.message || '';
+                console.error(`Inquiry create attempt ${retryCount + 1} failed:`, msg);
+                
+                // If it's a column error, strip the problematic field and try again
+                if (msg.includes('no column named') || msg.includes('SQLITE_ERROR') || msg.includes('column')) {
+                    let stripped = false;
+                    
+                    // Match the specific column name from the error message if possible
+                    const columnMatch = msg.match(/column (\w+) /) || msg.match(/no column named (\w+)/);
+                    if (columnMatch && columnMatch[1]) {
+                        const col = columnMatch[1];
+                        console.log(`Explicitly stripping missing column: ${col}`);
+                        delete payload[col];
+                        stripped = true;
+                    } else {
+                        // Fallback: strip known optional columns if mentioned in error
+                        if (msg.includes('email')) { delete payload.email; stripped = true; }
+                        if (msg.includes('websiteUserId')) { delete payload.websiteUserId; stripped = true; }
+                        if (msg.includes('propertyId')) { delete payload.propertyId; stripped = true; }
+                    }
+
+                    if (!stripped) {
+                        // If we can't identify the column but it's a column error, we must fail
+                        throw createErr;
+                    }
+                    
+                    retryCount++;
+                    console.log(`Retrying inquiry creation (${retryCount}) with stripped payload:`, payload);
+                } else {
+                    throw createErr;
+                }
             }
         }
 
