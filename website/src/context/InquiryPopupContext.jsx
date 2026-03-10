@@ -48,7 +48,7 @@ export const InquiryPopupProvider = ({ children }) => {
         }
     }, [openPopup]);
 
-    const ensureIdentified = useCallback((onIdentify, message = 'We\'d love to know you better') => {
+    const ensureIdentified = useCallback((onIdentify, message = "We'd love to know you better", pid = null) => {
         // Checking localStorage is okay as a sync first-pass, 
         // but checking the user state from useAuth (which we'll pass in or access) is better.
         const token = localStorage.getItem('website_token');
@@ -60,6 +60,7 @@ export const InquiryPopupProvider = ({ children }) => {
         // Otherwise open the popup and queue the action
         openPopup({
             message,
+            propertyId: pid,
             afterSubmit: onIdentify
         });
         return false;

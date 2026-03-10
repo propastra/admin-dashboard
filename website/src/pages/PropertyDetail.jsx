@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X, Download } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
-import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, loginUser, trackInteraction } from '../services/api';
+import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, API_BASE_URL, loginUser, trackInteraction } from '../services/api';
 import { getCoordinates, calculateRoute } from '../utils/mapUtils';
 import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
@@ -76,7 +76,7 @@ const PropertyDetail = () => {
         if (user) {
             toggle();
         } else {
-            ensureIdentified(toggle, 'To save this property, we\'d love to know you better');
+            ensureIdentified(toggle, 'To save this property, we\'d love to know you better', property.id);
         }
     };
 
@@ -313,7 +313,7 @@ const PropertyDetail = () => {
     }
 
     const photos = property.photos && property.photos.length > 0
-        ? property.photos.map(p => p.startsWith('http') ? p : `${API_BASE}${p.startsWith('/') ? '' : '/'}${p}`)
+        ? property.photos.map(p => p.startsWith('http') ? p : `${API_BASE_URL}${p.startsWith('/') ? '' : '/'}${p}`)
         : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'];
 
     const amenities = property.amenities || [];
@@ -374,7 +374,7 @@ const PropertyDetail = () => {
                     <div className="col-main image-wrap" onClick={() => {
                         const open = () => { setActivePhoto(0); setIsGalleryOpen(true); };
                         if (user) open();
-                        else ensureIdentified(open, 'To view individual photos, we\'d love to know you better');
+                        else ensureIdentified(open, 'To view individual photos, we\'d love to know you better', property.id);
                     }}>
                         <img src={photos[0]} alt="Main view" className="masonry-img main-img" />
                     </div>
@@ -385,7 +385,7 @@ const PropertyDetail = () => {
                             <div key={idx} className="image-wrap" onClick={() => {
                                 const open = () => { setActivePhoto(idx + 1); setIsGalleryOpen(true); };
                                 if (user) open();
-                                else ensureIdentified(open, 'To view more photos, we\'d love to know you better');
+                                else ensureIdentified(open, 'To view more photos, we\'d love to know you better', property.id);
                             }}>
                                 <img src={photo} alt={`View ${idx + 2}`} className="masonry-img" />
                                 {/* If it's the 4th thumbnail and there are more photos, show an overlay */}
@@ -470,7 +470,7 @@ const PropertyDetail = () => {
                     <div className="card-bottom-cta">
                         <button className="btn btn-accent btn-wide" onClick={() => {
                             if (user) setShowInquiry(true);
-                            else ensureIdentified(() => setShowInquiry(true), `To message about ${getDisplayTitle(property)}, we'd love to know you better`);
+                            else ensureIdentified(() => setShowInquiry(true), `To message about ${getDisplayTitle(property)}, we'd love to know you better`, property.id);
                         }}>
                             <MessageCircle size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Message
@@ -478,7 +478,7 @@ const PropertyDetail = () => {
                         <button className="btn btn-outline btn-wide" onClick={() => {
                             const callUs = () => window.location.href = 'tel:8147069579';
                             if (user) callUs();
-                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better');
+                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better', property.id);
                         }}>
                             <Phone size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Call us
@@ -549,15 +549,15 @@ const PropertyDetail = () => {
                             <h3>Project Brochure</h3>
                             <div className="brochure-preview-container" onClick={() => {
                                 const openBrochure = () => {
-                                    const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                    const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
                                     window.open(brochureUrl, '_blank');
                                 };
                                 if (user) openBrochure();
-                                else ensureIdentified(openBrochure, 'To view the project brochure, we\'d love to know you better');
+                                else ensureIdentified(openBrochure, 'To view the project brochure, we\'d love to know you better', property.id);
                             }}>
                                 <div className="brochure-images">
                                     {(() => {
-                                        const bFiles = property.brochure.map(p => p.startsWith('http') ? p : `${API_BASE}${p.startsWith('/') ? '' : '/'}${p}`);
+                                        const bFiles = property.brochure.map(p => p.startsWith('http') ? p : `${API_BASE_URL}${p.startsWith('/') ? '' : '/'}${p}`);
                                         if (bFiles.length === 0) {
                                             return (
                                                 <>
@@ -594,11 +594,11 @@ const PropertyDetail = () => {
                                 <button
                                     onClick={() => {
                                         const downloadBrochure = () => {
-                                            const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                            const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
                                             window.open(brochureUrl, '_blank');
                                         };
                                         if (user) downloadBrochure();
-                                        else ensureIdentified(downloadBrochure, 'To download the brochure, we\'d love to know you better');
+                                        else ensureIdentified(downloadBrochure, 'To download the brochure, we\'d love to know you better', property.id);
                                     }}
                                     className="btn btn-primary download-large-btn"
                                     style={{ background: '#3b82f6', color: '#ffffff', border: 'none', height: '44px', padding: '0 24px', fontSize: '15px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '8px', cursor: 'pointer' }}
@@ -718,7 +718,7 @@ const PropertyDetail = () => {
                                                     
                                                     <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
                                                         {plans.length > 0 ? plans.map((fp, fpIdx) => {
-                                                            const url = fp.startsWith('http') ? fp : `${API_BASE}${fp.startsWith('/') ? '' : '/'}${fp}`;
+                                                            const url = fp.startsWith('http') ? fp : `${API_BASE_URL}${fp.startsWith('/') ? '' : '/'}${fp}`;
                                                             return (
                                                                 <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                                      <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />

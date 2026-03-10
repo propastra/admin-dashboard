@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Share2, Star, Phone, MessageCircle, Maximize } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
-import { addFavorite, removeFavorite, API_BASE } from '../services/api';
+import { addFavorite, removeFavorite, API_BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import './PropertyCard.css';
@@ -21,11 +21,11 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         // or open the popup and navigate after submission.
         ensureIdentified(() => {
             navigate(`/property/${property.id}`);
-        }, `To view ${displayTitle}, we'd love to know you better`);
+        }, `To view ${displayTitle}, we'd love to know you better`, property.id);
     };
 
     const photoUrl = property.photos && property.photos.length > 0
-        ? (property.photos[0].startsWith('http') ? property.photos[0] : `${API_BASE}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
+        ? (property.photos[0].startsWith('http') ? property.photos[0] : `${API_BASE_URL}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
         : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop';
 
     const handleFavorite = async (e) => {

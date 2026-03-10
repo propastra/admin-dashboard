@@ -15,7 +15,7 @@ const AgentDashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        if (!user || user.role !== 'Agent') {
+        if (!user || (user.role !== 'Agent' && user.role !== 'Admin')) {
             navigate('/');
             return;
         }
