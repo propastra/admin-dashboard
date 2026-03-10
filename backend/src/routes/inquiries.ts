@@ -172,9 +172,9 @@ router.get('/', auth, async (req, res) => {
             order: [['createdAt', 'DESC']]
         });
         res.json(inquiries);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err.message);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message, stack: err.stack });
     }
 });
 
