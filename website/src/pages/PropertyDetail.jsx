@@ -275,9 +275,21 @@ const PropertyDetail = () => {
     const handleInquiry = async (e) => {
         e.preventDefault();
         try {
-            const res = await submitInquiry({ ...inquiryForm, propertyId: id });
-            setInquirySent(true);
+            const payload = { 
+                ...inquiryForm,
+                propertyId: id
+            };
 
+            // If user is already logged in, the inputs are hidden and inquiryForm lacks name/phone.
+            // We must inject them from the user object.
+            if (user) {
+                payload.name = user.name;
+                payload.phone = user.phone;
+                if (user.email) payload.email = user.email;
+            }
+
+            const res = await submitInquiry(payload);
+            setInquirySent(true);
             // Handle auto-login if token is returned (for guest-to-user conversion)
             if (res.data.token && res.data.user && !user) {
                 login(res.data.token, res.data.user);
