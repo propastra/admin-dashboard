@@ -39,7 +39,7 @@ export const InquiryPopupProvider = ({ children }) => {
 
     const showFirstVisitPopup = useCallback((userOrIndicator) => {
         if (userOrIndicator) return; // Skip if already logged in (or has a pending token)
-        
+
         // Use localStorage so the popup never re-shows on return visits after submitting
         const shown = localStorage.getItem(FIRST_VISIT_KEY);
         if (!shown) {
@@ -48,7 +48,7 @@ export const InquiryPopupProvider = ({ children }) => {
         }
     }, [openPopup]);
 
-    const ensureIdentified = useCallback((onIdentify, message = "We'd love to know you better", pid = null) => {
+    const ensureIdentified = useCallback((onIdentify, message = 'We\'d love to know you better') => {
         // Checking localStorage is okay as a sync first-pass, 
         // but checking the user state from useAuth (which we'll pass in or access) is better.
         const token = localStorage.getItem('website_token');
@@ -60,7 +60,6 @@ export const InquiryPopupProvider = ({ children }) => {
         // Otherwise open the popup and queue the action
         openPopup({
             message,
-            propertyId: pid,
             afterSubmit: onIdentify
         });
         return false;

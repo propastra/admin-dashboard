@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X, Download } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
-import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, API_BASE_URL, loginUser, trackInteraction } from '../services/api';
+import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, BACKEND_URL, loginUser, trackInteraction } from '../services/api';
 import { getCoordinates, calculateRoute } from '../utils/mapUtils';
 import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
@@ -21,12 +21,12 @@ const PropertyDetail = () => {
     const [loading, setLoading] = useState(true);
     const [activePhoto, setActivePhoto] = useState(0);
     const [showInquiry, setShowInquiry] = useState(false);
-    const [inquiryForm, setInquiryForm] = useState({ 
-        name: user?.name || '', 
-        email: user?.email || '', 
-        phone: user?.phone || '', 
-        message: '', 
-        visitDate: '' 
+    const [inquiryForm, setInquiryForm] = useState({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        message: '',
+        visitDate: ''
     });
     const [inquirySent, setInquirySent] = useState(false);
     const [showComparisonModal, setShowComparisonModal] = useState(false);
@@ -76,7 +76,7 @@ const PropertyDetail = () => {
         if (user) {
             toggle();
         } else {
-            ensureIdentified(toggle, 'To save this property, we\'d love to know you better', property.id);
+            ensureIdentified(toggle, 'To save this property, we\'d love to know you better');
         }
     };
 
@@ -231,9 +231,9 @@ const PropertyDetail = () => {
                 const getVal = x => parseFloat(x.price) * (x.priceUnit === 'Cr' ? 100 : 1);
                 return getVal(a) - getVal(b);
             });
-            
+
             setProjectProperties(allProjProps);
-            
+
             // Default active config to current property's ID
             setActiveConfig(property.id);
 
@@ -253,7 +253,7 @@ const PropertyDetail = () => {
 
             for (const p of filtered) {
                 const proj = getDisplayTitle(p).toLowerCase();
-                
+
                 // STRICT EXCLUSION: Never show anything from the same project
                 if (proj === currentProjLower) continue;
 
@@ -275,21 +275,9 @@ const PropertyDetail = () => {
     const handleInquiry = async (e) => {
         e.preventDefault();
         try {
-            const payload = { 
-                ...inquiryForm,
-                propertyId: id
-            };
-
-            // If user is already logged in, the inputs are hidden and inquiryForm lacks name/phone.
-            // We must inject them from the user object.
-            if (user) {
-                payload.name = user.name;
-                payload.phone = user.phone;
-                if (user.email) payload.email = user.email;
-            }
-
-            const res = await submitInquiry(payload);
+            const res = await submitInquiry({ ...inquiryForm, propertyId: id });
             setInquirySent(true);
+
             // Handle auto-login if token is returned (for guest-to-user conversion)
             if (res.data.token && res.data.user && !user) {
                 login(res.data.token, res.data.user);
@@ -325,7 +313,7 @@ const PropertyDetail = () => {
     }
 
     const photos = property.photos && property.photos.length > 0
-        ? property.photos.map(p => p.startsWith('http') ? p : `${API_BASE_URL}${p.startsWith('/') ? '' : '/'}${p}`)
+        ? property.photos.map(p => p.startsWith('http') ? p : `${BACKEND_URL}${p.startsWith('/') ? '' : '/'}${p}`)
         : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'];
 
     const amenities = property.amenities || [];
@@ -386,7 +374,7 @@ const PropertyDetail = () => {
                     <div className="col-main image-wrap" onClick={() => {
                         const open = () => { setActivePhoto(0); setIsGalleryOpen(true); };
                         if (user) open();
-                        else ensureIdentified(open, 'To view individual photos, we\'d love to know you better', property.id);
+                        else ensureIdentified(open, 'To view individual photos, we\'d love to know you better');
                     }}>
                         <img src={photos[0]} alt="Main view" className="masonry-img main-img" />
                     </div>
@@ -397,7 +385,7 @@ const PropertyDetail = () => {
                             <div key={idx} className="image-wrap" onClick={() => {
                                 const open = () => { setActivePhoto(idx + 1); setIsGalleryOpen(true); };
                                 if (user) open();
-                                else ensureIdentified(open, 'To view more photos, we\'d love to know you better', property.id);
+                                else ensureIdentified(open, 'To view more photos, we\'d love to know you better');
                             }}>
                                 <img src={photo} alt={`View ${idx + 2}`} className="masonry-img" />
                                 {/* If it's the 4th thumbnail and there are more photos, show an overlay */}
@@ -482,7 +470,7 @@ const PropertyDetail = () => {
                     <div className="card-bottom-cta">
                         <button className="btn btn-accent btn-wide" onClick={() => {
                             if (user) setShowInquiry(true);
-                            else ensureIdentified(() => setShowInquiry(true), `To message about ${getDisplayTitle(property)}, we'd love to know you better`, property.id);
+                            else ensureIdentified(() => setShowInquiry(true), `To message about ${getDisplayTitle(property)}, we'd love to know you better`);
                         }}>
                             <MessageCircle size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Message
@@ -490,7 +478,7 @@ const PropertyDetail = () => {
                         <button className="btn btn-outline btn-wide" onClick={() => {
                             const callUs = () => window.location.href = 'tel:8147069579';
                             if (user) callUs();
-                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better', property.id);
+                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better');
                         }}>
                             <Phone size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Call us
@@ -561,15 +549,15 @@ const PropertyDetail = () => {
                             <h3>Project Brochure</h3>
                             <div className="brochure-preview-container" onClick={() => {
                                 const openBrochure = () => {
-                                    const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                    const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${BACKEND_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
                                     window.open(brochureUrl, '_blank');
                                 };
                                 if (user) openBrochure();
-                                else ensureIdentified(openBrochure, 'To view the project brochure, we\'d love to know you better', property.id);
+                                else ensureIdentified(openBrochure, 'To view the project brochure, we\'d love to know you better');
                             }}>
                                 <div className="brochure-images">
                                     {(() => {
-                                        const bFiles = property.brochure.map(p => p.startsWith('http') ? p : `${API_BASE_URL}${p.startsWith('/') ? '' : '/'}${p}`);
+                                        const bFiles = property.brochure.map(p => p.startsWith('http') ? p : `${BACKEND_URL}${p.startsWith('/') ? '' : '/'}${p}`);
                                         if (bFiles.length === 0) {
                                             return (
                                                 <>
@@ -606,11 +594,11 @@ const PropertyDetail = () => {
                                 <button
                                     onClick={() => {
                                         const downloadBrochure = () => {
-                                            const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${API_BASE_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
+                                            const brochureUrl = property.brochure[0].startsWith('http') ? property.brochure[0] : `${BACKEND_URL}${property.brochure[0].startsWith('/') ? '' : '/'}${property.brochure[0]}`;
                                             window.open(brochureUrl, '_blank');
                                         };
                                         if (user) downloadBrochure();
-                                        else ensureIdentified(downloadBrochure, 'To download the brochure, we\'d love to know you better', property.id);
+                                        else ensureIdentified(downloadBrochure, 'To download the brochure, we\'d love to know you better');
                                     }}
                                     className="btn btn-primary download-large-btn"
                                     style={{ background: '#3b82f6', color: '#ffffff', border: 'none', height: '44px', padding: '0 24px', fontSize: '15px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '8px', cursor: 'pointer' }}
@@ -624,10 +612,10 @@ const PropertyDetail = () => {
 
                     {(() => {
                         // Detect data structure
-                        const isInternalUnits = property.floorPlan && 
-                                              property.floorPlan.length > 0 && 
-                                              typeof property.floorPlan[0] === 'object' && 
-                                              (property.floorPlan[0].configurations || property.floorPlan[0].type);
+                        const isInternalUnits = property.floorPlan &&
+                            property.floorPlan.length > 0 &&
+                            typeof property.floorPlan[0] === 'object' &&
+                            (property.floorPlan[0].configurations || property.floorPlan[0].type);
 
                         // If not internal units, we use the projectProperties (Brigade style)
                         const units = isInternalUnits ? property.floorPlan : projectProperties;
@@ -637,7 +625,7 @@ const PropertyDetail = () => {
                         return (
                             <div className="info-card floor-plans-card project-units-card" style={{ marginTop: '32px' }}>
                                 <h3>Price & Floor Plan</h3>
-                                
+
                                 <div className="units-tabs" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
                                     {units.map((unit, idx) => {
                                         const id = isInternalUnits ? `idx-${idx}` : unit.id;
@@ -646,8 +634,8 @@ const PropertyDetail = () => {
                                         const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
 
                                         return (
-                                            <button 
-                                                key={id} 
+                                            <button
+                                                key={id}
                                                 className={`unit-tab ${isActive ? 'active' : ''}`}
                                                 onClick={() => setActiveConfig(id)}
                                                 style={{
@@ -690,7 +678,7 @@ const PropertyDetail = () => {
                                                             {unit.priceRange || unit.price}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     {unit.configurations && unit.configurations.map((config, cIdx) => (
                                                         <div key={cIdx} style={{ marginBottom: '32px' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -727,14 +715,14 @@ const PropertyDetail = () => {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    
+
                                                     <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
                                                         {plans.length > 0 ? plans.map((fp, fpIdx) => {
-                                                            const url = fp.startsWith('http') ? fp : `${API_BASE_URL}${fp.startsWith('/') ? '' : '/'}${fp}`;
+                                                            const url = fp.startsWith('http') ? fp : `${BACKEND_URL}${fp.startsWith('/') ? '' : '/'}${fp}`;
                                                             return (
                                                                 <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                                     <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
-                                                                     <div className="plan-overlay">
+                                                                    <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
+                                                                    <div className="plan-overlay">
                                                                         <Maximize size={20} />
                                                                         <span>View Plan</span>
                                                                     </div>
@@ -785,75 +773,75 @@ const PropertyDetail = () => {
                             <h3 className="calculator-title">Nearby Destinations</h3>
                             <p className="calculator-subtitle">Enter any destination to check driving distance from {getDisplayTitle(property)}</p>
                         </div>
-                            <form onSubmit={handleCalculateDistance} className="distance-calc-form">
-                                <div className="calc-input-wrapper">
-                                    <Search size={18} className="calc-search-icon" />
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Kempegowda Airport, Manyata Tech Park"
-                                        value={calcDestination}
-                                        onChange={(e) => setCalcDestination(e.target.value)}
-                                        className="calc-input"
-                                    />
-                                    <button type="submit" className="calc-btn" disabled={calcLoading || !calcDestination.trim()}>
-                                        {calcLoading ? 'Calculating...' : 'Calculate'}
-                                    </button>
-                                </div>
-                            </form>
+                        <form onSubmit={handleCalculateDistance} className="distance-calc-form">
+                            <div className="calc-input-wrapper">
+                                <Search size={18} className="calc-search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Kempegowda Airport, Manyata Tech Park"
+                                    value={calcDestination}
+                                    onChange={(e) => setCalcDestination(e.target.value)}
+                                    className="calc-input"
+                                />
+                                <button type="submit" className="calc-btn" disabled={calcLoading || !calcDestination.trim()}>
+                                    {calcLoading ? 'Calculating...' : 'Calculate'}
+                                </button>
+                            </div>
+                        </form>
 
-                            {calcError && <div className="calc-error-msg">{calcError}</div>}
+                        {calcError && <div className="calc-error-msg">{calcError}</div>}
 
-                            {calcResult && (
-                                <div className="calc-result-box">
-                                    <div className="calc-result-item">
-                                        <Route size={20} className="result-icon-accent" />
-                                        <div className="result-text-group">
-                                            <span className="result-label">Distance</span>
-                                            <span className="result-value">{calcResult.distanceKm} km</span>
-                                        </div>
-                                    </div>
-                                    <div className="calc-result-item">
-                                        <div className="nearby-icon-wrap" style={{ backgroundColor: 'var(--accent-light, #e0e7ff)', color: 'var(--accent, #4f46e5)', width: '36px', height: '36px', padding: '8px' }}><MapPin size={20} /></div>
-                                        <div className="result-text-group">
-                                            <span className="result-label">Est. Driving Time</span>
-                                            <span className="result-value">{calcResult.durationMin} mins</span>
-                                        </div>
+                        {calcResult && (
+                            <div className="calc-result-box">
+                                <div className="calc-result-item">
+                                    <Route size={20} className="result-icon-accent" />
+                                    <div className="result-text-group">
+                                        <span className="result-label">Distance</span>
+                                        <span className="result-value">{calcResult.distanceKm} km</span>
                                     </div>
                                 </div>
-                            )}
+                                <div className="calc-result-item">
+                                    <div className="nearby-icon-wrap" style={{ backgroundColor: 'var(--accent-light, #e0e7ff)', color: 'var(--accent, #4f46e5)', width: '36px', height: '36px', padding: '8px' }}><MapPin size={20} /></div>
+                                    <div className="result-text-group">
+                                        <span className="result-label">Est. Driving Time</span>
+                                        <span className="result-value">{calcResult.durationMin} mins</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                            <div className="nearby-grid" style={{ marginTop: '24px' }}>
-                                <div className="nearby-item" onClick={() => { setCalcDestination('Kempegowda International Airport, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
-                                    <div className="nearby-icon-wrap"><MapPin size={18} /></div>
-                                    <div className="nearby-info">
-                                        <span className="nearby-title">International Airport</span>
-                                        <span className="nearby-dist">Click to calculate</span>
-                                    </div>
+                        <div className="nearby-grid" style={{ marginTop: '24px' }}>
+                            <div className="nearby-item" onClick={() => { setCalcDestination('Kempegowda International Airport, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
+                                <div className="nearby-icon-wrap"><MapPin size={18} /></div>
+                                <div className="nearby-info">
+                                    <span className="nearby-title">International Airport</span>
+                                    <span className="nearby-dist">Click to calculate</span>
                                 </div>
-                                <div className="nearby-item" onClick={() => { setCalcDestination('Manyata Tech Park, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
-                                    <div className="nearby-icon-wrap"><MapPin size={18} /></div>
-                                    <div className="nearby-info">
-                                        <span className="nearby-title">Primary Tech Parks</span>
-                                        <span className="nearby-dist">Click to calculate</span>
-                                    </div>
+                            </div>
+                            <div className="nearby-item" onClick={() => { setCalcDestination('Manyata Tech Park, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
+                                <div className="nearby-icon-wrap"><MapPin size={18} /></div>
+                                <div className="nearby-info">
+                                    <span className="nearby-title">Primary Tech Parks</span>
+                                    <span className="nearby-dist">Click to calculate</span>
                                 </div>
-                                <div className="nearby-item">
-                                    <div className="nearby-icon-wrap"><MapPin size={18} /></div>
-                                    <div className="nearby-info">
-                                        <span className="nearby-title">Hospitals & Schools</span>
-                                        <span className="nearby-dist">Within 5-10 km</span>
-                                    </div>
+                            </div>
+                            <div className="nearby-item">
+                                <div className="nearby-icon-wrap"><MapPin size={18} /></div>
+                                <div className="nearby-info">
+                                    <span className="nearby-title">Hospitals & Schools</span>
+                                    <span className="nearby-dist">Within 5-10 km</span>
                                 </div>
-                                <div className="nearby-item">
-                                    <div className="nearby-icon-wrap"><MapPin size={18} /></div>
-                                    <div className="nearby-info">
-                                        <span className="nearby-title">Malls & Markets</span>
-                                        <span className="nearby-dist">2-5 km away</span>
-                                    </div>
+                            </div>
+                            <div className="nearby-item">
+                                <div className="nearby-icon-wrap"><MapPin size={18} /></div>
+                                <div className="nearby-info">
+                                    <span className="nearby-title">Malls & Markets</span>
+                                    <span className="nearby-dist">2-5 km away</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
 
                 {/* Inquiry Modal */}
@@ -1024,7 +1012,7 @@ const PropertyDetail = () => {
                                         {similarProperties.map(prop => (
                                             <th key={prop.id} className="property-column text-center">
                                                 <div className="prop-img-wrap">
-                                                    <img src={prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${API_BASE}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'} alt={getDisplayTitle(prop)} />
+                                                    <img src={prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${BACKEND_URL}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'} alt={getDisplayTitle(prop)} />
                                                 </div>
                                                 <h4 className="compare-prop-name">{getDisplayTitle(prop)}</h4>
                                             </th>

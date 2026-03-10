@@ -38,7 +38,7 @@ function App() {
       const hasToken = !!localStorage.getItem('website_token');
       showFirstVisitPopup(hasToken ? { id: 'pending' } : null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, isMainSite]); // Only run when loading state settles — NOT on user changes
 
   // Guard: if user tries to access protected pages directly without being logged in.
@@ -49,7 +49,7 @@ function App() {
     const protectedPaths = ['/search', '/map', '/favorites', '/profile', '/property/'];
     const isProtected = protectedPaths.some(path => location.pathname.startsWith(path));
     const hasToken = !!localStorage.getItem('website_token');
-    
+
     if (isMainSite && isProtected && !user && !hasToken) {
       // Only redirect if we are sure there is no token AND user is not logged in
       const timer = setTimeout(() => {

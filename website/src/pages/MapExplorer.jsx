@@ -5,7 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ChevronLeft, Maximize, MapPin, Navigation } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
-import { getProperties, API_BASE_URL } from '../services/api';
+import { getProperties, API_BASE, BACKEND_URL } from '../services/api';
 import './MapExplorer.css';
 
 // Fix for default marker icons in Leaflet with React
@@ -51,7 +51,7 @@ const LocationMarker = ({ properties }) => {
                             <div className="popup-content" onClick={() => navigate(`/property/${prop.id}`)}>
                                 <div className="popup-image">
                                     <img
-                                        src={prop.photos?.[0] ? `${API_BASE_URL}${prop.photos[0]}` : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300'}
+                                        src={prop.photos?.[0] ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${BACKEND_URL}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300'}
                                         alt={prop.propertyName}
                                     />
                                     <span className="popup-badge">{prop.category}</span>
