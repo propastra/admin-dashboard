@@ -108,6 +108,13 @@ sequelize.sync()
         } catch (e) {
             // Column already exists
         }
+        
+        try {
+            await sequelize.query('ALTER TABLE Inquiries ADD COLUMN email VARCHAR(255);');
+            logger.info('Added email to Inquiries');
+        } catch (e) {
+            // Column already exists
+        }
 
         server.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
