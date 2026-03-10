@@ -69,6 +69,7 @@ app.use((req: any, res: any, next: any) => {
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Admin Dashboard Routes
 app.use('/api/auth', require('./routes/auth'));
