@@ -110,7 +110,7 @@ router.post('/', async (req, res) => {
                     let stripped = false;
 
                     // Match the specific column name from the error message if possible
-                    const columnMatch = msg.match(/column (\w+) /) || msg.match(/no column named (\w+)/);
+                    const columnMatch = msg.match(/no column named (\w+)/) || msg.match(/column (\w+) /);
                     if (columnMatch && columnMatch[1]) {
                         const col = columnMatch[1];
                         console.log(`Explicitly stripping missing column: ${col}`);
