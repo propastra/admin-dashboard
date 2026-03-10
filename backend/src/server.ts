@@ -90,14 +90,29 @@ app.get('/', (req, res) => {
 });
 
 // Sync Database and Start Server
-// Remove { alter: true } and { force: true } so SQLite never drops or attempts to automatically alter tables after they've been successfully created.
 sequelize.sync()
-    .then(() => {
+    .then(async () => {
         logger.info('Database synced');
+        
+        // Safely add missing columns to production DB since { alter: true } is disabled
+        try {
+            await sequelize.query('ALTER TABLE Inquiries ADD COLUMN propertyId CHAR(36);');
+            logger.info('Added propertyId to Inquiries');
+        } catch (e) {
+            // Column already exists
+        }
+        
+        try {
+            await sequelize.query('ALTER TABLE Inquiries ADD COLUMN websiteUserId CHAR(36);');
+            logger.info('Added websiteUserId to Inquiries');
+        } catch (e) {
+            // Column already exists
+        }
+
         server.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
         });
     })
-    .catch(err => {
+    .catch((err: any) => {
         logger.error('Unable to sync database: %s', err.message);
     });
