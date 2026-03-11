@@ -116,6 +116,13 @@ sequelize.sync()
             // Column already exists
         }
 
+        try {
+            await sequelize.query('ALTER TABLE Properties ADD COLUMN masterPlan TEXT;');
+            logger.info('Added masterPlan to Properties');
+        } catch (e) {
+            // Column already exists
+        }
+
         server.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
         });

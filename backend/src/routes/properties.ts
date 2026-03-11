@@ -61,20 +61,21 @@ router.get('/:id', async (req, res) => {
 // @route   POST api/properties
 // @desc    Add new property
 // @access  Private
-router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }])], async (req, res) => {
+router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
         const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
 
-        const photos = req.files && req.files['photos'] ? req.files['photos'].map((file: any) => `/uploads/${file.filename}`) : [];
-        const brochure = req.files && req.files['brochure'] ? req.files['brochure'].map((file: any) => `/uploads/${file.filename}`) : [];
-        const floorPlan = req.files && req.files['floorPlan'] ? req.files['floorPlan'].map((file: any) => `/uploads/${file.filename}`) : [];
+        const masterPlan = req.files && req.files['masterPlan'] ? (req.files['masterPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
+        const photos = req.files && req.files['photos'] ? (req.files['photos'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
+        const brochure = req.files && req.files['brochure'] ? (req.files['brochure'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
+        const floorPlan = req.files && req.files['floorPlan'] ? (req.files['floorPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
 
         let parsedAmenities = [];
         try {
             parsedAmenities = amenities ? JSON.parse(amenities) : [];
         } catch (e) {
             console.error('Error parsing amenities JSON:', e.message);
-            parsedAmenities = amenities ? amenities.split(',').map((s: string) => s.trim()) : [];
+            parsedAmenities = amenities ? (amenities as string).split(',').map((s: string) => s.trim()) : [];
         }
 
         let parsedHighlights = [];
@@ -96,6 +97,7 @@ router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name
             photos,
             brochure,
             floorPlan,
+            masterPlan,
             projectName,
             amenities: parsedAmenities,
             status,
@@ -126,19 +128,19 @@ router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name
 // @route   PUT api/properties/:id
 // @desc    Update property
 // @access  Private
-router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }])], async (req, res) => {
+router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
 
         let photos = property.photos || [];
         let brochure = property.brochure || [];
         let floorPlan = property.floorPlan || [];
+        let masterPlan = property.masterPlan || [];
 
-        // Handle existing - FIXED: if undefined, it might mean no changes or it might mean cleared. 
-        // In multipart form, if empty it might not be sent.
+        // Handle existing
         if ('existingPhotos' in req.body) {
             const keptPhotos = Array.isArray(existingPhotos) ? existingPhotos : (existingPhotos ? [existingPhotos] : []);
             photos = photos.filter((p: string) => keptPhotos.includes(p));
@@ -154,19 +156,29 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             floorPlan = floorPlan.filter((p: string) => keptFloorPlan.includes(p));
         }
 
+        if ('existingMasterPlan' in req.body) {
+            const keptMasterPlan = Array.isArray(existingMasterPlan) ? existingMasterPlan : (existingMasterPlan ? [existingMasterPlan] : []);
+            masterPlan = masterPlan.filter((p: string) => keptMasterPlan.includes(p));
+        }
+
         // Handle new files
         if (req.files) {
-            if (req.files['photos']) {
-                const newPhotos = req.files['photos'].map((file: any) => `/uploads/${file.filename}`);
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+            if (files['photos']) {
+                const newPhotos = files['photos'].map((file: any) => `/uploads/${file.filename}`);
                 photos = [...photos, ...newPhotos];
             }
-            if (req.files['brochure']) {
-                const newBrochures = req.files['brochure'].map((file: any) => `/uploads/${file.filename}`);
+            if (files['brochure']) {
+                const newBrochures = files['brochure'].map((file: any) => `/uploads/${file.filename}`);
                 brochure = [...brochure, ...newBrochures];
             }
-            if (req.files['floorPlan']) {
-                const newFloorPlans = req.files['floorPlan'].map((file: any) => `/uploads/${file.filename}`);
+            if (files['floorPlan']) {
+                const newFloorPlans = files['floorPlan'].map((file: any) => `/uploads/${file.filename}`);
                 floorPlan = [...floorPlan, ...newFloorPlans];
+            }
+            if (files['masterPlan']) {
+                const newMasterPlans = files['masterPlan'].map((file: any) => `/uploads/${file.filename}`);
+                masterPlan = [...masterPlan, ...newMasterPlans];
             }
         }
 
@@ -175,7 +187,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             try {
                 parsedAmenities = typeof amenities === 'string' ? JSON.parse(amenities) : amenities;
             } catch (e) {
-                parsedAmenities = amenities.split(',').map((s: string) => s.trim());
+                parsedAmenities = (amenities as string).split(',').map((s: string) => s.trim());
             }
         }
 
@@ -200,6 +212,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             photos,
             brochure,
             floorPlan,
+            masterPlan,
             projectName,
             amenities: parsedAmenities,
             status,
