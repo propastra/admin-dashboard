@@ -51,7 +51,8 @@ const CitySelect = () => {
 
     const handleCityClick = (cityName) => {
         setSelectedCity(cityName);
-        navigate('/');
+        const returnTab = new URLSearchParams(window.location.search).get('returnTab');
+        navigate(returnTab ? `/?tab=${returnTab}` : '/');
     };
 
     const handleDetectLocation = () => {
@@ -66,7 +67,8 @@ const CitySelect = () => {
                 // Once permission is granted and coords retrieved, just set generic context and let Home handle the map load
                 setSelectedCity("Current Location");
                 setDetecting(false);
-                navigate('/');
+                const returnTab = new URLSearchParams(window.location.search).get('returnTab');
+                navigate(returnTab ? `/?tab=${returnTab}` : '/');
             },
             (error) => {
                 console.warn('Geolocation error:', error.message);

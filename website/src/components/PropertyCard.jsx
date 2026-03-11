@@ -51,6 +51,50 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         }
     };
 
+    const handleShare = async (e) => {
+        e.stopPropagation();
+        const title = displayTitle;
+        const url = `${window.location.origin}/property/${property.id}`;
+        const text = `Check out ${title} on Ayora`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, text, url });
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                console.error('Web Share API failed:', err);
+            }
+        }
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+                alert('Link copied to clipboard!');
+            } else {
+                throw new Error('Clipboard API not available');
+            }
+        } catch (err) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = url;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) {
+                    alert('Link copied to clipboard!');
+                }
+            } catch (fallbackErr) {
+                alert('Could not copy link.');
+            }
+        }
+    };
+
     const formatPrice = (price, unit) => {
         const p = parseFloat(price);
         if (unit === 'Cr') return `₹${p} Cr`;
@@ -77,7 +121,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                     >
                         <Heart size={18} fill={isFavorited ? '#EF476F' : 'none'} color={isFavorited ? '#EF476F' : 'currentColor'} />
                     </button>
-                    <button className="action-icon" onClick={(e) => e.stopPropagation()}>
+                    <button className="action-icon" onClick={handleShare}>
                         <Share2 size={18} />
                     </button>
                 </div>

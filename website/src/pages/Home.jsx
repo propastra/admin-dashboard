@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight } from 'lucide-react';
-import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction } from '../services/api';
+import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
 import './Home.css';
 
-const categories = ['Buy', 'Rent', 'Sell', 'Invest'];
+const categories = ['Buy', 'Rent', 'Invest'];
 
 const groupProperties = (apiData) => {
     if (!apiData || !Array.isArray(apiData)) return [];
@@ -60,11 +60,21 @@ const Home = () => {
     const [nearbyCategory, setNearbyCategory] = useState('All');
     const [cities, setCities] = useState([]);
     const [favoriteIds, setFavoriteIds] = useState(new Set());
-    const [activeCategory, setActiveCategory] = useState('Buy');
+    const [activeCategory, setActiveCategory] = useState(() => {
+        const urlTab = new URLSearchParams(window.location.search).get('tab');
+        if (urlTab) return urlTab;
+        return localStorage.getItem('active_category') || null;
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadingNearby, setLoadingNearby] = useState(false);
     const [showAllLocations, setShowAllLocations] = useState(false);
+    const [investSubmitted, setInvestSubmitted] = useState(() => {
+        return localStorage.getItem('invest_submitted') === 'true';
+    });
+    const [buyListingType, setBuyListingType] = useState(() => {
+        return localStorage.getItem('buy_listing_type') || null;
+    }); // 'Developer' or 'Owner'
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -82,6 +92,18 @@ const Home = () => {
     }, []);
 
     useEffect(() => {
+        if (activeCategory) {
+            localStorage.setItem('active_category', activeCategory);
+        } else {
+            localStorage.removeItem('active_category');
+        }
+
+        if (buyListingType) {
+            localStorage.setItem('buy_listing_type', buyListingType);
+        } else {
+            localStorage.removeItem('buy_listing_type');
+        }
+
         // Auto-detect location if not already manually set
         if (!selectedCity || selectedCity === "Current Location") {
             detectLocation();
@@ -92,7 +114,7 @@ const Home = () => {
             loadData(selectedCity);
             loadNearbyProperties(selectedCity);
         }
-    }, [selectedCity]);
+    }, [selectedCity, activeCategory, buyListingType]);
 
     const detectLocation = () => {
         if ("geolocation" in navigator) {
@@ -143,13 +165,29 @@ const Home = () => {
         setLoading(true);
         try {
             const actualCity = city === "Current Location" || city === "Your Area" || !city ? '' : city;
-            // The main tabs are ['Buy', 'Rent', 'Sell', 'Invest'].
-            // We pass null for the requested city but pass 'actualCity' to 'excludeCity' so we get properties outside the current area.
+
+            let categoryParam = (activeCategory === 'Buy' || activeCategory === 'Invest') ? null : activeCategory;
+
+            // For Buy category, we handle Developer/Owner filtering
+            if (activeCategory === 'Buy') {
+                if (buyListingType === 'Owner') {
+                    categoryParam = 'Resale';
+                }
+            }
+
             const [propRes, cityRes] = await Promise.all([
-                getFeaturedProperties(null, activeCategory === 'Buy' ? null : activeCategory, actualCity),
+                getFeaturedProperties(null, categoryParam, actualCity),
                 getCities(),
             ]);
-            const groupedProps = groupProperties(propRes.data);
+
+            let fetchedProps = propRes.data;
+
+            // Manual filter for Developer in Buy tab: excludes Resale and Rental
+            if (activeCategory === 'Buy' && buyListingType === 'Developer') {
+                fetchedProps = fetchedProps.filter(p => p.category !== 'Resale' && p.category !== 'Rental');
+            }
+
+            const groupedProps = groupProperties(fetchedProps);
             setProperties(groupedProps.slice(0, 6)); // Ensure we only show 6 cards total
             setCities(cityRes.data);
         } catch (err) {
@@ -173,14 +211,33 @@ const Home = () => {
                 params.city = city;
             }
 
-            if (category && category !== 'All') {
-                params.category = category;
+            let categoryFilter = category || (activeCategory === 'Buy' || activeCategory === 'Invest' ? null : activeCategory);
+
+            // Handle Buy Listing Type filters for Nearby
+            if (activeCategory === 'Buy' && !category) {
+                if (buyListingType === 'Owner') {
+                    categoryFilter = 'Resale';
+                }
+            }
+
+            if (categoryFilter && categoryFilter !== 'All') {
+                params.category = categoryFilter;
             }
 
             const res = await getProperties(params);
 
             // If we have user coordinates, calculate distance for labeling
             let props = res.data.properties;
+
+            // Manual filter for Buy tab constraints
+            if (activeCategory === 'Buy') {
+                if (buyListingType === 'Developer') {
+                    props = props.filter(p => p.category !== 'Resale' && p.category !== 'Rental');
+                } else if (buyListingType === 'Owner') {
+                    props = props.filter(p => p.category === 'Resale');
+                }
+            }
+
             if (lat && lng) {
                 props = props.map(p => {
                     const dist = calculateDistance(lat, lng, p.latitude, p.longitude);
@@ -243,22 +300,42 @@ const Home = () => {
         }
     };
 
+    const handleInvestSubmit = async () => {
+        try {
+            await submitInquiry({
+                name: user?.name || 'Investment Lead',
+                phone: user?.phone || '0000000000',
+                message: 'Investment inquiry'
+            });
+            setInvestSubmitted(true);
+            localStorage.setItem('invest_submitted', 'true');
+        } catch (err) {
+            console.error('Failed to submit investment inquiry', err);
+            // Optionally could fallback to just setting true even if it fails, or show error
+            setInvestSubmitted(true);
+            localStorage.setItem('invest_submitted', 'true');
+        }
+    };
+
     return (
         <div className="home-page">
             {/* Hero Section with branded gradient */}
             <div className="home-hero">
                 <div className="home-hero-content">
                     <header className="home-header">
-                        <div className="home-header-left" onClick={() => navigate('/city')}>
-                            <div className="location-icon-wrap">
-                                <MapPin size={18} />
-                            </div>
-                            <div>
-                                <span className="location-label">Location</span>
-                                <span className="location-city">{displayCity || selectedCity || 'Select City'} <ChevronRight size={14} /></span>
-                            </div>
+                        <div className="home-header-left">
+                            <img src="/images/header-logo.png" alt="PropAstra Logo" className="home-logo-img" />
                         </div>
                         <div className="home-header-right">
+                            <div className="home-header-location" onClick={() => navigate('/city')}>
+                                <div className="location-icon-wrap">
+                                    <MapPin size={18} />
+                                </div>
+                                <div className="location-text-wrap">
+                                    <span className="location-label">Location</span>
+                                    <span className="location-city">{displayCity || selectedCity || 'Select City'} <ChevronRight size={14} /></span>
+                                </div>
+                            </div>
                             <button
                                 className="avatar-btn"
                                 onClick={() => {
@@ -312,6 +389,14 @@ const Home = () => {
                             key={cat}
                             className={`category-tab ${activeCategory === cat ? 'active' : ''}`}
                             onClick={() => {
+                                if (cat === 'Buy') {
+                                    if (!selectedCity || selectedCity === "Select City") {
+                                        navigate(`/city?returnTab=${cat}`);
+                                    } else {
+                                        setActiveCategory(cat);
+                                    }
+                                    return;
+                                }
                                 if (user) setActiveCategory(cat);
                                 else ensureIdentified(() => setActiveCategory(cat), 'Select a category to explore');
                             }}
@@ -321,95 +406,154 @@ const Home = () => {
                     ))}
                 </div>
 
-                {/* Properties Near You - Dynamic Section */}
-                {(selectedCity || userCoords) && (
-                    <section className="home-section animate-section">
-                        <div className="section-header">
-                            <h2>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
-                            <a className="see-all" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))}>
-                                See all <ArrowRight size={16} />
-                            </a>
-                        </div>
+                {activeCategory === 'Buy' && (selectedCity && selectedCity !== "Select City") && !buyListingType && (
+                    <div className="listing-type-toggle">
+                        <button
+                            className={`listing-type-btn ${buyListingType === 'Developer' ? 'active' : ''}`}
+                            onClick={() => setBuyListingType('Developer')}
+                        >
+                            Developer listing
+                        </button>
+                        <button
+                            className={`listing-type-btn ${buyListingType === 'Owner' ? 'active' : ''}`}
+                            onClick={() => setBuyListingType('Owner')}
+                        >
+                            Owner listing
+                        </button>
+                    </div>
+                )}
 
-                        {/* Sub-category Filter for Nearby */}
-                        <div className="nearby-filters">
-                            {['All', 'Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Rental'].map(cat => (
-                                <button
-                                    key={cat}
-                                    className={`nearby-filter-chip ${nearbyCategory === cat ? 'active' : ''}`}
-                                    onClick={() => {
-                                        const updateFilter = () => {
-                                            setNearbyCategory(cat);
-                                            if (userCoords) {
-                                                loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
+                {activeCategory === 'Invest' && (
+                    <section className="home-section invest-section">
+                        <div className="invest-content">
+                            {investSubmitted ? (
+                                <div className="invest-success">
+                                    <h3>Thank you, we will reach out soon....</h3>
+                                </div>
+                            ) : (
+                                <div className="invest-form">
+                                    <h3>Talk To Our Expert Know more</h3>
+                                    <button
+                                        className="invest-submit-btn"
+                                        onClick={() => {
+                                            if (user) {
+                                                handleInvestSubmit();
                                             } else {
-                                                loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
+                                                ensureIdentified(handleInvestSubmit, 'To speak to our experts, please verify your details');
                                             }
-                                        };
-
-                                        if (user) updateFilter();
-                                        else ensureIdentified(updateFilter, 'Filter properties by type');
-                                    }}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                                        }}
+                                    >
+                                        Submit
+                                    </button>
+                                </div>
+                            )}
                         </div>
-
-                        {loadingNearby ? (
-                            <div className="loading-scroll"><div className="spinner-small"></div></div>
-                        ) : nearbyProperties.length > 0 ? (
-                            <div className="property-scroll">
-                                {nearbyProperties.map((prop, index) => (
-                                    <div key={prop.id} className="property-scroll-item" style={{ animationDelay: `${index * 0.1}s` }}>
-                                        <PropertyCard
-                                            property={prop}
-                                            isFavorited={favoriteIds.has(prop.id)}
-                                            onFavoriteToggle={handleFavoriteToggle}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="empty-state-small" style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                                <p style={{ fontSize: '18px', fontWeight: '500' }}>We are coming soon...</p>
-                                <p style={{ fontSize: '14px', marginTop: '8px' }}>No {nearbyCategory !== 'All' ? nearbyCategory : ''} properties available in {displayCity || selectedCity} yet.</p>
-                            </div>
-                        )}
                     </section>
                 )}
 
-                {/* Featured Estates */}
-                <section className="home-section animate-section">
-                    <div className="section-header">
-                        <h2>Explore properties outside <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
-                        <a className="see-all" onClick={() => ensureIdentified(() => navigate('/search'), 'Explore more properties')}>
-                            See all <ArrowRight size={16} />
-                        </a>
-                    </div>
-
-                    {loading ? (
-                        <div className="loading-screen"><div className="spinner"></div></div>
-                    ) : properties.length > 0 ? (
-                        <div className="property-scroll">
-                            {properties.map((prop, index) => (
-                                <div key={prop.id} className="property-scroll-item" style={{ animationDelay: `${index * 0.1}s` }}>
-                                    <PropertyCard
-                                        property={prop}
-                                        isFavorited={favoriteIds.has(prop.id)}
-                                        onFavoriteToggle={handleFavoriteToggle}
-                                    />
+                {(activeCategory && (activeCategory !== 'Buy' || buyListingType)) && (
+                    <>
+                        {/* Properties Near You - Dynamic Section */}
+                        {(selectedCity || userCoords) && (
+                            <section className="home-section animate-section">
+                                <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <h2 style={{ margin: 0 }}>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
+                                        {activeCategory === 'Buy' && buyListingType && (
+                                            <button 
+                                                onClick={() => setBuyListingType(null)} 
+                                                style={{ background: 'var(--brand-bg)', color: 'var(--brand)', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                                            >
+                                                Switch to {buyListingType === 'Developer' ? 'Owner' : 'Developer'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <a className="see-all" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))}>
+                                        See all <ArrowRight size={16} />
+                                    </a>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="empty-state" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                            <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
-                            <h3 style={{ fontSize: '24px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>We are coming soon...</h3>
-                            <p style={{ color: '#6b7280' }}>Amazing properties will be listed here shortly.</p>
-                        </div>
-                    )}
-                </section>
+
+                                {/* Sub-category Filter for Nearby */}
+                                <div className="nearby-filters">
+                                    {['All', 'Villa', 'Plot', 'Farm Land', 'Residential', 'Resale', 'Rental'].map(cat => (
+                                        <button
+                                            key={cat}
+                                            className={`nearby-filter-chip ${nearbyCategory === cat ? 'active' : ''}`}
+                                            onClick={() => {
+                                                const updateFilter = () => {
+                                                    setNearbyCategory(cat);
+                                                    if (userCoords) {
+                                                        loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
+                                                    } else {
+                                                        loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
+                                                    }
+                                                };
+
+                                                if (user) updateFilter();
+                                                else ensureIdentified(updateFilter, 'Filter properties by type');
+                                            }}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {loadingNearby ? (
+                                    <div className="loading-scroll"><div className="spinner-small"></div></div>
+                                ) : nearbyProperties.length > 0 ? (
+                                    <div className="property-scroll">
+                                        {nearbyProperties.map((prop, index) => (
+                                            <div key={prop.id} className="property-scroll-item" style={{ animationDelay: `${index * 0.1}s` }}>
+                                                <PropertyCard
+                                                    property={prop}
+                                                    isFavorited={favoriteIds.has(prop.id)}
+                                                    onFavoriteToggle={handleFavoriteToggle}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="empty-state-small" style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+                                        <p style={{ fontSize: '18px', fontWeight: '500' }}>We are coming soon...</p>
+                                        <p style={{ fontSize: '14px', marginTop: '8px' }}>No {nearbyCategory !== 'All' ? nearbyCategory : ''} properties available in {displayCity || selectedCity} yet.</p>
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Featured Estates */}
+                        <section className="home-section animate-section">
+                            <div className="section-header">
+                                <h2>Explore properties outside <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
+                                <a className="see-all" onClick={() => ensureIdentified(() => navigate('/search'), 'Explore more properties')}>
+                                    See all <ArrowRight size={16} />
+                                </a>
+                            </div>
+
+                            {loading ? (
+                                <div className="loading-screen"><div className="spinner"></div></div>
+                            ) : properties.length > 0 ? (
+                                <div className="property-scroll">
+                                    {properties.map((prop, index) => (
+                                        <div key={prop.id} className="property-scroll-item" style={{ animationDelay: `${index * 0.1}s` }}>
+                                            <PropertyCard
+                                                property={prop}
+                                                isFavorited={favoriteIds.has(prop.id)}
+                                                onFavoriteToggle={handleFavoriteToggle}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="empty-state" style={{ textAlign: 'center', padding: '60px 20px' }}>
+                                    <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+                                    <h3 style={{ fontSize: '24px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>We are coming soon...</h3>
+                                    <p style={{ color: '#6b7280' }}>Amazing properties will be listed here shortly.</p>
+                                </div>
+                            )}
+                        </section>
+                    </>
+                )}
 
                 {/* CTA Banner - Moved here as requested */}
                 <div className="home-cta-banner" style={{ marginTop: '12px', marginBottom: '32px' }}>

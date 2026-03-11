@@ -54,8 +54,20 @@
 .home-header-left {
     display: flex;
     align-items: center;
+}
+
+.home-logo-img {
+    height: 56px;
+    width: auto;
+    object-fit: contain;
+}
+
+.home-header-location {
+    display: flex;
+    align-items: center;
     gap: 10px;
     cursor: pointer;
+    margin-right: 4px;
 }
 
 .location-icon-wrap {
@@ -69,7 +81,7 @@
     color: var(--white);
 }
 
-.home-header-left div:last-child {
+.location-text-wrap {
     display: flex;
     flex-direction: column;
 }
@@ -556,3 +568,89 @@
         width: 100%;
     }
 }
+
+/* Invest Section */
+.invest-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-2xl);
+    text-align: center;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.invest-content h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: var(--space-xl);
+}
+
+.invest-success h3 {
+    color: var(--success);
+    margin: 0;
+}
+
+.invest-success {
+    background: var(--success-light, #d1fae5);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--success);
+}
+
+.invest-submit-btn {
+    background: var(--gradient-brand);
+    color: var(--white);
+    border: none;
+    padding: 12px 32px;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.invest-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-brand);
+}
+
+/* Listing Type Toggle */
+.listing-type-toggle {
+    display: flex;
+    gap: 12px;
+    margin-bottom: var(--space-xl);
+    padding: 2px;
+}
+
+.listing-type-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid var(--gray-200);
+    background: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.listing-type-btn.active {
+    background: var(--brand);
+    color: var(--white);
+    border-color: var(--brand);
+    box-shadow: 0 4px 12px rgba(59, 63, 140, 0.2);
+}
+
+.listing-type-btn:hover:not(.active) {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+

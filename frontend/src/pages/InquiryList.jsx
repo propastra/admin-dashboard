@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import * as XLSX from 'xlsx';
 
 const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -9,12 +10,18 @@ const formatDate = (dateStr) => {
 
 const InquiryList = () => {
     const [inquiries, setInquiries] = useState([]);
+    const [filteredInquiries, setFilteredInquiries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
+    const [dateFilter, setDateFilter] = useState('all');
 
     useEffect(() => {
         fetchInquiries();
     }, []);
+
+    useEffect(() => {
+        applyFilters();
+    }, [inquiries, dateFilter]);
 
     const fetchInquiries = async () => {
         try {
@@ -26,6 +33,29 @@ const InquiryList = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const applyFilters = () => {
+        if (dateFilter === 'all') {
+            setFilteredInquiries(inquiries);
+            return;
+        }
+
+        const now = new Date();
+        const filtered = inquiries.filter(inq => {
+            const inqDate = new Date(inq.createdAt);
+            const diffTime = Math.abs(now.getTime() - inqDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (dateFilter === '7d') return diffDays <= 7;
+            if (dateFilter === '30d') return diffDays <= 30;
+            if (dateFilter === '60d') return diffDays <= 60;
+            if (dateFilter === 'month') {
+                return inqDate.getMonth() === now.getMonth() && inqDate.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
+        setFilteredInquiries(filtered);
     };
 
     const handleStatusChange = async (id, newStatus) => {
@@ -53,13 +83,59 @@ const InquiryList = () => {
         }
     };
 
-    const selected = selectedId ? inquiries.find((i) => i.id === selectedId) : null;
+    const exportToExcel = () => {
+        const dataToExport = filteredInquiries.map(inq => ({
+            Date: new Date(inq.createdAt).toLocaleString(),
+            Name: inq.name || '-',
+            Phone: inq.phone || '-',
+            Email: inq.email || '-',
+            Property: inq.Property?.propertyName || '-',
+            Location: inq.Property?.location || '-',
+            Message: inq.message || '-',
+            Status: inq.status || 'New'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inquiries");
+        XLSX.writeFile(workbook, `Inquiries_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    const selected = selectedId ? filteredInquiries.find((i) => i.id === selectedId) : null;
 
     if (loading) return <div>Loading...</div>;
 
     return (
         <div style={{ padding: '0 4px' }}>
-            <h1 style={{ marginBottom: '20px' }}>Inquiries</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                <h1>Inquiries</h1>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <select 
+                        value={dateFilter} 
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                    >
+                        <option value="all">All Time</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="60d">Last 60 Days</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    <button 
+                        onClick={exportToExcel}
+                        style={{ 
+                            padding: '8px 16px', 
+                            backgroundColor: '#10b981', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer' 
+                        }}
+                    >
+                        Export to Excel
+                    </button>
+                </div>
+            </div>
 
             <div className="card" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -76,7 +152,7 @@ const InquiryList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {inquiries.map((inquiry) => (
+                        {filteredInquiries.map((inquiry) => (
                             <React.Fragment key={inquiry.id}>
                                 <tr
                                     style={{
@@ -197,7 +273,7 @@ const InquiryList = () => {
                         ))}
                     </tbody>
                 </table>
-                {inquiries.length === 0 && (
+                {filteredInquiries.length === 0 && (
                     <p style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>No inquiries found.</p>
                 )}
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X, Download } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, MapPin, Maximize, Phone, MessageCircle, Star, Check, Search, Route, Mail, Lock, Eye, EyeOff, GitCompare, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
 import { getPropertyById, getProperties, submitInquiry, addFavorite, removeFavorite, API_BASE, BACKEND_URL, loginUser, trackInteraction } from '../services/api';
 import { getCoordinates, calculateRoute } from '../utils/mapUtils';
@@ -82,19 +82,50 @@ const PropertyDetail = () => {
 
 
     const handleShare = async () => {
+        const title = getDisplayTitle(property);
+        const url = window.location.href;
+        const text = `Check out ${title} on Ayora`;
+
         if (navigator.share) {
             try {
-                await navigator.share({
-                    title: getDisplayTitle(property),
-                    text: `Check out ${getDisplayTitle(property)} on Ayora`,
-                    url: window.location.href,
-                });
+                await navigator.share({ title, text, url });
+                return;
             } catch (err) {
-                console.error('Error sharing:', err);
+                if (err.name === 'AbortError') return;
+                console.error('Web Share API failed:', err);
             }
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert('Link copied to clipboard!');
+        }
+
+        // Fallback to clipboard
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+                alert('Link copied to clipboard!');
+            } else {
+                throw new Error('Clipboard API not available');
+            }
+        } catch (err) {
+            console.warn('Clipboard API failed, trying legacy fallback:', err);
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = url;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) {
+                    alert('Link copied to clipboard!');
+                } else {
+                    throw new Error('Legacy copy failed');
+                }
+            } catch (fallbackErr) {
+                console.error('All share methods failed:', fallbackErr);
+                alert('Could not copy link. Please copy the URL manually.');
+            }
         }
     };
 
@@ -543,6 +574,48 @@ const PropertyDetail = () => {
                             </div>
                         </div>
                     )}
+                    {(() => {
+                        const mpFiles = property.masterPlan ? (Array.isArray(property.masterPlan) ? property.masterPlan : (() => {
+                            try {
+                                const parsed = JSON.parse(property.masterPlan);
+                                return Array.isArray(parsed) ? parsed : [];
+                            } catch (e) {
+                                return [];
+                            }
+                        })()) : [];
+
+                        if (mpFiles.length === 0) return null;
+
+                        return (
+                            <div className="info-card master-plan-card" style={{ marginTop: '32px' }}>
+                                <h3>Master Plan</h3>
+                                <div className="master-plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                                    {mpFiles.map((mp, mpIdx) => {
+                                        const url = mp.startsWith('http') ? mp : `${BACKEND_URL}${mp.startsWith('/') ? '' : '/'}${mp}`;
+                                        const isPdf = mp.toLowerCase().endsWith('.pdf');
+                                        
+                                        return (
+                                            <div key={mpIdx} className="master-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+                                                {isPdf ? (
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
+                                                        <span style={{ fontWeight: '600', color: '#4b5563' }}>View Master Plan PDF</span>
+                                                    </div>
+                                                ) : (
+                                                    <img src={url} alt="Master Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
+                                                )}
+                                                <div className="plan-overlay">
+                                                    <Maximize size={20} />
+                                                    <span>View {isPdf ? 'PDF' : 'Full Image'}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
 
                     {property.brochure && property.brochure.length > 0 && (
                         <div className="info-card brochure-card">
@@ -968,15 +1041,47 @@ const PropertyDetail = () => {
                             marginTop: '30px', display: 'flex', gap: '24px', alignItems: 'center',
                             background: 'rgba(255,255,255,0.1)', padding: '12px 24px', borderRadius: '100px'
                         }} onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => setActivePhoto((prev) => (prev > 0 ? prev - 1 : photos.length - 1))} style={{
-                                background: 'white', color: 'black', border: 'none', padding: '10px 24px', borderRadius: '100px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px'
-                            }}>Previous</button>
-                            <div style={{ color: 'white', fontWeight: '500', minWidth: '60px', textAlign: 'center' }}>
-                                {activePhoto + 1} <span style={{ opacity: 0.6 }}>/ {photos.length}</span>
+                            <button 
+                                onClick={() => setActivePhoto((prev) => (prev > 0 ? prev - 1 : photos.length - 1))} 
+                                disabled={photos.length <= 1}
+                                style={{
+                                    background: photos.length <= 1 ? 'rgba(255,255,255,0.1)' : 'white', 
+                                    color: photos.length <= 1 ? 'rgba(255,255,255,0.3)' : 'black', 
+                                    border: 'none', 
+                                    width: '44px',
+                                    height: '44px',
+                                    borderRadius: '50%', 
+                                    cursor: photos.length <= 1 ? 'default' : 'pointer', 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <div style={{ color: 'white', fontWeight: '600', minWidth: '80px', textAlign: 'center', fontSize: '16px' }}>
+                                {activePhoto + 1} <span style={{ opacity: 0.5, fontWeight: '400', margin: '0 4px' }}>/</span> {photos.length}
                             </div>
-                            <button onClick={() => setActivePhoto((prev) => (prev < photos.length - 1 ? prev + 1 : 0))} style={{
-                                background: 'white', color: 'black', border: 'none', padding: '10px 24px', borderRadius: '100px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px'
-                            }}>Next</button>
+                            <button 
+                                onClick={() => setActivePhoto((prev) => (prev < photos.length - 1 ? prev + 1 : 0))} 
+                                disabled={photos.length <= 1}
+                                style={{
+                                    background: photos.length <= 1 ? 'rgba(255,255,255,0.1)' : 'white', 
+                                    color: photos.length <= 1 ? 'rgba(255,255,255,0.3)' : 'black', 
+                                    border: 'none', 
+                                    width: '44px',
+                                    height: '44px',
+                                    borderRadius: '50%', 
+                                    cursor: photos.length <= 1 ? 'default' : 'pointer', 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <ChevronRight size={24} />
+                            </button>
                         </div>
                     )}
                 </div>

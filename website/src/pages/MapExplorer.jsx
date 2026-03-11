@@ -46,6 +46,9 @@ const LocationMarker = ({ properties }) => {
                         key={prop.id}
                         position={[prop.latitude, prop.longitude]}
                         icon={customIcon}
+                        eventHandlers={{
+                            mouseover: (e) => e.target.openPopup(),
+                        }}
                     >
                         <Popup className="property-popup">
                             <div className="popup-content" onClick={() => navigate(`/property/${prop.id}`)}>

@@ -47,6 +47,10 @@ const PropertyForm = () => {
     const [existingFloorPlan, setExistingFloorPlan] = useState([]);
     const [previewFloorPlan, setPreviewFloorPlan] = useState([]);
 
+    const [masterPlan, setMasterPlan] = useState([]);
+    const [existingMasterPlan, setExistingMasterPlan] = useState([]);
+    const [previewMasterPlan, setPreviewMasterPlan] = useState([]);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [modalImage, setModalImage] = useState(null);
@@ -86,9 +90,21 @@ const PropertyForm = () => {
                         bhk: data.bhk || '',
                         projectHighlights: data.projectHighlights ? (Array.isArray(data.projectHighlights) ? data.projectHighlights.join(', ') : data.projectHighlights) : ''
                     });
-                    setExistingPhotos(data.photos || []);
-                    setExistingBrochure(data.brochure || []);
-                    setExistingFloorPlan(data.floorPlan || []);
+                    const parseArray = (val) => {
+                        if (!val) return [];
+                        if (Array.isArray(val)) return val;
+                        try {
+                            const parsed = JSON.parse(val);
+                            return Array.isArray(parsed) ? parsed : [];
+                        } catch (e) {
+                            return [];
+                        }
+                    };
+
+                    setExistingPhotos(parseArray(data.photos));
+                    setExistingBrochure(parseArray(data.brochure));
+                    setExistingFloorPlan(parseArray(data.floorPlan));
+                    setExistingMasterPlan(parseArray(data.masterPlan));
                 } catch (err) {
                     console.error("Error fetching property", err);
                     const msg = err.response?.data?.message || "Failed to load property details. The server might be experiencing issues.";
@@ -131,6 +147,13 @@ const PropertyForm = () => {
         setPreviewFloorPlan(prev => [...prev, ...newPreviews]);
     };
 
+    const handleMasterPlanChange = (e) => {
+        const files = Array.from(e.target.files);
+        setMasterPlan(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => ({ url: URL.createObjectURL(file), type: file.type, name: file.name }));
+        setPreviewMasterPlan(prev => [...prev, ...newPreviews]);
+    };
+
     const handleClearNewPhotos = () => {
         setPhotos([]);
         setPreviewPhotos([]);
@@ -143,6 +166,10 @@ const PropertyForm = () => {
         setFloorPlan([]);
         setPreviewFloorPlan([]);
     };
+    const handleClearNewMasterPlan = () => {
+        setMasterPlan([]);
+        setPreviewMasterPlan([]);
+    };
 
     const handleRemoveExistingPhoto = (photoPath) => {
         setExistingPhotos(prev => prev.filter(p => p !== photoPath));
@@ -154,6 +181,10 @@ const PropertyForm = () => {
 
     const handleRemoveExistingFloorPlan = (fpPath) => {
         setExistingFloorPlan(prev => prev.filter(f => f !== fpPath));
+    };
+
+    const handleRemoveExistingMasterPlan = (mpPath) => {
+        setExistingMasterPlan(prev => prev.filter(m => m !== mpPath));
     };
 
     const handleSubmit = async (e) => {
@@ -174,11 +205,13 @@ const PropertyForm = () => {
         photos.forEach(file => data.append('photos', file));
         brochure.forEach(file => data.append('brochure', file));
         floorPlan.forEach(file => data.append('floorPlan', file));
+        masterPlan.forEach(file => data.append('masterPlan', file));
 
         if (isEdit) {
             existingPhotos.forEach(photo => data.append('existingPhotos', photo));
             existingBrochure.forEach(b => data.append('existingBrochure', b));
             existingFloorPlan.forEach(f => data.append('existingFloorPlan', f));
+            existingMasterPlan.forEach(m => data.append('existingMasterPlan', m));
         }
 
         try {
@@ -222,7 +255,6 @@ const PropertyForm = () => {
                         <option value="Villa">Villa</option>
                         <option value="Plot">Plot</option>
                         <option value="Farm Land">Farm Land</option>
-                        <option value="Commercial">Commercial</option>
                         <option value="Residential">Residential</option>
                         <option value="Resale">Resale</option>
                         <option value="Rental">Rental</option>
@@ -378,7 +410,8 @@ const PropertyForm = () => {
                     </div>
                     <input type="file" multiple accept="image/*,video/*" onChange={handleFileChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {existingPhotos.map((photo, index) => {
+                        {Array.isArray(existingPhotos) && existingPhotos.map((photo, index) => {
+                            if (typeof photo !== 'string') return null;
                             const isVideo = photo.match(/\.(mp4|webm|ogg|mov)$/i);
                             return (
                                 <div key={`exist-${index}`} style={{ position: 'relative' }}>
@@ -410,7 +443,8 @@ const PropertyForm = () => {
                     </div>
                     <input type="file" multiple accept="image/*,application/pdf" onChange={handleFloorPlanChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {existingFloorPlan.map((file, index) => {
+                        {Array.isArray(existingFloorPlan) && existingFloorPlan.map((file, index) => {
+                            if (typeof file !== 'string') return null;
                             const isPdf = file.match(/\.pdf$/i);
                             return (
                                 <div key={`exist-fp-${index}`} style={{ position: 'relative' }}>
@@ -441,6 +475,45 @@ const PropertyForm = () => {
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Master Plan (Images or PDFs)</label>
+                        {previewMasterPlan.length > 0 && (
+                            <button type="button" onClick={handleClearNewMasterPlan} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
+                        )}
+                    </div>
+                    <input type="file" multiple accept="image/*,application/pdf" onChange={handleMasterPlanChange} className="form-input" />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {Array.isArray(existingMasterPlan) && existingMasterPlan.map((file, index) => {
+                            if (typeof file !== 'string') return null;
+                            const isPdf = file.match(/\.pdf$/i);
+                            return (
+                                <div key={`exist-mp-${index}`} style={{ position: 'relative' }}>
+                                    {isPdf ? (
+                                        <a href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+                                            <span style={{ fontSize: '24px' }}>🗺️</span>
+                                            <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing PDF</span>
+                                        </a>
+                                    ) : (
+                                        <img src={`${API_BASE_URL}${file}`} alt="Existing Master Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${file}`)} />
+                                    )}
+                                    <button type="button" onClick={() => handleRemoveExistingMasterPlan(file)} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
+                                </div>
+                            );
+                        })}
+                        {previewMasterPlan.map((file, index) => (
+                            file.type === 'application/pdf' ? (
+                                <div key={`new-mp-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '24px' }}>🗺️</span>
+                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                                </div>
+                            ) : (
+                                <img key={`new-mp-${index}`} src={file.url} alt="Preview Master Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setModalImage(file.url)} />
+                            )
+                        ))}
+                    </div>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <label className="form-label">Brochures (PDFs)</label>
                         {previewBrochure.length > 0 && (
                             <button type="button" onClick={handleClearNewBrochure} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
@@ -448,7 +521,7 @@ const PropertyForm = () => {
                     </div>
                     <input type="file" multiple accept="application/pdf" onChange={handleBrochureChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {existingBrochure.map((file, index) => (
+                        {Array.isArray(existingBrochure) && existingBrochure.map((file, index) => (
                             <div key={`exist-b-${index}`} style={{ position: 'relative' }}>
                                 <a href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
                                     <span style={{ fontSize: '24px' }}>📕</span>

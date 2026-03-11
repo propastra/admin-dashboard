@@ -53,6 +53,11 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         localStorage.removeItem('website_token');
+        localStorage.removeItem('selectedCity');
+        localStorage.removeItem('active_category');
+        localStorage.removeItem('buy_listing_type');
+        localStorage.removeItem('invest_submitted');
+        localStorage.removeItem('inquiry_first_visit_shown');
         setToken(null);
         setUser(null);
         setLoading(false);

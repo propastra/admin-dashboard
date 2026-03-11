@@ -20,14 +20,7 @@ const propertyTypes = {
         { label: '5 Bhk', value: '5 BHK', type: 'config' },
         { label: '5+ Bhk', value: '5+ BHK', type: 'config' },
     ],
-    commercial: [
-        { label: 'Office Space', value: 'Commercial', type: 'category' },
-        { label: 'Shop/Showroom', value: 'Commercial', type: 'category' },
-        { label: 'Commercial Land', value: 'Commercial', type: 'category' },
-        { label: 'Warehouse/Godown', value: 'Commercial', type: 'category' },
-        { label: 'Industrial Building', value: 'Commercial', type: 'category' },
-        { label: 'Industrial Shed', value: 'Commercial', type: 'category' },
-    ],
+
     others: [
         { label: 'Farm Land', value: 'Farm Land', type: 'category' },
         { label: 'Resale', value: 'Resale', type: 'category' },
@@ -205,7 +198,7 @@ const SearchPage = () => {
         const totalSelected = filters.categories.length + filters.configurations.length;
         if (totalSelected === 0) return 'Property Type';
         if (totalSelected === 1) {
-            const allItems = [...propertyTypes.residential, ...propertyTypes.bhk, ...propertyTypes.commercial, ...propertyTypes.others];
+            const allItems = [...propertyTypes.residential, ...propertyTypes.bhk, ...propertyTypes.others];
             const found = allItems.find(i =>
                 (i.type === 'category' && filters.categories.includes(i.value)) ||
                 (i.type === 'config' && filters.configurations.includes(i.value))
@@ -215,8 +208,7 @@ const SearchPage = () => {
 
         // Show "Flat +1" style label if multiple selected
         if (filters.categories.length > 0) {
-            const first = propertyTypes.residential.find(r => filters.categories.includes(r.value)) ||
-                propertyTypes.commercial.find(r => filters.categories.includes(r.value));
+            const first = propertyTypes.residential.find(r => filters.categories.includes(r.value));
             return `${first ? first.label : 'Selected'} +${totalSelected - 1}`;
         }
         return `${totalSelected} Selected`;
@@ -330,23 +322,7 @@ const SearchPage = () => {
                                 </div>
                             </div>
 
-                            <div className="filter-section">
-                                <div className="filter-section-title">
-                                    <span>Commercial</span>
-                                    <ChevronUp size={16} />
-                                </div>
-                                <div className="chip-grid">
-                                    {propertyTypes.commercial.map(item => (
-                                        <button
-                                            key={item.label}
-                                            className={`filter-chip ${filters.categories.includes(item.value) ? 'active' : ''}`}
-                                            onClick={() => toggleType(item)}
-                                        >
-                                            {item.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+
 
                             <div className="filter-section">
                                 <div className="filter-section-title">

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { io } from 'socket.io-client';
 
 const LeadList = () => {
     const [leads, setLeads] = useState([]);
@@ -8,53 +7,50 @@ const LeadList = () => {
 
     useEffect(() => {
         fetchLeads();
-
-        // Connect to Socket.IO backend for real-time updates
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001', {
-            transports: ['websocket', 'polling']
-        });
-
-        socket.on('new_lead', (newLead) => {
-            console.log('New real-time lead received:', newLead);
-
-            // Format to match API structure if needed
-            const formattedLead = {
-                id: newLead.userId + '_' + Date.now(),
-                loginMethod: newLead.method,
-                ipAddress: 'Website User',
-                createdAt: newLead.timestamp,
-                WebsiteUser: {
-                    name: newLead.name,
-                    email: newLead.email,
-                    phone: newLead.phone,
-                }
-            };
-
-            setLeads(prev => [formattedLead, ...prev]);
-        });
-
-        return () => {
-            socket.disconnect();
-        };
     }, []);
 
     const fetchLeads = async () => {
         try {
-            const res = await api.get('/leads');
-            setLeads(res.data);
+            const res = await api.get('/inquiries');
+            const investmentLeads = res.data.filter(inq => inq.message === 'Investment inquiry');
+            setLeads(investmentLeads);
             setLoading(false);
         } catch (err) {
-            console.error('Error fetching leads:', err);
+            console.error('Error fetching investment inquiries:', err);
             setLoading(false);
         }
     };
 
-    if (loading) return <div>Loading Leads...</div>;
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await api.put(`/inquiries/${id}`, { status: newStatus });
+            setLeads(leads.map(lead =>
+                lead.id === id ? { ...lead, status: newStatus } : lead
+            ));
+        } catch (err) {
+            console.error('Failed to update status:', err);
+            alert('Failed to update status');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this investment inquiry?')) {
+            try {
+                await api.delete(`/inquiries/${id}`);
+                setLeads(leads.filter(lead => lead.id !== id));
+            } catch (err) {
+                console.error('Failed to delete inquiry:', err);
+                alert('Failed to delete inquiry');
+            }
+        }
+    };
+
+    if (loading) return <div>Loading Investment Inquiries...</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1>Login Leads</h1>
+                <h1>Investment Inquiries</h1>
             </div>
 
             <div className="table-container card">
@@ -65,33 +61,61 @@ const LeadList = () => {
                             <th style={{ padding: '12px' }}>Name</th>
                             <th style={{ padding: '12px' }}>Email</th>
                             <th style={{ padding: '12px' }}>Phone</th>
-                            <th style={{ padding: '12px' }}>Login Method</th>
-                            <th style={{ padding: '12px' }}>IP Address</th>
+                            <th style={{ padding: '12px' }}>Message</th>
+                            <th style={{ padding: '12px' }}>Status</th>
+                            <th style={{ padding: '12px' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {leads.length > 0 ? leads.map(lead => (
                             <tr key={lead.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px' }}>{new Date(lead.createdAt).toLocaleString()}</td>
-                                <td style={{ padding: '12px' }}>{lead.WebsiteUser?.name || '-'}</td>
-                                <td style={{ padding: '12px' }}>{lead.WebsiteUser?.email || '-'}</td>
-                                <td style={{ padding: '12px' }}>{lead.WebsiteUser?.phone || '-'}</td>
+                                <td style={{ padding: '12px' }}>{lead.name || '-'}</td>
+                                <td style={{ padding: '12px' }}>{lead.email || '-'}</td>
+                                <td style={{ padding: '12px' }}>{lead.phone || '-'}</td>
+                                <td style={{ padding: '12px' }}>{lead.message || '-'}</td>
                                 <td style={{ padding: '12px' }}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        backgroundColor: lead.loginMethod.includes('OTP') ? '#dbeafe' : '#e0e7ff',
-                                        color: lead.loginMethod.includes('OTP') ? '#1e40af' : '#3730a3'
-                                    }}>
-                                        {lead.loginMethod}
-                                    </span>
+                                    <select
+                                        value={lead.status || 'New'}
+                                        onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #d1d5db',
+                                            backgroundColor:
+                                                lead.status === 'New' ? '#dbeafe' :
+                                                    lead.status === 'Contacted' ? '#fef3c7' :
+                                                        lead.status === 'Visit Scheduled' ? '#e0e7ff' : '#d1fae5',
+                                            color:
+                                                lead.status === 'New' ? '#1e40af' :
+                                                    lead.status === 'Contacted' ? '#92400e' :
+                                                        lead.status === 'Visit Scheduled' ? '#3730a3' : '#065f46'
+                                        }}
+                                    >
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Visit Scheduled">Visit Scheduled</option>
+                                        <option value="Closed">Closed</option>
+                                    </select>
                                 </td>
-                                <td style={{ padding: '12px' }}>{lead.ipAddress || '-'}</td>
+                                <td style={{ padding: '12px' }}>
+                                    <button
+                                        onClick={() => handleDelete(lead.id)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#ef4444',
+                                            cursor: 'pointer',
+                                            padding: '4px 8px'
+                                        }}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>No leads found.</td>
+                                <td colSpan="7" style={{ padding: '20px', textAlign: 'center' }}>No investment inquiries found.</td>
                             </tr>
                         )}
                     </tbody>

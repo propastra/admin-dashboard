@@ -15,7 +15,7 @@ const Property = sequelize.define('Property', {
         type: DataTypes.TEXT,
     },
     category: {
-        type: DataTypes.ENUM('Villa', 'Plot', 'Farm Land', 'Commercial', 'Residential', 'Resale', 'Rental'),
+        type: DataTypes.ENUM('Villa', 'Plot', 'Farm Land', 'Residential', 'Resale', 'Rental'),
         allowNull: true,
     },
     location: {
@@ -45,6 +45,10 @@ const Property = sequelize.define('Property', {
         defaultValue: [],
     },
     floorPlan: {
+        type: DataTypes.JSON,
+        defaultValue: [],
+    },
+    masterPlan: {
         type: DataTypes.JSON,
         defaultValue: [],
     },

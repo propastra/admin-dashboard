@@ -52,7 +52,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                         <FaEnvelope style={{ marginRight: '10px' }} /> Inquiries
                     </Link>
                     <Link to="/leads" style={linkStyle('/leads')}>
-                        <FaBolt style={{ marginRight: '10px', color: '#f59e0b' }} /> Live Leads
+                        <FaBolt style={{ marginRight: '10px', color: '#f59e0b' }} /> Investment Inquiries
                     </Link>
                 </nav>
                 <div style={{ padding: '20px', borderTop: '1px solid #334155' }}>
