@@ -1,19 +1,19 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import AuthSelect from './pages/AuthSelect';
-import Login from './pages/Login';
-import MobileLogin from './pages/MobileLogin';
-import Register from './pages/Register';
-import CitySelect from './pages/CitySelect';
-import Home from './pages/Home';
-import PropertyDetail from './pages/PropertyDetail';
-import SearchPage from './pages/SearchPage';
-import MapExplorer from './pages/MapExplorer';
-import Favorites from './pages/Favorites';
-import Profile from './pages/Profile';
-import AgentDashboard from './pages/AgentDashboard';
-import BottomNav from './components/BottomNav';
-import InquiryPopup from './components/InquiryPopup';
+const AuthSelect = React.lazy(() => import('./pages/AuthSelect'));
+const Login = React.lazy(() => import('./pages/Login'));
+const MobileLogin = React.lazy(() => import('./pages/MobileLogin'));
+const Register = React.lazy(() => import('./pages/Register'));
+const CitySelect = React.lazy(() => import('./pages/CitySelect'));
+const Home = React.lazy(() => import('./pages/Home'));
+const PropertyDetail = React.lazy(() => import('./pages/PropertyDetail'));
+const SearchPage = React.lazy(() => import('./pages/SearchPage'));
+const MapExplorer = React.lazy(() => import('./pages/MapExplorer'));
+const Favorites = React.lazy(() => import('./pages/Favorites'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const AgentDashboard = React.lazy(() => import('./pages/AgentDashboard'));
+const BottomNav = React.lazy(() => import('./components/BottomNav'));
+const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
 import { useHeartbeat } from './hooks/useHeartbeat';
 import { useAuth } from './context/AuthContext';
 import { useInquiryPopup } from './context/InquiryPopupContext';
@@ -60,7 +60,7 @@ function App() {
   }, [location.pathname, user, loading, isMainSite, navigate]);
 
   return (
-    <>
+    <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
       <Routes>
         {/* Auth Pages */}
         <Route path="/auth" element={<AuthSelect />} />
@@ -83,7 +83,7 @@ function App() {
 
       {showBottomNav && <BottomNav />}
       {isMainSite && <InquiryPopup />}
-    </>
+    </React.Suspense>
   );
 }
 

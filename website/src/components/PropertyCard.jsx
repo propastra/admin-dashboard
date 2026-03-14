@@ -107,7 +107,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     return (
         <div className="property-card" onClick={openPropertyWithInquiry}>
             <div className="property-card-image">
-                <img src={photoUrl} alt={displayTitle} />
+                <img src={photoUrl} alt={displayTitle} loading="lazy" decoding="async" />
                 <div className="property-card-badges">
                     <span className="badge-category">{property.category}</span>
                     {property.distance && (
@@ -168,4 +168,4 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     );
 };
 
-export default PropertyCard;
+export default React.memo(PropertyCard);

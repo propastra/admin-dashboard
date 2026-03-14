@@ -1,0 +1,90 @@
+.why-trust-us {
+    padding: 60px 20px;
+    background-color: #fcfcfc;
+    border-radius: var(--radius-xl, 24px);
+    margin: 40px 0;
+    font-family: var(--font-family);
+}
+
+.why-trust-title {
+    text-align: center;
+    font-size: var(--font-size-3xl, 32px);
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 50px;
+    letter-spacing: -0.5px;
+}
+
+.highlight-text {
+    color: var(--brand, #3B3F8C);
+    position: relative;
+    display: inline-block;
+}
+
+.trust-features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.trust-feature-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    transition: transform 0.3s ease;
+}
+
+.trust-feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.trust-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.04);
+}
+
+.trust-feature-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.trust-feature-description {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .trust-features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .trust-features-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .why-trust-title {
+        font-size: 24px;
+    }
+    
+    .why-trust-us {
+        padding: 40px 15px;
+    }
+}

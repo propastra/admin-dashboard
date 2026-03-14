@@ -78,11 +78,13 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/visitors', require('./routes/visitors'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/leads', require('./routes/leads'));
+app.use('/api/developers', require('./routes/developers'));
 
 // Public Website Routes
 app.use('/api/website/auth', require('./routes/websiteAuth'));
 app.use('/api/website/properties', require('./routes/websiteProperties'));
 app.use('/api/website/favorites', require('./routes/websiteFavorites'));
+app.use('/api/website/developers', require('./routes/developers'));
 
 // Test API
 app.get('/', (req, res) => {

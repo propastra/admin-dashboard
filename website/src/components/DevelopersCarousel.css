@@ -1,0 +1,226 @@
+.developers-section {
+    padding: 60px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.section-header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.title-group h2 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    color: #1a1a1a;
+}
+
+.section-subtitle {
+    color: #666;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.developers-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 50px; /* Space for arrows */
+}
+
+.developers-container {
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 20px 0;
+    scroll-behavior: smooth;
+}
+
+.developers-container::-webkit-scrollbar {
+    display: none;
+}
+
+.developers-grid {
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-template-columns: repeat(auto-fill, 240px);
+    gap: 24px;
+    width: max-content;
+}
+
+.developer-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    width: 260px;
+    min-height: 90px;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.developer-card:hover {
+    transform: translateY(-15px) scale(1.02);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.12);
+    border-color: var(--brand);
+    animation-play-state: paused;
+}
+
+/* Shine effect on hover */
+.developer-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-25deg);
+    transition: none;
+    z-index: 1;
+}
+
+.developer-card:hover::before {
+    animation: shine 0.8s ease;
+}
+
+@keyframes shine {
+    100% { left: 200%; }
+}
+
+.developer-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand), transparent);
+    transition: width 0.4s ease;
+}
+
+.developer-card:hover::after {
+    width: 100%;
+}
+
+.developer-logo-wrap {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fdfdfd;
+    border-radius: 14px;
+    padding: 10px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s ease;
+}
+
+.developer-card:hover .developer-logo-wrap {
+    transform: scale(1.1) rotate(-5deg);
+    background: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+.developer-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: grayscale(20%);
+    transition: filter 0.3s ease;
+}
+
+.developer-card:hover .developer-logo {
+    filter: grayscale(0%);
+}
+
+.developer-info {
+    flex: 1;
+    min-width: 0;
+    z-index: 2;
+}
+
+.developer-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.2px;
+}
+
+.side-control-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.side-control-btn:hover {
+    background: var(--brand);
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.side-control-btn.prev {
+    left: 0;
+}
+
+.side-control-btn.next {
+    right: 0;
+}
+
+.side-control-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Specific styling for the brand highlight */
+.hero-highlight {
+    color: #fbbf24; /* Golden highlight as in screenshot */
+}
+
+@media (max-width: 768px) {
+    .developers-wrapper {
+        padding: 0 10px;
+    }
+    .side-control-btn {
+        display: none; /* Hide arrows on mobile for swipe */
+    }
+    .developers-grid {
+        grid-template-columns: repeat(auto-fill, 200px);
+    }
+    .developer-card {
+        width: 200px;
+    }
+}

@@ -132,4 +132,4 @@ const InquiryPopup = () => {
     );
 };
 
-export default InquiryPopup;
+export default React.memo(InquiryPopup);

@@ -102,6 +102,13 @@ const Property = sequelize.define('Property', {
     developerName: {
         type: DataTypes.STRING,
     },
+    developerId: {
+        type: DataTypes.UUID,
+        references: {
+            model: 'Developers',
+            key: 'id'
+        }
+    },
     landParcel: {
         type: DataTypes.STRING,
     },

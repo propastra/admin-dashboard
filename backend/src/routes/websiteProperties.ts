@@ -144,6 +144,7 @@ router.get('/', async (req, res) => {
                 { location: locationSearch },
                 { description: { [Op.like]: `%${search}%` } },
                 { projectName: { [Op.like]: `%${search}%` } },
+                { category: { [Op.like]: `%${search}%` } },
             ];
         }
 
@@ -251,50 +252,45 @@ router.get('/featured', async (req, res) => {
     }
 });
 
-// @route   GET /api/website/properties/cities
-// @desc    Get distinct cities/locations
-// @access  Public
 router.get('/cities', async (req, res) => {
     try {
+        // Fetch all properties with their location and projectName to group them
         const properties = await Property.findAll({
-            attributes: ['location'],
-            group: ['location'],
+            attributes: ['location', 'projectName'],
+            where: {
+                status: { [Op.in]: ['Available', 'Sold', 'EOI', 'RTMI'] }
+            }
         });
 
-        // Use a map to aggregate counts so we can group Bangalore variations
-        const cityMap = new Map();
+        // Use a map of sets to aggregate distinct project names per location
+        const cityProjectMap = new Map<string, Set<string>>();
 
-        // Count properties per location
-        await Promise.all(
-            properties.map(async (p) => {
-                const count = await Property.count({
-                    where: {
-                        location: p.location,
-                        status: { [Op.in]: ['Available', 'Sold', 'EOI', 'RTMI'] }
-                    },
-                });
+        properties.forEach(p => {
+            const loc = (p.location || '').trim();
+            if (!loc) return;
 
-                if (count > 0) {
-                    const loc = p.location.trim();
-                    const isBglr = loc.toLowerCase().includes('bangalore') || loc.toLowerCase().includes('bengaluru');
-                    const finalLoc = isBglr ? 'Bangalore' : loc;
+            // Group Bangalore variations
+            const isBglr = loc.toLowerCase().includes('bangalore') || loc.toLowerCase().includes('bengaluru');
+            const finalLoc = isBglr ? 'Bangalore' : loc;
 
-                    if (cityMap.has(finalLoc)) {
-                        cityMap.set(finalLoc, cityMap.get(finalLoc) + count);
-                    } else {
-                        cityMap.set(finalLoc, count);
-                    }
-                }
-            })
-        );
+            if (!cityProjectMap.has(finalLoc)) {
+                cityProjectMap.set(finalLoc, new Set<string>());
+            }
+            
+            if (p.projectName) {
+                cityProjectMap.get(finalLoc)!.add(p.projectName);
+            }
+        });
 
-        // Convert map back to array and sort by count descending so Top Locations is accurate
-        const cities = Array.from(cityMap, ([name, propertyCount]) => ({ name, propertyCount }))
-            .sort((a, b) => b.propertyCount - a.propertyCount);
+        // Convert map back to array and count distinct projects
+        const cities = Array.from(cityProjectMap, ([name, projectSet]) => ({
+            name,
+            propertyCount: projectSet.size // This now represents the count of unique projects
+        })).sort((a, b) => b.propertyCount - a.propertyCount);
 
         res.json(cities);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error fetching city counts:', err.message);
         res.status(500).send('Server error');
     }
 });

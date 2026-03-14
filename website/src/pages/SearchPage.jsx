@@ -107,7 +107,7 @@ const SearchPage = () => {
     }, []);
 
     const loadProperties = async () => {
-        const params = { page, limit: 12 };
+        const params = { page, limit: 24 };
         if (filters.search) params.search = filters.search;
         if (filters.city) params.city = filters.city;
         if (filters.categories.length > 0) params.category = filters.categories.join(',');

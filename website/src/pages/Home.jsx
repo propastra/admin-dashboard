@@ -1,57 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight } from 'lucide-react';
-import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry } from '../services/api';
+import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand } from 'lucide-react';
+import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry, getDevelopers } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
+import ServiceCards from '../components/ServiceCards';
 import './Home.css';
 
-const categories = ['Buy', 'Rent', 'Invest'];
+// Lazy load components below the fold
+const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
+const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
 
-const groupProperties = (apiData) => {
-    if (!apiData || !Array.isArray(apiData)) return [];
-
-    const grouped = {};
-
-    apiData.forEach(prop => {
-        const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
-        const projName = projNameRaw.split('  ')[0].trim();
-
-        if (!grouped[projName]) {
-            grouped[projName] = { ...prop };
-            grouped[projName].isProject = true;
-            grouped[projName].displayTitle = projName;
-            grouped[projName].configurations = [];
-            grouped[projName].minPrice = parseFloat(prop.price);
-            grouped[projName].maxPrice = parseFloat(prop.price);
-            grouped[projName].priceUnit = prop.priceUnit;
-        }
-
-        if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
-            grouped[projName].configurations.push(prop.configuration);
-        }
-
-        const price = parseFloat(prop.price);
-        if (price < grouped[projName].minPrice) grouped[projName].minPrice = price;
-        if (price > grouped[projName].maxPrice) grouped[projName].maxPrice = price;
-    });
-
-    Object.values(grouped).forEach(proj => {
-        proj.configurations.sort();
-        proj.priceRange = {
-            min: proj.minPrice,
-            max: proj.maxPrice,
-            unit: proj.priceUnit
-        };
-    });
-
-    return Object.values(grouped);
-};
+const categories = [];
 
 const Home = () => {
     const navigate = useNavigate();
+    
+    // Memoized grouping function to prevent recreation on every render
+    const groupProperties = React.useCallback((apiData) => {
+        if (!apiData || !Array.isArray(apiData)) return [];
+        const grouped = {};
+        apiData.forEach(prop => {
+            const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
+            const projName = projNameRaw.split('  ')[0].trim();
+            if (!grouped[projName]) {
+                grouped[projName] = { ...prop };
+                grouped[projName].isProject = true;
+                grouped[projName].displayTitle = projName;
+                grouped[projName].configurations = [];
+                grouped[projName].minPrice = parseFloat(prop.price);
+                grouped[projName].maxPrice = parseFloat(prop.price);
+                grouped[projName].priceUnit = prop.priceUnit;
+            }
+            if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
+                grouped[projName].configurations.push(prop.configuration);
+            }
+            const price = parseFloat(prop.price);
+            if (price < grouped[projName].minPrice) grouped[projName].minPrice = price;
+            if (price > grouped[projName].maxPrice) grouped[projName].maxPrice = price;
+        });
+        Object.values(grouped).forEach(proj => {
+            proj.configurations.sort();
+            proj.priceRange = { min: proj.minPrice, max: proj.maxPrice, unit: proj.priceUnit };
+        });
+        return Object.values(grouped);
+    }, []);
     const { selectedCity, setSelectedCity } = useCity();
     const { user } = useAuth();
     const { ensureIdentified, showFirstVisitPopup } = useInquiryPopup();
@@ -75,6 +70,8 @@ const Home = () => {
     const [buyListingType, setBuyListingType] = useState(() => {
         return localStorage.getItem('buy_listing_type') || null;
     }); // 'Developer' or 'Owner'
+    const [developers, setDevelopers] = useState([]);
+    const [loadingDevelopers, setLoadingDevelopers] = useState(true);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -89,6 +86,7 @@ const Home = () => {
             userAgent: navigator.userAgent,
             metadata: { page: 'home', city: selectedCity }
         }).catch(() => { });
+        loadDevelopers();
     }, []);
 
     useEffect(() => {
@@ -106,7 +104,11 @@ const Home = () => {
 
         // Auto-detect location if not already manually set
         if (!selectedCity || selectedCity === "Current Location") {
-            detectLocation();
+            const hasInitialDetection = localStorage.getItem('initial_location_detected');
+            if (!hasInitialDetection) {
+                detectLocation();
+                localStorage.setItem('initial_location_detected', 'true');
+            }
             loadData("Current Location");
         } else {
             setDisplayCity(selectedCity);
@@ -161,6 +163,20 @@ const Home = () => {
         }
     }, [user]);
 
+    const loadDevelopers = async () => {
+        setLoadingDevelopers(true);
+        try {
+            const res = await getDevelopers();
+            if (res.data.success) {
+                setDevelopers(res.data.data);
+            }
+        } catch (err) {
+            console.error('Failed to load developers:', err);
+        } finally {
+            setLoadingDevelopers(false);
+        }
+    };
+
     const loadData = async (city = selectedCity) => {
         setLoading(true);
         try {
@@ -188,7 +204,7 @@ const Home = () => {
             }
 
             const groupedProps = groupProperties(fetchedProps);
-            setProperties(groupedProps.slice(0, 6)); // Ensure we only show 6 cards total
+            setProperties(groupedProps.slice(0, 4)); // Show fewer cards initially for speed
             setCities(cityRes.data);
         } catch (err) {
             console.error('Failed to load data:', err);
@@ -249,7 +265,8 @@ const Home = () => {
             }
 
             const groupedNearbyProps = groupProperties(props);
-            setNearbyProperties(groupedNearbyProps.slice(0, 6)); // Ensure we only show 6 cards total
+            const displayLimit = (categoryFilter && categoryFilter !== 'All') ? 50 : 6;
+            setNearbyProperties(groupedNearbyProps.slice(0, displayLimit)); // Show up to 50 if filtered, otherwise 6
         } catch (err) {
             console.error('Failed to load nearby properties:', err);
         } finally {
@@ -324,7 +341,7 @@ const Home = () => {
                 <div className="home-hero-content">
                     <header className="home-header">
                         <div className="home-header-left">
-                            <img src="/images/header-logo.png" alt="PropAstra Logo" className="home-logo-img" />
+                            <img src="/images/header-logo.png" alt="PropAstra Logo" className="home-logo-img" fetchpriority="high" decoding="async" />
                         </div>
                         <div className="home-header-right">
                             <div className="home-header-location" onClick={() => navigate('/city')}>
@@ -346,7 +363,7 @@ const Home = () => {
                                 {user?.avatar ? (
                                     <img src={user.avatar} alt="Avatar" className="user-avatar-img" />
                                 ) : (
-                                    user ? user.name?.charAt(0).toUpperCase() : <User size={20} />
+                                    user ? user.name?.charAt(0).toUpperCase() : <img src="/images/PROPASTRA%20P%20.png" alt="P" className="user-avatar-img" />
                                 )}
                             </button>
                         </div>
@@ -381,30 +398,17 @@ const Home = () => {
                 <div className="hero-decor hero-decor-2"></div>
             </div>
 
+            <ServiceCards 
+                setActiveCategory={setActiveCategory} 
+                setBuyListingType={setBuyListingType} 
+                investSubmitted={investSubmitted}
+                handleInvestSubmit={handleInvestSubmit}
+                user={user}
+                ensureIdentified={ensureIdentified}
+            />
+
             {/* Category Tabs */}
             <div className="home-body">
-                <div className="category-tabs">
-                    {categories.map((cat) => (
-                        <button
-                            key={cat}
-                            className={`category-tab ${activeCategory === cat ? 'active' : ''}`}
-                            onClick={() => {
-                                if (cat === 'Buy') {
-                                    if (!selectedCity || selectedCity === "Select City") {
-                                        navigate(`/city?returnTab=${cat}`);
-                                    } else {
-                                        setActiveCategory(cat);
-                                    }
-                                    return;
-                                }
-                                if (user) setActiveCategory(cat);
-                                else ensureIdentified(() => setActiveCategory(cat), 'Select a category to explore');
-                            }}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
 
                 {activeCategory === 'Buy' && (selectedCity && selectedCity !== "Select City") && !buyListingType && (
                     <div className="listing-type-toggle">
@@ -423,33 +427,6 @@ const Home = () => {
                     </div>
                 )}
 
-                {activeCategory === 'Invest' && (
-                    <section className="home-section invest-section">
-                        <div className="invest-content">
-                            {investSubmitted ? (
-                                <div className="invest-success">
-                                    <h3>Thank you, we will reach out soon....</h3>
-                                </div>
-                            ) : (
-                                <div className="invest-form">
-                                    <h3>Talk To Our Expert Know more</h3>
-                                    <button
-                                        className="invest-submit-btn"
-                                        onClick={() => {
-                                            if (user) {
-                                                handleInvestSubmit();
-                                            } else {
-                                                ensureIdentified(handleInvestSubmit, 'To speak to our experts, please verify your details');
-                                            }
-                                        }}
-                                    >
-                                        Submit
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </section>
-                )}
 
                 {(activeCategory && (activeCategory !== 'Buy' || buyListingType)) && (
                     <>
@@ -462,8 +439,9 @@ const Home = () => {
                                         {activeCategory === 'Buy' && buyListingType && (
                                             <button 
                                                 onClick={() => setBuyListingType(null)} 
-                                                style={{ background: 'var(--brand-bg)', color: 'var(--brand)', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                                                className="listing-switch-btn"
                                             >
+                                                <Hand size={14} className="pointing-hand" />
                                                 Switch to {buyListingType === 'Developer' ? 'Owner' : 'Developer'}
                                             </button>
                                         )}
@@ -572,6 +550,15 @@ const Home = () => {
                     </button>
                 </div>
 
+                {/* Trusted Developers */}
+                {!loadingDevelopers && developers.length > 0 && (
+                    <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
+                        <DevelopersCarousel developers={developers} />
+                        <WhyTrustUs />
+                    </React.Suspense>
+                )}
+                
+
                 {/* Top Locations */}
                 <section className="home-section animate-section">
                     <div className="section-header">
@@ -603,7 +590,7 @@ const Home = () => {
                             >
                                 <div className="location-info">
                                     <span className="location-name">{city.name}</span>
-                                    <span className="location-count">{city.propertyCount} Properties</span>
+                                    <span className="location-count">{city.propertyCount} Projects</span>
                                 </div>
                                 <div className="location-pin">
                                     <MapPin size={18} />

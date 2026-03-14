@@ -1,13 +1,12 @@
 .inquiry-popup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(15, 23, 42, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     padding: 20px;
-    backdrop-filter: blur(8px);
     animation: inquiryPopupFadeIn 0.2s ease-out;
 }
 
@@ -165,4 +164,26 @@
     color: var(--gray-600);
     font-size: 14px;
     margin: 0;
+}
+
+@media (max-width: 480px) {
+    .inquiry-popup-modal {
+        padding: 24px;
+        border-radius: 20px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .inquiry-popup-title {
+        font-size: 20px;
+    }
+
+    .inquiry-popup-form {
+        gap: 12px;
+    }
+
+    .inquiry-popup-submit {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
 }

@@ -63,7 +63,7 @@ router.get('/:id', async (req, res) => {
 // @access  Private
 router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
 
         const masterPlan = req.files && req.files['masterPlan'] ? (req.files['masterPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const photos = req.files && req.files['photos'] ? (req.files['photos'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
@@ -112,6 +112,7 @@ router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name
             longitude: longitude ? parseFloat(longitude) : null,
             possessionTime,
             developerName,
+            developerId,
             landParcel,
             floor,
             units,
@@ -133,7 +134,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
 
         let photos = property.photos || [];
         let brochure = property.brochure || [];
@@ -227,6 +228,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             longitude: longitude ? parseFloat(longitude) : null,
             possessionTime,
             developerName,
+            developerId,
             landParcel,
             floor,
             units,

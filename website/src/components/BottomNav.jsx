@@ -58,4 +58,4 @@ const BottomNav = () => {
     );
 };
 
-export default BottomNav;
+export default React.memo(BottomNav);

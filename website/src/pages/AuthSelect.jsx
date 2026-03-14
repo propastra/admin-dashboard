@@ -9,7 +9,7 @@ const AuthSelect = () => {
     return (
         <div className="auth-select-page">
             <div className="auth-card">
-                <img src="/images/IMG_8664.png" alt="Propastra" className="auth-logo" />
+                <img src="/images/PROPASTRA%20P%20.png" alt="Propastra" className="auth-logo" />
 
                 <h1 className="auth-title">Ready to explore?</h1>
                 <p className="auth-subtitle">Sign in to find your dream home</p>

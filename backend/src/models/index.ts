@@ -7,6 +7,7 @@ const Inquiry = require('./Inquiry');
 const WebsiteUser = require('./WebsiteUser');
 const Favorite = require('./Favorite');
 const LoginLead = require('./LoginLead');
+const Developer = require('./Developer');
 
 // Associations
 Property.hasMany(Interaction, { foreignKey: 'propertyId' });
@@ -35,6 +36,10 @@ Favorite.belongsTo(Property, { foreignKey: 'propertyId' });
 WebsiteUser.hasMany(LoginLead, { foreignKey: 'websiteUserId' });
 LoginLead.belongsTo(WebsiteUser, { foreignKey: 'websiteUserId' });
 
+// Developer and Property relationship
+Developer.hasMany(Property, { foreignKey: 'developerId' });
+Property.belongsTo(Developer, { foreignKey: 'developerId' });
+
 module.exports = {
     sequelize,
     Property,
@@ -45,4 +50,5 @@ module.exports = {
     WebsiteUser,
     Favorite,
     LoginLead,
+    Developer,
 };

@@ -34,6 +34,7 @@ export const getProperties = (params) => api.get('/website/properties', { params
 export const getFeaturedProperties = (city, category, excludeCity) => api.get('/website/properties/featured', { params: { city, category, excludeCity } });
 export const getCities = () => api.get('/website/properties/cities');
 export const getPropertyById = (id) => api.get(`/website/properties/${id}`);
+export const getDevelopers = () => api.get('/website/developers');
 
 // ======= FAVORITES =======
 export const getFavorites = () => api.get('/website/favorites');
