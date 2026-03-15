@@ -94,6 +94,15 @@ jobs:
             npx pm2 flush || true
             sudo journalctl --vacuum-time=1d || true
             
+            # Aggressive Space Cleanup
+            echo "Running aggressive disk space cleanup..."
+            rm -rf /home/ubuntu/.npm || true
+            rm -rf ~/.npm/_cacache || true
+            npm cache clean --force || true
+            docker system prune -af || true
+            sudo rm -rf /tmp/* || true
+            sudo rm -f /home/ubuntu/database_backup_*.tar.gz || true
+            
                         # 1. CREATE A LEAN BACKUP (Only critical database)
             # ----------------------------------------------------
             echo "Creating a backup of the current database..."
