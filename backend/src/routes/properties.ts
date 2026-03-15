@@ -193,10 +193,16 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
 
         const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
 
-        let photos = property.photos || [];
-        let brochure = property.brochure || [];
-        let floorPlan = property.floorPlan || [];
-        let masterPlan = property.masterPlan || [];
+        const parseArray = (val: any) => {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            try { return JSON.parse(val); } catch(e) { return []; }
+        };
+
+        let photos = parseArray(property.photos);
+        let brochure = parseArray(property.brochure);
+        let floorPlan = parseArray(property.floorPlan);
+        let masterPlan = parseArray(property.masterPlan);
 
         // Handle existing
         if ('existingPhotos' in req.body) {
@@ -301,9 +307,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
         res.json(property);
     } catch (err) {
         console.error(`Error updating property ${req.params.id}:`, err);
-        const requireError = require('fs');
-        requireError.appendFileSync('/Users/pujithsingh/Desktop/Admin_dashboard/backend_logs.txt', `\nERROR updating property: ${err.message}\n${err.stack}\n`);
-        res.status(500).json({ message: 'Server error updating property: ' + err.message, error: err.message });
+        res.status(500).json({ message: 'Server error updating property: ' + err.message, error: err.stack });
     }
 });
 
