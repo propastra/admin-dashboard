@@ -236,6 +236,9 @@ jobs:
             npm install
             npm run build
             
+            # Remove node_modules to free up space for next steps
+            rm -rf node_modules
+            
             # Create a public debug file to verify DB state
             echo "Creating debug file..."
             echo "Deployment Time: $(date)" > dist/debug.txt
@@ -260,6 +263,9 @@ jobs:
             
             npm install
             npm run build
+            
+            # Remove node_modules to maintain a lean disk for the server
+            rm -rf node_modules
             
             sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/website/dist
             
