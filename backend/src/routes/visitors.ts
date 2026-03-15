@@ -51,4 +51,22 @@ router.get('/:id/history', async (req, res) => {
     }
 });
 
+// @route   DELETE api/visitors/:id
+// @desc    Delete a visitor and interactions
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const visitor = await Visitor.findByPk(req.params.id);
+        if (!visitor) return res.status(404).json({ message: 'Visitor not found' });
+
+        await Interaction.destroy({ where: { visitorId: req.params.id } });
+        await visitor.destroy();
+
+        res.json({ message: 'Visitor removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 module.exports = router;

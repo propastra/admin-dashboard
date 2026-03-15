@@ -14,6 +14,7 @@ const InquiryList = () => {
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
     const [dateFilter, setDateFilter] = useState('all');
+    const [searchDate, setSearchDate] = useState('');
 
     useEffect(() => {
         fetchInquiries();
@@ -21,7 +22,7 @@ const InquiryList = () => {
 
     useEffect(() => {
         applyFilters();
-    }, [inquiries, dateFilter]);
+    }, [inquiries, dateFilter, searchDate]);
 
     const fetchInquiries = async () => {
         try {
@@ -36,25 +37,33 @@ const InquiryList = () => {
     };
 
     const applyFilters = () => {
-        if (dateFilter === 'all') {
-            setFilteredInquiries(inquiries);
-            return;
+        let filtered = inquiries;
+
+        if (dateFilter !== 'all') {
+            const now = new Date();
+            filtered = filtered.filter(inq => {
+                const inqDate = new Date(inq.createdAt);
+                const diffTime = Math.abs(now.getTime() - inqDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (dateFilter === '7d') return diffDays <= 7;
+                if (dateFilter === '30d') return diffDays <= 30;
+                if (dateFilter === '60d') return diffDays <= 60;
+                if (dateFilter === 'month') {
+                    return inqDate.getMonth() === now.getMonth() && inqDate.getFullYear() === now.getFullYear();
+                }
+                return true;
+            });
         }
 
-        const now = new Date();
-        const filtered = inquiries.filter(inq => {
-            const inqDate = new Date(inq.createdAt);
-            const diffTime = Math.abs(now.getTime() - inqDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (searchDate) {
+            filtered = filtered.filter(inq => {
+                // Ignore time completely
+                const inqDate = new Date(inq.createdAt).toISOString().split('T')[0];
+                return inqDate === searchDate;
+            });
+        }
 
-            if (dateFilter === '7d') return diffDays <= 7;
-            if (dateFilter === '30d') return diffDays <= 30;
-            if (dateFilter === '60d') return diffDays <= 60;
-            if (dateFilter === 'month') {
-                return inqDate.getMonth() === now.getMonth() && inqDate.getFullYear() === now.getFullYear();
-            }
-            return true;
-        });
         setFilteredInquiries(filtered);
     };
 
@@ -110,9 +119,24 @@ const InquiryList = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                 <h1>Inquiries</h1>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <label style={{ fontSize: '14px', color: '#4b5563' }}>Specific Date:</label>
+                        <input 
+                            type="date" 
+                            value={searchDate} 
+                            onChange={(e) => {
+                                setSearchDate(e.target.value);
+                                if (e.target.value) setDateFilter('all'); // Clear interval when specific date chosen
+                            }}
+                            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                        />
+                    </div>
                     <select 
                         value={dateFilter} 
-                        onChange={(e) => setDateFilter(e.target.value)}
+                        onChange={(e) => {
+                            setDateFilter(e.target.value);
+                            if (e.target.value !== 'all') setSearchDate(''); // Clear specific date when interval chosen
+                        }}
                         style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                     >
                         <option value="all">All Time</option>

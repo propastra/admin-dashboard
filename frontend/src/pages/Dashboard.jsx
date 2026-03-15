@@ -43,13 +43,14 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await api.get('/analytics/dashboard');
-                setStats(res.data);
+                const [dashRes, actRes, chartRes] = await Promise.all([
+                    api.get('/analytics/dashboard'),
+                    api.get('/analytics/activity'),
+                    api.get('/analytics/chart-data')
+                ]);
 
-                const actRes = await api.get('/analytics/activity');
+                setStats(dashRes.data);
                 setActivity(actRes.data);
-
-                const chartRes = await api.get('/analytics/chart-data');
                 setChartData(chartRes.data);
             } catch (err) {
                 console.error("Error fetching stats", err);

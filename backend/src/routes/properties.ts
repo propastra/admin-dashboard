@@ -126,6 +126,63 @@ router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name
     }
 });
 
+// @route   POST api/properties/bulk
+// @desc    Add multiple properties via bulk JSON payload
+// @access  Private
+router.post('/bulk', auth, async (req, res) => {
+    try {
+        const { properties } = req.body;
+        if (!Array.isArray(properties) || properties.length === 0) {
+            return res.status(400).json({ message: 'Properties array is required' });
+        }
+
+        const createdProperties = await Property.bulkCreate(properties.map(p => ({
+            ...p,
+            photos: [],
+            brochure: [],
+            floorPlan: [],
+            masterPlan: [],
+            amenities: Array.isArray(p.amenities) ? p.amenities : (p.amenities ? String(p.amenities).split(',').map(s => s.trim()) : []),
+            projectHighlights: Array.isArray(p.projectHighlights) ? p.projectHighlights : (p.projectHighlights ? String(p.projectHighlights).split(',').map(s => s.trim()) : []),
+            isVerified: p.isVerified === 'true' || p.isVerified === true,
+            bhk: p.bhk ? parseInt(p.bhk) : null,
+            latitude: p.latitude ? parseFloat(p.latitude) : null,
+            longitude: p.longitude ? parseFloat(p.longitude) : null,
+        })));
+
+        res.json({ 
+            message: `Successfully imported ${createdProperties.length} properties`, 
+            count: createdProperties.length,
+            importedIds: createdProperties.map(p => p.id)
+        });
+    } catch (err) {
+        console.error('Error in bulk import:', err);
+        res.status(500).json({ message: 'Server error during bulk import', error: err.message });
+    }
+});
+
+// @route   DELETE api/properties/bulk
+// @desc    Revert/delete multiple properties via bulk JSON payload of IDs
+// @access  Private
+router.delete('/bulk', auth, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'Array of property IDs is required' });
+        }
+
+        const deletedCount = await Property.destroy({
+            where: {
+                id: ids
+            }
+        });
+
+        res.json({ message: `Successfully reverted ${deletedCount} properties`, count: deletedCount });
+    } catch (err) {
+        console.error('Error reverting bulk import:', err);
+        res.status(500).json({ message: 'Server error reverting bulk import', error: err.message });
+    }
+});
 // @route   PUT api/properties/:id
 // @desc    Update property
 // @access  Private

@@ -26,12 +26,6 @@ const PropertyForm = () => {
         projectHighlights: '',
         bhk: '',
         possessionTime: '',
-        developerName: '',
-        landParcel: '',
-        floor: '',
-        units: '',
-        investmentType: 'Self Use',
-        reraNumber: '',
         possessionStatus: 'Ready to Move',
         furnishingStatus: 'Unfurnished'
     });
@@ -56,6 +50,10 @@ const PropertyForm = () => {
     const [modalImage, setModalImage] = useState(null);
 
     useEffect(() => {
+    }, []);
+
+
+    useEffect(() => {
         if (isEdit) {
             const fetchProperty = async () => {
                 setLoading(true);
@@ -76,14 +74,6 @@ const PropertyForm = () => {
                         latitude: data.latitude || '',
                         longitude: data.longitude || '',
                         possessionTime: data.possessionTime || '',
-                        developerName: data.developerName || '',
-                        landParcel: data.landParcel || '',
-                        floor: data.floor || '',
-                        units: data.units || '',
-                        investmentType: data.investmentType || 'Self Use',
-                        reraNumber: data.reraNumber || '',
-                        possessionStatus: data.possessionStatus || 'Ready to Move',
-                        furnishingStatus: data.furnishingStatus || 'Unfurnished',
                         projectName: data.projectName || '',
                         builderInfo: data.builderInfo || '',
                         isVerified: data.isVerified || false,
@@ -208,21 +198,24 @@ const PropertyForm = () => {
         masterPlan.forEach(file => data.append('masterPlan', file));
 
         if (isEdit) {
-            existingPhotos.forEach(photo => data.append('existingPhotos', photo));
-            existingBrochure.forEach(b => data.append('existingBrochure', b));
-            existingFloorPlan.forEach(f => data.append('existingFloorPlan', f));
-            existingMasterPlan.forEach(m => data.append('existingMasterPlan', m));
+            if (existingPhotos.length === 0) data.append('existingPhotos', '');
+            else existingPhotos.forEach(photo => data.append('existingPhotos', photo));
+
+            if (existingBrochure.length === 0) data.append('existingBrochure', '');
+            else existingBrochure.forEach(b => data.append('existingBrochure', b));
+
+            if (existingFloorPlan.length === 0) data.append('existingFloorPlan', '');
+            else existingFloorPlan.forEach(f => data.append('existingFloorPlan', f));
+
+            if (existingMasterPlan.length === 0) data.append('existingMasterPlan', '');
+            else existingMasterPlan.forEach(m => data.append('existingMasterPlan', m));
         }
 
         try {
             if (isEdit) {
-                await api.put(`/properties/${id}`, data, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.put(`/properties/${id}`, data);
             } else {
-                await api.post('/properties', data, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post('/properties', data);
             }
             navigate('/properties');
         } catch (err) {
@@ -298,10 +291,6 @@ const PropertyForm = () => {
                     <input name="reraNumber" value={formData.reraNumber} onChange={handleChange} className="form-input" placeholder="e.g. PRM/KA/RERA/..." />
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Developer Name</label>
-                    <input name="developerName" value={formData.developerName} onChange={handleChange} className="form-input" placeholder="e.g. Prestige Group" />
-                </div>
 
                 <div className="form-group">
                     <label className="form-label">Land Parcel</label>

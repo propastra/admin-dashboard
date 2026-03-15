@@ -51,11 +51,52 @@ const VisitorList = () => {
         return `${m}m ${s}s`;
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this visitor?")) return;
+        try {
+            await api.delete(`/visitors/${id}`);
+            setVisitors(visitors.filter(v => v.id !== id));
+        } catch (err) {
+            console.error("Failed to delete visitor", err);
+        }
+    };
+
+    const handleExport = () => {
+        const headers = ["IP Address", "User Agent", "Time Spent (seconds)", "Last Visit", "Status"];
+        const rows = visitors.map(v => [
+            v.ipAddress,
+            `"${v.userAgent ? v.userAgent.replace(/"/g, '""') : ''}"`, // Escaped for CSV
+            v.totalDuration || 0,
+            `"${new Date(v.lastVisit).toLocaleString()}"`,
+            v.isBlocked ? 'Blocked' : 'Active'
+        ]);
+
+        const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Visitors_Export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
         <div>
-            <h1>Visitor Management</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h1>Visitor Management</h1>
+                <button 
+                    onClick={handleExport} 
+                    className="btn btn-primary"
+                    style={{ backgroundColor: '#10b981', color: 'white' }}
+                >
+                    Export to Excel
+                </button>
+            </div>
             <div className="card" style={{ marginTop: '20px', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -91,16 +132,23 @@ const VisitorList = () => {
                                     <button
                                         onClick={() => handleViewHistory(visitor)}
                                         className="btn"
-                                        style={{ backgroundColor: '#3b82f6', color: 'white' }}
+                                        style={{ backgroundColor: '#3b82f6', color: 'white', padding: '4px 8px', fontSize: '14px' }}
                                     >
                                         History
                                     </button>
                                     <button
                                         onClick={() => toggleBlock(visitor.id)}
                                         className="btn"
-                                        style={{ backgroundColor: visitor.isBlocked ? '#10b981' : '#ef4444', color: 'white' }}
+                                        style={{ backgroundColor: visitor.isBlocked ? '#10b981' : '#f59e0b', color: 'white', padding: '4px 8px', fontSize: '14px' }}
                                     >
                                         {visitor.isBlocked ? 'Unblock' : 'Block'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(visitor.id)}
+                                        className="btn"
+                                        style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 8px', fontSize: '14px' }}
+                                    >
+                                        Delete
                                     </button>
                                 </td>
                             </tr>

@@ -124,22 +124,22 @@ router.get('/chart-data', async (req, res) => {
 // @access  Private (Admin)
 router.get('/dashboard', async (req, res) => {
     try {
-        const totalProperties = await Property.count();
-        const totalVisitors = await Visitor.count();
-        const totalInteractions = await Interaction.count();
-
-        // Top 5 Properties by views
-        const topProperties = await Interaction.findAll({
-            attributes: [
-                'propertyId',
-                [sequelize.fn('COUNT', sequelize.col('Interaction.id')), 'count']
-            ],
-            where: { interactionType: 'View' },
-            include: [{ model: Property, attributes: ['propertyName'] }],
-            group: ['propertyId', 'Property.id'],
-            order: [[sequelize.literal('count'), 'DESC']],
-            limit: 5
-        });
+        const [totalProperties, totalVisitors, totalInteractions, topProperties] = await Promise.all([
+            Property.count(),
+            Visitor.count(),
+            Interaction.count(),
+            Interaction.findAll({
+                attributes: [
+                    'propertyId',
+                    [sequelize.fn('COUNT', sequelize.col('Interaction.id')), 'count']
+                ],
+                where: { interactionType: 'View' },
+                include: [{ model: Property, attributes: ['propertyName'] }],
+                group: ['propertyId', 'Property.id'],
+                order: [[sequelize.literal('count'), 'DESC']],
+                limit: 5
+            })
+        ]);
 
         res.json({
             totalProperties,

@@ -6,9 +6,6 @@ export const API_BASE_URL = (envUrl && !envUrl.includes('localhost')) ? envUrl.r
 
 const api = axios.create({
     baseURL: (envUrl && !envUrl.includes('localhost')) ? envUrl : fallbackUrl,
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
 // Add a request interceptor to add the auth token
@@ -18,6 +15,12 @@ api.interceptors.request.use(
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
+        
+        // Let the browser set the Content-Type with boundary for form data
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
+        
         return config;
     },
     (error) => {
@@ -41,4 +44,5 @@ api.interceptors.response.use(
     }
 );
 
+export const getDevelopers = () => api.get('/developers');
 export default api;
