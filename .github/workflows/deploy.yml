@@ -99,9 +99,17 @@ jobs:
             rm -rf /home/ubuntu/.npm || true
             rm -rf ~/.npm/_cacache || true
             npm cache clean --force || true
-            docker system prune -af || true
+            docker system prune -af --volumes || true
             sudo rm -rf /tmp/* || true
-            sudo rm -f /home/ubuntu/database_backup_*.tar.gz || true
+            
+            # User specifically requested deleting todays backups to clear space
+            TODAY=$(date +"%Y%m%d")
+            sudo rm -f /home/ubuntu/database_backup_${TODAY}_*.tar.gz || true
+            
+            # Instantly delete existing heavy node_modules to guarantee space for the pipeline
+            rm -rf /home/ubuntu/Admin_dashboard/frontend/node_modules || true
+            rm -rf /home/ubuntu/Admin_dashboard/website/node_modules || true
+            rm -rf /home/ubuntu/Admin_dashboard/backend/node_modules || true
             
                         # 1. CREATE A LEAN BACKUP (Only critical database)
             # ----------------------------------------------------
