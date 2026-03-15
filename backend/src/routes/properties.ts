@@ -258,12 +258,18 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             }
         }
 
+        // Sanitize numeric inputs to avoid NaN / database constraint errors
+        const safePrice = (price === '' || price === 'null' || price === 'undefined') ? null : price;
+        const safeBhk = (bhk && bhk !== 'null' && bhk !== 'undefined' && !isNaN(parseInt(bhk))) ? parseInt(bhk) : null;
+        const safeLat = (latitude && latitude !== 'null' && latitude !== 'undefined' && !isNaN(parseFloat(latitude))) ? parseFloat(latitude) : null;
+        const safeLng = (longitude && longitude !== 'null' && longitude !== 'undefined' && !isNaN(parseFloat(longitude))) ? parseFloat(longitude) : null;
+
         await property.update({
             propertyName,
             description,
             category,
             location,
-            price,
+            price: safePrice,
             priceUnit,
             dimensions,
             configuration,
@@ -280,9 +286,9 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             projectHighlights: parsedHighlights,
             possessionStatus,
             furnishingStatus,
-            bhk: bhk ? parseInt(bhk) : null,
-            latitude: latitude ? parseFloat(latitude) : null,
-            longitude: longitude ? parseFloat(longitude) : null,
+            bhk: safeBhk,
+            latitude: safeLat,
+            longitude: safeLng,
             possessionTime,
             developerName,
             developerId,
@@ -295,7 +301,9 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
         res.json(property);
     } catch (err) {
         console.error(`Error updating property ${req.params.id}:`, err);
-        res.status(500).json({ message: 'Server error updating property', error: err.message });
+        const requireError = require('fs');
+        requireError.appendFileSync('/Users/pujithsingh/Desktop/Admin_dashboard/backend_logs.txt', `\nERROR updating property: ${err.message}\n${err.stack}\n`);
+        res.status(500).json({ message: 'Server error updating property: ' + err.message, error: err.message });
     }
 });
 
