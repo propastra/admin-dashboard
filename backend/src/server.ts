@@ -86,12 +86,23 @@ app.use('/api/website/properties', require('./routes/websiteProperties'));
 app.use('/api/website/favorites', require('./routes/websiteFavorites'));
 app.use('/api/website/developers', require('./routes/developers'));
 
-// Test API
+// Sync Database and Start Server
 app.get('/', (req, res) => {
     res.send('Real Estate Admin Dashboard API is running');
 });
 
-// Sync Database and Start Server
+// Global Error Handler
+app.use((err, req, res, next) => {
+    logger.error('Unhandled Global Error:', err);
+    if (err instanceof require('multer').MulterError) {
+        return res.status(400).json({ message: 'File upload error: ' + err.message, error: err.code });
+    }
+    res.status(err.status || 500).json({ 
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV !== 'production' ? err.stack : undefined 
+    });
+});
+
 sequelize.sync()
     .then(async () => {
         logger.info('Database synced');
@@ -125,6 +136,7 @@ sequelize.sync()
             // Column already exists
         }
 
+        server.setTimeout(600000); // 10 minutes for large uploads
         server.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
         });
