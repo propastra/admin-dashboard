@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import './PropertyCard.css';
 
-const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showActions = true }) => {
+const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showActions = true, variantCount, allConfigurations, maxPrice, maxPriceUnit }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { ensureIdentified } = useInquiryPopup();
@@ -102,6 +102,14 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         return `₹${p.toLocaleString()}`;
     };
 
+    const priceDisplay = (variantCount > 1 && maxPrice && maxPrice !== property.price)
+        ? `${formatPrice(property.price, property.priceUnit)} – ${formatPrice(maxPrice, maxPriceUnit)}`
+        : formatPrice(property.price, property.priceUnit);
+
+    const configDisplay = (variantCount > 1 && allConfigurations && allConfigurations.length > 0)
+        ? allConfigurations.join(', ')
+        : property.configuration;
+
     const rating = (4 + Math.random()).toFixed(1);
 
     return (
@@ -114,6 +122,9 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                         <span className="badge-distance">{property.distance} km away</span>
                     )}
                 </div>
+                {variantCount > 1 && (
+                    <div className="badge-variants">{variantCount} configs</div>
+                )}
                 <div className="property-card-actions">
                     <button
                         className={`action-icon ${isFavorited ? 'favorited' : ''}`}
@@ -137,7 +148,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                 </div>
 
                 <p className="property-card-price">
-                    {formatPrice(property.price, property.priceUnit)}
+                    {priceDisplay}
                 </p>
                 <p className="property-card-location">{property.location}</p>
 
@@ -145,8 +156,8 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                     {property.dimensions && (
                         <span><Maximize size={14} /> {property.dimensions}</span>
                     )}
-                    {property.configuration && (
-                        <span><BiBed size={14} /> {property.configuration}</span>
+                    {configDisplay && (
+                        <span><BiBed size={14} /> {configDisplay}</span>
                     )}
                 </div>
 

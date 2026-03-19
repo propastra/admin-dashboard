@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('active_category');
         localStorage.removeItem('buy_listing_type');
         localStorage.removeItem('invest_submitted');
+        localStorage.removeItem('banner_cta_submitted');
         localStorage.removeItem('inquiry_first_visit_shown');
         setToken(null);
         setUser(null);

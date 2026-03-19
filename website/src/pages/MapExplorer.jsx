@@ -106,30 +106,65 @@ const MapExplorer = () => {
             if (missing.length > 0) {
                 const uniqueLocs = [...new Set(missing.map(p => p.location).filter(Boolean))];
 
+                // Helper: validate the result is actually within India's geographic bounding box
+                const isWithinIndia = (lat, lon) =>
+                    lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
+
+                // Geocode a location string using Nominatim with fallback queries
+                const geocode = async (loc) => {
+                    // Try more specific query first (Karnataka), then broader India
+                    const queries = [
+                        `${loc}, Karnataka, India`,
+                        `${loc}, India`,
+                    ];
+                    for (const query of queries) {
+                        try {
+                            const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
+                            const response = await fetch(geoUrl, {
+                                headers: { 'Accept-Language': 'en' }
+                            });
+                            const data = await response.json();
+
+                            if (data && data.length > 0) {
+                                for (const result of data) {
+                                    const lat = parseFloat(result.lat);
+                                    const lon = parseFloat(result.lon);
+                                    // Only accept results that fall within India's bounding box
+                                    if (isWithinIndia(lat, lon)) {
+                                        return { lat, lon };
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Geocoding query failed:', query, e);
+                        }
+                        // Respect Nominatim rate limit between queries
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                    return null;
+                };
+
                 // Fetch coordinates sequentially with delay to respect rate limits
                 for (const loc of uniqueLocs) {
                     try {
-                        const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ", India")}`;
-                        const response = await fetch(geoUrl);
-                        const data = await response.json();
+                        const coords = await geocode(loc);
 
-                        if (data && data.length > 0) {
-                            const lat = parseFloat(data[0].lat);
-                            const lon = parseFloat(data[0].lon);
-
-                            // Map all properties matching this location with a tiny random jitter
+                        if (coords) {
+                            // Apply a tiny jitter so overlapping properties don't stack on same pixel
                             const newlyResolved = missing.filter(p => p.location === loc).map(p => ({
                                 ...p,
-                                latitude: lat + (Math.random() - 0.5) * 0.005,
-                                longitude: lon + (Math.random() - 0.5) * 0.005
+                                latitude: coords.lat + (Math.random() - 0.5) * 0.005,
+                                longitude: coords.lon + (Math.random() - 0.5) * 0.005
                             }));
 
                             currentProps = [...currentProps, ...newlyResolved];
-                            setProperties(currentProps);
+                            setProperties([...currentProps]);
+                        } else {
+                            console.warn(`Could not resolve location within India: "${loc}"`);
                         }
 
-                        // Wait 1 second before next request to respect OpenStreetMap Nominatim limits
-                        await new Promise(r => setTimeout(r, 1000));
+                        // Extra delay between each unique location
+                        await new Promise(r => setTimeout(r, 1200));
                     } catch (e) {
                         console.error('Geocoding failed for', loc, e);
                     }

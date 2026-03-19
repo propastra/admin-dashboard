@@ -134,58 +134,59 @@ const PropertyDetail = () => {
     const [calcLoading, setCalcLoading] = useState(false);
     const [calcError, setCalcError] = useState('');
 
-    const handleCalculateDistance = async (e) => {
+    const handleCalculateDistance = async (e, forcedDest = null) => {
         if (e) e.preventDefault();
-        if (!calcDestination.trim()) return;
+        const destToUse = forcedDest || calcDestination;
+        if (!destToUse.trim()) return;
 
         setCalcLoading(true);
         setCalcError('');
         setCalcResult(null);
 
-        const queries = [];
-        const area = property.location ? property.location.split(',')[0].trim() : '';
-        // Some properties don't have projectName and their propertyName includes config (e.g., Sattva Lumina - 3 BHK Regular)
-        // Clean this up to just "Sattva Lumina"
-        const projNameRaw = property.projectName || property.propertyName.split('-')[0].trim();
-        // Remove words like "Phase" or numbers that confuse Nominatim if possible, but keep it simple first
-        const projName = projNameRaw.split('  ')[0].trim();
-
-        if (projName && area) queries.push(`${projName}, ${area}, Bengaluru`);
-        if (projName && area) queries.push(`${projName}, Bengaluru`);
-        if (area) queries.push(`${area}, Bengaluru`);
-        // Fallback to searching just the area name without Bengaluru in case it's entered weirdly
-        if (area) queries.push(area);
-        // Absolute fallback to Bengaluru city center so it doesn't just error out hard
-        queries.push(`Bengaluru`);
-
         try {
+            // STEP 1: Get Property Coordinates (Prioritize exact GPS from DB)
             let propCoords = null;
-            for (const q of queries) {
-                if (!q) continue;
-                propCoords = await getCoordinates(q);
-                if (propCoords) break;
+            if (property.latitude && property.longitude) {
+                propCoords = { lat: parseFloat(property.latitude), lon: parseFloat(property.longitude) };
+            } else {
+                // If no GPS, geocode using project name & area
+                const area = property.location ? property.location.split(',')[0].trim() : '';
+                const projName = property.projectName || property.propertyName.split('-')[0].trim();
+                const city = property.location ? property.location.split(',').pop().trim().replace(/\.$/, '') : 'Bengaluru';
+                
+                propCoords = await getCoordinates(`${projName}, ${area}`, city);
+                
+                // Final fallback: just the area in that city
+                if (!propCoords && area) {
+                    propCoords = await getCoordinates(area, city);
+                }
             }
 
             if (!propCoords) {
-                setCalcError('Could not find property location on the map.');
+                setCalcError('Could not find property location. Please try again later.');
                 setCalcLoading(false);
                 return;
             }
 
-            const destCoords = await getCoordinates(calcDestination);
+            // STEP 2: Get Destination Coordinates
+            const city = property.location ? property.location.split(',').pop().trim().replace(/\.$/, '') : 'Bengaluru';
+            const destCoords = await getCoordinates(destToUse, city);
+            
             if (!destCoords) {
                 setCalcError('Could not find the destination on the map.');
                 setCalcLoading(false);
                 return;
             }
 
+            // STEP 3: Calculate Route
             const routeData = await calculateRoute(propCoords, destCoords);
             if (routeData) {
                 setCalcResult(routeData);
             } else {
-                setCalcError('Could not calculate route.');
+                setCalcError('Could not calculate a driving route.');
             }
         } catch (err) {
+            console.error('Location Calculation Error:', err);
             setCalcError('An error occurred while calculating distance.');
         } finally {
             setCalcLoading(false);
@@ -589,20 +590,20 @@ const PropertyDetail = () => {
                         return (
                             <div className="info-card master-plan-card" style={{ marginTop: '32px' }}>
                                 <h3>Master Plan</h3>
-                                <div className="master-plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                            <div className="master-plan-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
                                     {mpFiles.map((mp, mpIdx) => {
                                         const url = mp.startsWith('http') ? mp : `${BACKEND_URL}${mp.startsWith('/') ? '' : '/'}${mp}`;
                                         const isPdf = mp.toLowerCase().endsWith('.pdf');
                                         
                                         return (
-                                            <div key={mpIdx} className="master-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+                                            <div key={mpIdx} className="master-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', flex: '0 1 700px', maxWidth: '100%' }}>
                                                 {isPdf ? (
                                                     <div style={{ textAlign: 'center' }}>
                                                         <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
                                                         <span style={{ fontWeight: '600', color: '#4b5563' }}>View Master Plan PDF</span>
                                                     </div>
                                                 ) : (
-                                                    <img src={url} alt="Master Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
+                                                    <img src={url} alt="Master Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                                                 )}
                                                 <div className="plan-overlay">
                                                     <Maximize size={20} />
@@ -789,12 +790,12 @@ const PropertyDetail = () => {
                                                         )}
                                                     </div>
 
-                                                    <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+                                                    <div className="floor-plans-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
                                                         {plans.length > 0 ? plans.map((fp, fpIdx) => {
                                                             const url = fp.startsWith('http') ? fp : `${BACKEND_URL}${fp.startsWith('/') ? '' : '/'}${fp}`;
                                                             return (
-                                                                <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                                    <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }} />
+                                                                <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', flex: '0 1 600px', maxWidth: '100%' }}>
+                                                                    <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                                                                     <div className="plan-overlay">
                                                                         <Maximize size={20} />
                                                                         <span>View Plan</span>
@@ -884,14 +885,22 @@ const PropertyDetail = () => {
                         )}
 
                         <div className="nearby-grid" style={{ marginTop: '24px' }}>
-                            <div className="nearby-item" onClick={() => { setCalcDestination('Kempegowda International Airport, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
+                            <div className="nearby-item" onClick={() => { 
+                                const dest = 'Kempegowda International Airport, Bengaluru';
+                                setCalcDestination(dest); 
+                                handleCalculateDistance(null, dest);
+                            }} style={{ cursor: 'pointer' }}>
                                 <div className="nearby-icon-wrap"><MapPin size={18} /></div>
                                 <div className="nearby-info">
                                     <span className="nearby-title">International Airport</span>
                                     <span className="nearby-dist">Click to calculate</span>
                                 </div>
                             </div>
-                            <div className="nearby-item" onClick={() => { setCalcDestination('Manyata Tech Park, Bengaluru'); setTimeout(() => document.querySelector('.distance-calc-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100); }} style={{ cursor: 'pointer' }}>
+                            <div className="nearby-item" onClick={() => { 
+                                const dest = 'Manyata Tech Park, Bengaluru';
+                                setCalcDestination(dest); 
+                                handleCalculateDistance(null, dest);
+                            }} style={{ cursor: 'pointer' }}>
                                 <div className="nearby-icon-wrap"><MapPin size={18} /></div>
                                 <div className="nearby-info">
                                     <span className="nearby-title">Primary Tech Parks</span>

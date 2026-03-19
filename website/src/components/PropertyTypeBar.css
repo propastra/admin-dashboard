@@ -1,0 +1,125 @@
+.property-type-bar-container {
+  display: flex;
+  justify-content: center;
+  margin: -40px auto 40px;
+  max-width: 900px;
+  padding: 0 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.property-type-bar {
+  background: white;
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
+  width: 100%;
+}
+
+.type-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.type-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+}
+
+.icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.icon-wrap.blue { background: #eff6ff; color: #3b82f6; }
+.icon-wrap.purple { background: #f5f3ff; color: #8b5cf6; }
+.icon-wrap.orange { background: #fff7ed; color: #f97316; }
+
+.type-btn:hover .icon-wrap.blue { background: #3b82f6; color: white; }
+.type-btn:hover .icon-wrap.purple { background: #8b5cf6; color: white; }
+.type-btn:hover .icon-wrap.orange { background: #f97316; color: white; }
+
+.text-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.type-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.type-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.divider {
+  width: 1px;
+  height: 48px;
+  background: #f1f5f9;
+  margin: 0 10px;
+}
+
+.anim-fade-up {
+  animation: barFadeUp 0.8s ease forwards;
+  opacity: 0;
+}
+
+@keyframes barFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .property-type-bar {
+    flex-direction: column;
+    padding: 10px;
+    border-radius: 24px;
+  }
+  
+  .type-btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .type-btn:last-child {
+    margin-bottom: 0;
+  }
+  
+  .divider {
+    display: none;
+  }
+  
+  .property-type-bar-container {
+    margin-top: -30px;
+    margin-bottom: 30px;
+  }
+}

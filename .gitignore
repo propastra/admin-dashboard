@@ -6,7 +6,17 @@ coverage/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
+
+# ===== DATABASE PROTECTION =====
+# Main database — NEVER commit, NEVER overwrite on pull
 backend/database.sqlite
+# All backup files
+backend/database_backup_*.sqlite
+backend/db_backups/
+backend/src/database.sqlite
+backend/backend/database.sqlite
+# ================================
+
 backend/uploads/
 admin-dashboard/
 backend/logs/

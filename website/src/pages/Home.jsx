@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand } from 'lucide-react';
 import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry, getDevelopers } from '../services/api';
@@ -12,6 +12,8 @@ import './Home.css';
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
+const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
+const CompareModal = React.lazy(() => import('../components/CompareModal'));
 
 const categories = [];
 
@@ -48,7 +50,7 @@ const Home = () => {
         return Object.values(grouped);
     }, []);
     const { selectedCity, setSelectedCity } = useCity();
-    const { user } = useAuth();
+    const { user, login } = useAuth();
     const { ensureIdentified, showFirstVisitPopup } = useInquiryPopup();
     const [properties, setProperties] = useState([]);
     const [nearbyProperties, setNearbyProperties] = useState([]);
@@ -67,18 +69,23 @@ const Home = () => {
     const [investSubmitted, setInvestSubmitted] = useState(() => {
         return localStorage.getItem('invest_submitted') === 'true';
     });
+    const [bannerCtaSubmitted, setBannerCtaSubmitted] = useState(() => {
+        return localStorage.getItem('banner_cta_submitted') === 'true';
+    });
     const [buyListingType, setBuyListingType] = useState(() => {
         return localStorage.getItem('buy_listing_type') || null;
     }); // 'Developer' or 'Owner'
     const [developers, setDevelopers] = useState([]);
     const [loadingDevelopers, setLoadingDevelopers] = useState(true);
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
     const [displayCity, setDisplayCity] = useState('');
 
     useEffect(() => {
-        loadData();
+        // Only run analytics and developers on mount.
+        // Data loading is handled by the selectedCity/activeCategory effect below.
         showFirstVisitPopup(user);
         trackInteraction({
             interactionType: 'View',
@@ -102,14 +109,10 @@ const Home = () => {
             localStorage.removeItem('buy_listing_type');
         }
 
-        // Auto-detect location if not already manually set
         if (!selectedCity || selectedCity === "Current Location") {
-            const hasInitialDetection = localStorage.getItem('initial_location_detected');
-            if (!hasInitialDetection) {
-                detectLocation();
-                localStorage.setItem('initial_location_detected', 'true');
-            }
-            loadData("Current Location");
+            // Always try to detect location and load data
+            loadData(null);
+            detectLocation();
         } else {
             setDisplayCity(selectedCity);
             setUserCoords(null);
@@ -120,37 +123,43 @@ const Home = () => {
 
     const detectLocation = () => {
         if ("geolocation" in navigator) {
+            setDisplayCity("Detecting location...");
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
                 console.log('GPS Detected:', latitude, longitude);
-
                 setUserCoords({ lat: latitude, lng: longitude });
 
-                // Fetch properties by GPS coordinates immediately
-                loadNearbyProperties(null, latitude, longitude);
-                loadData("Current Location");
-
                 try {
-                    // Pre-set generic location so home page doesn't break
-                    setDisplayCity("Your Area");
-                    setSelectedCity("Current Location");
-
-                    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+                    const response = await fetch(
+                        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                    );
                     const data = await response.json();
-                    const city = data.city || data.locality || "Current Location";
-                    if (city) setDisplayCity(city);
+                    const detectedCity = data.city || data.locality || 'Bangalore';
+                    console.log('Detected City:', detectedCity);
+
+                    setDisplayCity(detectedCity);
+                    // Update selectedCity only if it was "Current Location" to avoid re-trigger loop
+                    // We call loadNearbyProperties directly with coords here
+                    loadData(detectedCity);
+                    loadNearbyProperties(detectedCity, latitude, longitude);
                 } catch (error) {
                     console.error('Reverse geocode error:', error);
-                    // Leave it as "Your Area"
+                    setDisplayCity('Bangalore');
+                    loadData('Bangalore');
+                    loadNearbyProperties('Bangalore', latitude, longitude);
                 }
             }, (error) => {
                 console.warn('Geolocation error:', error.message);
-                if (selectedCity && selectedCity !== "Current Location") {
-                    loadNearbyProperties(selectedCity);
-                    loadData(selectedCity);
-                    setDisplayCity(selectedCity);
-                }
-            }, { enableHighAccuracy: true });
+                // Fallback: load all Bangalore properties
+                setDisplayCity('Bangalore');
+                loadData('Bangalore');
+                loadNearbyProperties('Bangalore');
+            }, { enableHighAccuracy: true, timeout: 10000 });
+        } else {
+            // Geolocation not supported - use Bangalore as default
+            setDisplayCity('Bangalore');
+            loadData('Bangalore');
+            loadNearbyProperties('Bangalore');
         }
     };
 
@@ -213,23 +222,18 @@ const Home = () => {
         }
     };
 
-    const loadNearbyProperties = async (city = null, lat = null, lng = null, category = null) => { // Modified function signature
+    const loadNearbyProperties = async (city = null, userLat = null, userLng = null, category = null) => {
         setLoadingNearby(true);
         try {
-            // Set limit extremely high so we get all active properties for gathering/grouping.
-            // (Since the home page requires fetching all units to compress them into project cards)
-            const params = { limit: 1000 };
-            if (lat && lng) {
-                params.lat = lat;
-                params.lng = lng;
-                params.radius = 30; // 30km radius
-            } else if (city) {
+            // Always fetch by city name — this is reliable regardless of whether
+            // properties have lat/lng stored. We do client-side 10km filtering if coords exist.
+            const params = { limit: 100 };
+            if (city && city !== 'Current Location') {
                 params.city = city;
             }
 
             let categoryFilter = category || (activeCategory === 'Buy' || activeCategory === 'Invest' ? null : activeCategory);
 
-            // Handle Buy Listing Type filters for Nearby
             if (activeCategory === 'Buy' && !category) {
                 if (buyListingType === 'Owner') {
                     categoryFilter = 'Resale';
@@ -241,9 +245,7 @@ const Home = () => {
             }
 
             const res = await getProperties(params);
-
-            // If we have user coordinates, calculate distance for labeling
-            let props = res.data.properties;
+            let props = res.data.properties || [];
 
             // Manual filter for Buy tab constraints
             if (activeCategory === 'Buy') {
@@ -254,19 +256,36 @@ const Home = () => {
                 }
             }
 
-            if (lat && lng) {
-                props = props.map(p => {
-                    const dist = calculateDistance(lat, lng, p.latitude, p.longitude);
-                    return {
+            // CLIENT-SIDE 10km RADIUS FILTER
+            // Only applied if user GPS is available AND the property has coordinates stored.
+            if (userLat && userLng) {
+                const propsWithCoords = props.filter(p => p.latitude && p.longitude);
+                const propsWithDist = propsWithCoords
+                    .map(p => ({
                         ...p,
-                        distance: dist !== null ? dist.toFixed(1) : null
-                    };
-                });
+                        distance: calculateDistance(userLat, userLng, p.latitude, p.longitude)
+                    }))
+                    .filter(p => p.distance !== null && p.distance <= 10); // ≤ 10km
+
+                if (propsWithDist.length > 0) {
+                    // Sort by distance ascending
+                    propsWithDist.sort((a, b) => a.distance - b.distance);
+                    const grouped = groupProperties(propsWithDist.map(p => ({
+                        ...p,
+                        distance: parseFloat(p.distance).toFixed(1)
+                    })));
+                    setNearbyProperties(grouped.slice(0, 20));
+                    setLoadingNearby(false);
+                    return;
+                }
+
+                // Fallback: if no properties have coords stored, show all city props with distance label
+                props = props.map(p => ({ ...p, distance: null }));
             }
 
             const groupedNearbyProps = groupProperties(props);
-            const displayLimit = (categoryFilter && categoryFilter !== 'All') ? 50 : 6;
-            setNearbyProperties(groupedNearbyProps.slice(0, displayLimit)); // Show up to 50 if filtered, otherwise 6
+            const displayLimit = (categoryFilter && categoryFilter !== 'All') ? 50 : 8;
+            setNearbyProperties(groupedNearbyProps.slice(0, displayLimit));
         } catch (err) {
             console.error('Failed to load nearby properties:', err);
         } finally {
@@ -328,10 +347,48 @@ const Home = () => {
             localStorage.setItem('invest_submitted', 'true');
         } catch (err) {
             console.error('Failed to submit investment inquiry', err);
-            // Optionally could fallback to just setting true even if it fails, or show error
             setInvestSubmitted(true);
             localStorage.setItem('invest_submitted', 'true');
         }
+    };
+
+    const handleBannerExpertClick = () => {
+        // Submit inquiry and auto-login the user using the returned token
+        submitInquiry({
+            name: user?.name || 'Investment Lead',
+            phone: user?.phone || '0000000000',
+            email: user?.email || null,
+            message: 'Investment inquiry'
+        })
+        .then((res) => {
+            if (res?.data?.token && res?.data?.user) {
+                login(res.data.token, res.data.user);
+            }
+            localStorage.setItem('banner_cta_submitted', 'true');
+            setBannerCtaSubmitted(true);
+        })
+        .catch(() => {
+            localStorage.setItem('banner_cta_submitted', 'true');
+            setBannerCtaSubmitted(true);
+        });
+    };
+
+    const handleResidentialClick = () => {
+        setActiveCategory('Buy');
+        setBuyListingType('Developer');
+        setTimeout(() => {
+            const element = document.querySelector('.home-body');
+            if (element) element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+
+    const handleResaleClick = () => {
+        setActiveCategory('Buy');
+        setBuyListingType('Owner');
+        setTimeout(() => {
+            const element = document.querySelector('.home-body');
+            if (element) element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
     };
 
     return (
@@ -398,6 +455,45 @@ const Home = () => {
                 <div className="hero-decor hero-decor-2"></div>
             </div>
 
+            <React.Suspense fallback={null}>
+                <PropertyTypeBar 
+                    onResidentialClick={handleResidentialClick}
+                    onResaleClick={handleResaleClick}
+                    onCompareClick={() => setIsCompareModalOpen(true)}
+                />
+                
+                <CompareModal 
+                    isOpen={isCompareModalOpen} 
+                    onClose={() => setIsCompareModalOpen(false)} 
+                />
+            </React.Suspense>
+
+            {/* Promotional Banner with CTA */}
+            <div className="promo-banner-section">
+                <img
+                    src="/images/promo-banner-new.png"
+                    alt="Promotional Banner"
+                    className="promo-banner-img"
+                />
+                <div className="promo-banner-cta">
+                    {bannerCtaSubmitted ? (
+                        <div className="promo-cta-success">
+                            ✅ We will reach out soon...
+                        </div>
+                    ) : (
+                        <button
+                            className="promo-cta-btn"
+                            onClick={() => ensureIdentified(
+                                handleBannerExpertClick,
+                                'To talk to our expert, please verify your details'
+                            )}
+                        >
+                            Talk to Our Expert
+                        </button>
+                    )}
+                </div>
+            </div>
+
             <ServiceCards 
                 setActiveCategory={setActiveCategory} 
                 setBuyListingType={setBuyListingType} 
@@ -405,6 +501,7 @@ const Home = () => {
                 handleInvestSubmit={handleInvestSubmit}
                 user={user}
                 ensureIdentified={ensureIdentified}
+                onCompareClick={() => setIsCompareModalOpen(true)}
             />
 
             {/* Category Tabs */}
@@ -416,33 +513,31 @@ const Home = () => {
                             className={`listing-type-btn ${buyListingType === 'Developer' ? 'active' : ''}`}
                             onClick={() => setBuyListingType('Developer')}
                         >
-                            Developer listing
+                            Residential
                         </button>
                         <button
                             className={`listing-type-btn ${buyListingType === 'Owner' ? 'active' : ''}`}
                             onClick={() => setBuyListingType('Owner')}
                         >
-                            Owner listing
+                            Resale
                         </button>
                     </div>
                 )}
 
 
-                {(activeCategory && (activeCategory !== 'Buy' || buyListingType)) && (
-                    <>
-                        {/* Properties Near You - Dynamic Section */}
-                        {(selectedCity || userCoords) && (
+                {/* Properties Near You - Always shown when city/location is available */}
+                {(displayCity || selectedCity || userCoords) && displayCity !== 'Detecting location...' && (
                             <section className="home-section animate-section">
                                 <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <h2 style={{ margin: 0 }}>Properties in <span className="hero-highlight" style={{ cursor: 'pointer' }} onClick={() => ensureIdentified(() => navigate((displayCity || selectedCity) === "Your Area" ? '/search' : `/search?city=${displayCity || selectedCity}`))} title={`See all properties in ${displayCity || selectedCity}`}>{displayCity || selectedCity}</span></h2>
                                         {activeCategory === 'Buy' && buyListingType && (
                                             <button 
-                                                onClick={() => setBuyListingType(null)} 
+                                                onClick={() => setBuyListingType(buyListingType === 'Developer' ? 'Owner' : 'Developer')} 
                                                 className="listing-switch-btn"
                                             >
                                                 <Hand size={14} className="pointing-hand" />
-                                                Switch to {buyListingType === 'Developer' ? 'Owner' : 'Developer'}
+                                                Switch to {buyListingType === 'Developer' ? 'Resale' : 'Residential'}
                                             </button>
                                         )}
                                     </div>
@@ -498,40 +593,6 @@ const Home = () => {
                                 )}
                             </section>
                         )}
-
-                        {/* Featured Estates */}
-                        <section className="home-section animate-section">
-                            <div className="section-header">
-                                <h2>Explore properties outside <span className="hero-highlight">{displayCity || selectedCity}</span></h2>
-                                <a className="see-all" onClick={() => ensureIdentified(() => navigate('/search'), 'Explore more properties')}>
-                                    See all <ArrowRight size={16} />
-                                </a>
-                            </div>
-
-                            {loading ? (
-                                <div className="loading-screen"><div className="spinner"></div></div>
-                            ) : properties.length > 0 ? (
-                                <div className="property-scroll">
-                                    {properties.map((prop, index) => (
-                                        <div key={prop.id} className="property-scroll-item" style={{ animationDelay: `${index * 0.1}s` }}>
-                                            <PropertyCard
-                                                property={prop}
-                                                isFavorited={favoriteIds.has(prop.id)}
-                                                onFavoriteToggle={handleFavoriteToggle}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="empty-state" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                                    <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
-                                    <h3 style={{ fontSize: '24px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>We are coming soon...</h3>
-                                    <p style={{ color: '#6b7280' }}>Amazing properties will be listed here shortly.</p>
-                                </div>
-                            )}
-                        </section>
-                    </>
-                )}
 
                 {/* CTA Banner - Moved here as requested */}
                 <div className="home-cta-banner" style={{ marginTop: '12px', marginBottom: '32px' }}>

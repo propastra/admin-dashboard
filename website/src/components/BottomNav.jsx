@@ -47,7 +47,7 @@ const BottomNav = () => {
                         key={item.to}
                         onClick={() => handleNavClick(item.to, item.label)}
                         className={`bottom-nav-item ${isActive ? 'active' : ''}`}
-                        style={{ background: 'none', border: 'none', padding: '0', cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                         <item.icon size={22} />
                         <span>{item.label}</span>

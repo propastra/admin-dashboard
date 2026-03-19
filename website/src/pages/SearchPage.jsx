@@ -126,8 +126,56 @@ const SearchPage = () => {
             const res = await getProperties(params);
             console.log('Frontend Request Params:', params);
             console.log('Frontend Received Response Data:', res.data);
-            console.log('Frontend Received Properties Length:', res.data.properties?.length);
-            setProperties(res.data.properties || []);
+
+            const raw = res.data.properties || [];
+
+            // --- Deduplicate by projectName ---
+            // Group all records that share the same projectName into one card.
+            // Properties without a projectName are never grouped.
+            const projectMap = new Map();
+            const noProject = [];
+
+            raw.forEach(p => {
+                const key = p.projectName ? p.projectName.trim().toLowerCase() : null;
+                if (!key) {
+                    noProject.push(p);
+                    return;
+                }
+                if (!projectMap.has(key)) {
+                    projectMap.set(key, []);
+                }
+                projectMap.get(key).push(p);
+            });
+
+            // For each group, pick the representative (cheapest) & attach variant metadata
+            const normalizePrice = (p) => {
+                const val = parseFloat(p.price) || 0;
+                if (p.priceUnit === 'Cr') return val * 10000000;
+                if (p.priceUnit === 'Lakhs') return val * 100000;
+                if (p.priceUnit === 'Thousands') return val * 1000;
+                return val;
+            };
+
+            const grouped = [];
+            projectMap.forEach((variants) => {
+                const sorted = [...variants].sort((a, b) => normalizePrice(a) - normalizePrice(b));
+                const rep = sorted[0]; // cheapest as representative
+                const maxVariant = sorted[sorted.length - 1];
+                const configs = [...new Set(variants.map(v => v.configuration).filter(Boolean))];
+                grouped.push({
+                    ...rep,
+                    variantCount: variants.length,
+                    allConfigurations: configs,
+                    minPrice: rep.price,
+                    minPriceUnit: rep.priceUnit,
+                    maxPrice: maxVariant.price,
+                    maxPriceUnit: maxVariant.priceUnit,
+                    _allVariants: variants,
+                });
+            });
+
+            const deduped = [...grouped, ...noProject];
+            setProperties(deduped);
             setTotal(res.data.total || 0);
             setTotalPages(res.data.totalPages || 1);
             // ...
@@ -447,6 +495,10 @@ const SearchPage = () => {
                             property={prop}
                             isFavorited={favoriteIds.has(prop.id)}
                             onFavoriteToggle={handleFavoriteToggle}
+                            variantCount={prop.variantCount}
+                            allConfigurations={prop.allConfigurations}
+                            maxPrice={prop.maxPrice}
+                            maxPriceUnit={prop.maxPriceUnit}
                         />
                     ))}
                 </div>
