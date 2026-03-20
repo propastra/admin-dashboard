@@ -48,141 +48,103 @@ jobs:
             set -e
 
             BACKEND_DIR="/home/ubuntu/Admin_dashboard/backend"
-            SAFE_STORE="/home/ubuntu/persistent_data"
+            SAFE_UPLOADS="/home/ubuntu/persistent_data/uploads"
+            SAFE_DB="/home/ubuntu/persistent_data/db_backups"
 
             # ============================================================
-            # STEP 0: ENSURE PERMANENT SAFE STORAGE EXISTS
-            # This folder lives OUTSIDE the repo and is NEVER deleted.
-            # It stores uploads and DB backups permanently across deploys.
+            # STEP 1: PROTECT DATA (fast - just move files, no copy)
             # ============================================================
-            echo "=== Ensuring permanent safe storage at $SAFE_STORE ==="
-            mkdir -p "$SAFE_STORE/uploads"
-            mkdir -p "$SAFE_STORE/db_backups"
-
-            # ============================================================
-            # STEP 1: SYNC uploads INTO permanent safe store
-            # This merges all current uploads to the safe location first,
-            # so even if the deploy fails, nothing is ever lost.
-            # ============================================================
-            echo "=== Syncing uploads to permanent safe store ==="
-            if [ -d "$BACKEND_DIR/uploads" ]; then
-              rsync -av --ignore-existing "$BACKEND_DIR/uploads/" "$SAFE_STORE/uploads/"
-              UPLOAD_COUNT=$(ls "$SAFE_STORE/uploads" | wc -l)
-              echo "Safe store now has $UPLOAD_COUNT files in uploads."
-            else
-              echo "No uploads dir found yet, skipping sync."
-            fi
-
-            # ============================================================
-            # STEP 2: BACKUP DATABASE to permanent safe store
-            # ============================================================
-            echo "=== Backing up database ==="
-            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-            if [ -f "$BACKEND_DIR/database.sqlite" ]; then
-              cp "$BACKEND_DIR/database.sqlite" "$SAFE_STORE/db_backups/database_$TIMESTAMP.sqlite"
-              echo "Database backed up to $SAFE_STORE/db_backups/database_$TIMESTAMP.sqlite"
-              # Keep only the last 5 backups to save space
-              ls -t "$SAFE_STORE/db_backups/"*.sqlite 2>/dev/null | tail -n +6 | xargs rm -f || true
-            fi
-
-            # ============================================================
-            # STEP 3: FREE UP DISK SPACE (safe - won't touch production data)
-            # ============================================================
-            echo "=== Freeing up disk space ==="
-            df -h
-
-            # Flush PM2 logs
-            npx pm2 flush || true
-            sudo journalctl --vacuum-time=1d || true
-
-            # Clean npm cache & temp files (NOT uploads or db)
-            rm -rf /home/ubuntu/.npm || true
-            npm cache clean --force || true
-
-            # Remove node_modules to free space before reinstall
-            rm -rf /home/ubuntu/Admin_dashboard/frontend/node_modules || true
-            rm -rf /home/ubuntu/Admin_dashboard/website/node_modules || true
-            rm -rf /home/ubuntu/Admin_dashboard/backend/node_modules || true
-
-            echo "Disk after cleanup:"
-            df -h
-
-            # ============================================================
-            # STEP 4: PROTECT DATA BEFORE GIT RESET
-            # Move DB and uploads out of repo directory temporarily
-            # ============================================================
-            echo "=== Protecting production data before git reset ==="
+            echo "=== [1/6] Protecting production data ==="
+            mkdir -p /home/ubuntu/persistent_data/uploads
+            mkdir -p /home/ubuntu/persistent_data/db_backups
             mkdir -p /home/ubuntu/deploy_tmp
 
-            mv "$BACKEND_DIR/database.sqlite" /home/ubuntu/deploy_tmp/database.sqlite || true
-            mv "$BACKEND_DIR/uploads" /home/ubuntu/deploy_tmp/uploads || true
+            # Backup DB (quick file copy)
+            if [ -f "$BACKEND_DIR/database.sqlite" ]; then
+              TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+              cp "$BACKEND_DIR/database.sqlite" "$SAFE_DB/database_$TIMESTAMP.sqlite"
+              # Keep only last 5 backups
+              ls -t "$SAFE_DB/"*.sqlite 2>/dev/null | tail -n +6 | xargs rm -f || true
+              # Move DB out before git reset
+              mv "$BACKEND_DIR/database.sqlite" /home/ubuntu/deploy_tmp/database.sqlite
+            fi
+
+            # Move uploads out before git reset (fast move, not copy)
+            if [ -d "$BACKEND_DIR/uploads" ]; then
+              mv "$BACKEND_DIR/uploads" /home/ubuntu/deploy_tmp/uploads
+            fi
+
+            # Sync any new uploads to permanent store (only new files, skips existing)
+            if [ -d "/home/ubuntu/deploy_tmp/uploads" ]; then
+              rsync -a --ignore-existing /home/ubuntu/deploy_tmp/uploads/ "$SAFE_UPLOADS/" 2>/dev/null || true
+            fi
 
             # ============================================================
-            # STEP 5: PULL LATEST CODE
+            # STEP 2: PULL LATEST CODE
             # ============================================================
-            echo "=== Pulling latest code from GitHub ==="
+            echo "=== [2/6] Pulling latest code ==="
             cd /home/ubuntu/Admin_dashboard
             git fetch --all
             git reset --hard origin/main
 
             # ============================================================
-            # STEP 6: RESTORE PRODUCTION DATA
-            # Restore DB + uploads back from temp, then ALSO merge
-            # anything from the permanent safe store to avoid any loss.
+            # STEP 3: RESTORE DATA
             # ============================================================
-            echo "=== Restoring production data ==="
+            echo "=== [3/6] Restoring production data ==="
             mkdir -p "$BACKEND_DIR/uploads"
 
-            # Restore DB
-            mv /home/ubuntu/deploy_tmp/database.sqlite "$BACKEND_DIR/database.sqlite" || true
-
-            # Restore uploads from temp (what was just there)
+            mv /home/ubuntu/deploy_tmp/database.sqlite "$BACKEND_DIR/database.sqlite" 2>/dev/null || true
             if [ -d "/home/ubuntu/deploy_tmp/uploads" ]; then
-              rsync -av --ignore-existing /home/ubuntu/deploy_tmp/uploads/ "$BACKEND_DIR/uploads/"
-              rm -rf /home/ubuntu/deploy_tmp/uploads
+              rsync -a --ignore-existing /home/ubuntu/deploy_tmp/uploads/ "$BACKEND_DIR/uploads/"
+              rm -rf /home/ubuntu/deploy_tmp
             fi
+            # Merge from permanent store to catch any missed files
+            rsync -a --ignore-existing "$SAFE_UPLOADS/" "$BACKEND_DIR/uploads/" 2>/dev/null || true
 
-            # Also merge from permanent safe store (catches any file that
-            # might have been missed or lost in a previous failed deploy)
-            rsync -av --ignore-existing "$SAFE_STORE/uploads/" "$BACKEND_DIR/uploads/"
-
-            rm -rf /home/ubuntu/deploy_tmp
-
-            TOTAL_UPLOADS=$(ls "$BACKEND_DIR/uploads" | wc -l)
-            echo "Total uploads restored: $TOTAL_UPLOADS files"
+            echo "Uploads restored: $(ls $BACKEND_DIR/uploads | wc -l) files"
 
             # ============================================================
-            # STEP 7: DEPLOY BACKEND
+            # STEP 4: DEPLOY BACKEND
+            # Only reinstall if package.json changed (saves ~1-2 min)
             # ============================================================
-            echo "=== Deploying Backend ==="
+            echo "=== [4/6] Deploying Backend ==="
             cd "$BACKEND_DIR"
 
-            rm -rf node_modules dist
-
-            npm install
-            npm run build
-
-            # Run migration (safe - only adds NULLable columns if missing)
-            echo "Running database migration..."
-            npm run migrate || true
-
-            # Seed admin user only (not properties - preserves all data)
-            echo "Seeding admin user..."
-            node dist/seed.js || true
-
-            # Only seed properties if database is completely empty
-            echo "Verifying property count..."
-            COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" 2>/dev/null || echo "0")
-            echo "Current total properties: $COUNT"
-            if [ "$COUNT" -eq 0 ]; then
-              echo "Database is empty - running fresh property seeding..."
-              npm run seed:all
+            # Smart install: reuse node_modules if lockfile unchanged
+            LOCKFILE_CHANGED=false
+            if [ ! -d "node_modules" ]; then
+              LOCKFILE_CHANGED=true
+            elif ! git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "backend/package-lock.json"; then
+              echo "package-lock.json unchanged - reusing node_modules"
             else
-              echo "Database has $COUNT properties - skipping seeding to preserve data."
+              LOCKFILE_CHANGED=true
             fi
 
-            echo "Final property count: $(sqlite3 database.sqlite 'SELECT COUNT(*) FROM Properties;')"
-            echo "Final uploads count: $(ls uploads | wc -l) files"
+            if [ "$LOCKFILE_CHANGED" = true ]; then
+              echo "Installing backend dependencies..."
+              rm -rf node_modules
+              npm ci --prefer-offline 2>/dev/null || npm install
+            fi
+
+            npm run build
+
+            # Migration (fast - skips if already applied)
+            npm run migrate || true
+
+            # Only seed if DB is empty (skip the slow logo-downloading seed otherwise)
+            PROP_COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" 2>/dev/null || echo "0")
+            DEV_COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Developers;" 2>/dev/null || echo "0")
+            echo "Properties: $PROP_COUNT | Developers: $DEV_COUNT"
+
+            if [ "$PROP_COUNT" -eq 0 ]; then
+              echo "Empty DB - running full seed..."
+              node dist/seed.js || true
+              npm run seed:all || true
+            else
+              echo "DB has data - skipping seed (preserving all $PROP_COUNT properties)"
+            fi
+
+            echo "Final: $(sqlite3 database.sqlite 'SELECT COUNT(*) FROM Properties;') properties, $(ls uploads | wc -l) uploads"
 
             # Restart backend
             npx pm2 delete backend || true
@@ -190,47 +152,52 @@ jobs:
             npx pm2 save
 
             # ============================================================
-            # STEP 8: DEPLOY FRONTEND (Admin Dashboard)
+            # STEP 5: DEPLOY FRONTEND (Admin Dashboard)
             # ============================================================
-            echo "=== Deploying Frontend (Admin Dashboard) ==="
+            echo "=== [5/6] Deploying Frontend ==="
             cd /home/ubuntu/Admin_dashboard/frontend
 
-            sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/frontend/dist || true
+            sudo chown -R ubuntu:ubuntu dist 2>/dev/null || true
+            rm -rf dist
 
-            rm -rf node_modules dist
+            # Smart install
+            if [ ! -d "node_modules" ] || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "frontend/package-lock.json"; then
+              rm -rf node_modules
+              npm ci --prefer-offline 2>/dev/null || npm install
+            else
+              echo "Reusing frontend node_modules"
+            fi
 
-            npm install
             npm run build
-
-            rm -rf node_modules
-
-            # Write a debug info file
-            echo "Deployment Time: $(date)" > dist/debug.txt
-            echo "DB Properties: $(sqlite3 /home/ubuntu/Admin_dashboard/backend/database.sqlite 'SELECT COUNT(*) FROM Properties;')" >> dist/debug.txt
-            echo "Uploads: $(ls /home/ubuntu/Admin_dashboard/backend/uploads | wc -l) files" >> dist/debug.txt
-
-            sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/frontend/dist
-
-            echo "Frontend deployed successfully!"
+            sudo chown -R www-data:www-data dist
+            echo "Frontend deployed!"
 
             # ============================================================
-            # STEP 9: DEPLOY WEBSITE (Customer-facing propastra.com)
+            # STEP 6: DEPLOY WEBSITE (propastra.com)
             # ============================================================
-            echo "=== Deploying Website (propastra.com) ==="
+            echo "=== [6/6] Deploying Website ==="
             cd /home/ubuntu/Admin_dashboard/website
 
-            sudo chown -R ubuntu:ubuntu /home/ubuntu/Admin_dashboard/website/dist || true
+            sudo chown -R ubuntu:ubuntu dist 2>/dev/null || true
+            rm -rf dist
 
-            rm -rf node_modules dist
+            # Smart install
+            if [ ! -d "node_modules" ] || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "website/package-lock.json"; then
+              rm -rf node_modules
+              npm ci --prefer-offline 2>/dev/null || npm install
+            else
+              echo "Reusing website node_modules"
+            fi
 
-            npm install
             npm run build
+            sudo chown -R www-data:www-data dist
+            echo "Website deployed!"
 
-            rm -rf node_modules
-
-            sudo chown -R www-data:www-data /home/ubuntu/Admin_dashboard/website/dist
-
-            echo "=== ALL DEPLOYMENTS COMPLETED SUCCESSFULLY ==="
-            echo "Properties in DB: $(sqlite3 /home/ubuntu/Admin_dashboard/backend/database.sqlite 'SELECT COUNT(*) FROM Properties;')"
-            echo "Uploads preserved: $(ls /home/ubuntu/Admin_dashboard/backend/uploads | wc -l) files"
-            echo "Safe store uploads: $(ls $SAFE_STORE/uploads | wc -l) files"
+            # ============================================================
+            # DONE
+            # ============================================================
+            echo ""
+            echo "=== DEPLOYMENT COMPLETE ==="
+            echo "Properties: $(sqlite3 /home/ubuntu/Admin_dashboard/backend/database.sqlite 'SELECT COUNT(*) FROM Properties;')"
+            echo "Uploads:    $(ls /home/ubuntu/Admin_dashboard/backend/uploads | wc -l) files"
+            echo "Safe store: $(ls $SAFE_UPLOADS | wc -l) files backed up"
