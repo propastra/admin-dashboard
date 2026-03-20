@@ -1025,14 +1025,26 @@
 .comparison-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 800px;
+    table-layout: fixed;
+    min-width: max-content;
+}
+
+.comparison-table thead, 
+.comparison-table tbody {
+    min-width: 100%;
+}
+
+.comparison-table tr {
+    display: table-row !important;
 }
 
 .comparison-table th,
 .comparison-table td {
-    padding: 20px;
+    padding: 24px;
     border: 1px solid #e2e8f0;
     vertical-align: top;
+    background: #fff;
+    display: table-cell !important;
 }
 
 .comparison-table thead th {
@@ -1043,13 +1055,15 @@
 }
 
 .feature-column {
-    width: 150px;
-    min-width: 150px;
+    width: 180px;
+    min-width: 180px;
     font-weight: 700;
     color: var(--gray-700, #334155);
-    background: #f8faff;
-    position: relative;
-    z-index: 20 !important;
+    background: #f8faff !important;
+    position: sticky;
+    left: 0;
+    z-index: 30 !important;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
 }
 
 .comparison-table tbody .feature-column {
@@ -1057,7 +1071,8 @@
 }
 
 .property-column {
-    min-width: 250px;
+    width: 280px;
+    min-width: 280px;
     max-width: 280px;
 }
 
