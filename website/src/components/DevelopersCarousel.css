@@ -11,6 +11,7 @@
     text-align: center;
 }
 
+
 .title-group h2 {
     margin: 0;
     font-size: 32px;
@@ -28,7 +29,8 @@
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0 45px; /* Space for arrows */
+    padding: 0 45px;
+    /* Space for arrows */
 }
 
 .developers-container {
@@ -36,7 +38,8 @@
     scrollbar-width: none;
     padding: 20px 0;
     scroll-behavior: smooth;
-    max-width: 968px; /* (230px * 4) + (16px * 3) */
+    max-width: 968px;
+    /* (230px * 4) + (16px * 3) */
     margin: 0 auto;
 }
 
@@ -86,12 +89,10 @@
     left: -100%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(
-        to right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: skewX(-25deg);
     transition: none;
     z-index: 1;
@@ -102,7 +103,9 @@
 }
 
 @keyframes shine {
-    100% { left: 200%; }
+    100% {
+        left: 200%;
+    }
 }
 
 .developer-card::after {
@@ -209,29 +212,36 @@
 
 /* Specific styling for the brand highlight */
 .hero-highlight {
-    color: #fbbf24; /* Golden highlight as in screenshot */
+    color: #fbbf24;
+    /* Golden highlight as in screenshot */
 }
 
 @media (max-width: 1200px) {
     .developers-wrapper {
         padding: 0 35px;
     }
+
     .developers-grid {
         grid-template-columns: repeat(auto-fill, 210px);
         gap: 12px;
     }
+
     .developers-container {
-        max-width: 876px; /* (210px * 4) + (12px * 3) */
+        max-width: 876px;
+        /* (210px * 4) + (12px * 3) */
     }
+
     .developer-card {
         width: 210px;
         padding: 12px;
         gap: 10px;
     }
+
     .developer-logo-wrap {
         width: 45px;
         height: 45px;
     }
+
     .developer-name {
         font-size: 13px;
     }
@@ -241,19 +251,23 @@
     .developers-section {
         padding: 40px 16px;
     }
+
     .developers-wrapper {
         padding: 0;
         overflow: hidden;
     }
+
     .side-control-btn {
         display: none;
     }
+
     .developers-container {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
         padding: 10px 0;
     }
+
     .developers-grid {
         display: grid;
         grid-template-rows: repeat(2, auto);
@@ -263,6 +277,7 @@
         width: max-content;
         max-width: none;
     }
+
     .developer-card {
         width: calc(50vw - 24px);
         padding: 14px 12px;
@@ -270,12 +285,14 @@
         min-height: 80px;
         border-radius: 16px;
     }
+
     .developer-logo-wrap {
         width: 40px;
         height: 40px;
         flex-shrink: 0;
         padding: 6px;
     }
+
     .developer-name {
         font-size: 12px;
         font-weight: 700;
