@@ -28,7 +28,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0 50px; /* Space for arrows */
+    padding: 0 45px; /* Space for arrows */
 }
 
 .developers-container {
@@ -36,6 +36,8 @@
     scrollbar-width: none;
     padding: 20px 0;
     scroll-behavior: smooth;
+    max-width: 968px; /* (230px * 4) + (16px * 3) */
+    margin: 0 auto;
 }
 
 .developers-container::-webkit-scrollbar {
@@ -46,8 +48,8 @@
     display: grid;
     grid-template-rows: repeat(2, auto);
     grid-auto-flow: column;
-    grid-template-columns: repeat(auto-fill, 240px);
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, 230px);
+    gap: 16px;
     width: max-content;
 }
 
@@ -59,7 +61,7 @@
     flex-direction: row;
     align-items: center;
     gap: 16px;
-    width: 260px;
+    width: 230px;
     min-height: 90px;
     border: 1px solid rgba(229, 231, 235, 0.8);
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
@@ -210,17 +212,72 @@
     color: #fbbf24; /* Golden highlight as in screenshot */
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
     .developers-wrapper {
-        padding: 0 10px;
-    }
-    .side-control-btn {
-        display: none; /* Hide arrows on mobile for swipe */
+        padding: 0 35px;
     }
     .developers-grid {
-        grid-template-columns: repeat(auto-fill, 200px);
+        grid-template-columns: repeat(auto-fill, 210px);
+        gap: 12px;
+    }
+    .developers-container {
+        max-width: 876px; /* (210px * 4) + (12px * 3) */
     }
     .developer-card {
-        width: 200px;
+        width: 210px;
+        padding: 12px;
+        gap: 10px;
+    }
+    .developer-logo-wrap {
+        width: 45px;
+        height: 45px;
+    }
+    .developer-name {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 768px) {
+    .developers-section {
+        padding: 40px 16px;
+    }
+    .developers-wrapper {
+        padding: 0;
+        overflow: hidden;
+    }
+    .side-control-btn {
+        display: none;
+    }
+    .developers-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+    .developers-grid {
+        display: grid;
+        grid-template-rows: repeat(2, auto);
+        grid-auto-flow: column;
+        grid-template-columns: repeat(auto-fill, calc(50vw - 24px));
+        gap: 12px;
+        width: max-content;
+        max-width: none;
+    }
+    .developer-card {
+        width: calc(50vw - 24px);
+        padding: 14px 12px;
+        gap: 10px;
+        min-height: 80px;
+        border-radius: 16px;
+    }
+    .developer-logo-wrap {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        padding: 6px;
+    }
+    .developer-name {
+        font-size: 12px;
+        font-weight: 700;
     }
 }
