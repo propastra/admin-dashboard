@@ -61,10 +61,11 @@ router.get('/:id', async (req, res) => {
 // @route   POST api/properties
 // @desc    Add new property
 // @access  Private
-router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
+router.post('/', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
         const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
 
+        const coverPhoto = req.files && req.files['coverPhoto'] ? `/uploads/${(req.files['coverPhoto'] as any[])[0].filename}` : null;
         const masterPlan = req.files && req.files['masterPlan'] ? (req.files['masterPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const photos = req.files && req.files['photos'] ? (req.files['photos'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const brochure = req.files && req.files['brochure'] ? (req.files['brochure'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
@@ -94,6 +95,7 @@ router.post('/', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name
             priceUnit,
             dimensions,
             configuration,
+            coverPhoto,
             photos,
             brochure,
             floorPlan,
@@ -186,12 +188,12 @@ router.delete('/bulk', auth, async (req, res) => {
 // @route   PUT api/properties/:id
 // @desc    Update property
 // @access  Private
-router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
+router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingCoverPhoto, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
 
         const parseArray = (val: any) => {
             if (!val) return [];
@@ -226,8 +228,18 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
         }
 
         // Handle new files
+        let coverPhoto = property.coverPhoto;
+        if ('existingCoverPhoto' in req.body && !req.body.existingCoverPhoto) {
+            coverPhoto = null; // Removed existing
+        } else if ('existingCoverPhoto' in req.body && req.body.existingCoverPhoto) {
+            coverPhoto = req.body.existingCoverPhoto; // Kept existing
+        }
+
         if (req.files) {
             const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+            if (files['coverPhoto'] && files['coverPhoto'].length > 0) {
+                coverPhoto = `/uploads/${files['coverPhoto'][0].filename}`;
+            }
             if (files['photos']) {
                 const newPhotos = files['photos'].map((file: any) => `/uploads/${file.filename}`);
                 photos = [...photos, ...newPhotos];
@@ -279,6 +291,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'photos', maxCount: 100 }, { na
             priceUnit,
             dimensions,
             configuration,
+            coverPhoto,
             photos,
             brochure,
             floorPlan,

@@ -24,9 +24,11 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         }, `To view ${displayTitle}, we'd love to know you better`);
     };
 
-    const photoUrl = property.photos && property.photos.length > 0
-        ? (property.photos[0].startsWith('http') ? property.photos[0] : `${BACKEND_URL}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
-        : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop';
+    const photoUrl = property.coverPhoto
+        ? (property.coverPhoto.startsWith('http') ? property.coverPhoto : `${BACKEND_URL}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`)
+        : (property.photos && property.photos.length > 0
+            ? (property.photos[0].startsWith('http') ? property.photos[0] : `${BACKEND_URL}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
+            : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop');
 
     const handleFavorite = async (e) => {
         e.stopPropagation();

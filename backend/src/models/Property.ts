@@ -36,6 +36,10 @@ const Property = sequelize.define('Property', {
     configuration: {
         type: DataTypes.STRING, // e.g., "3BHK"
     },
+    coverPhoto: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     photos: {
         type: DataTypes.JSON, // SQLite stores JSON as TEXT
         defaultValue: [],

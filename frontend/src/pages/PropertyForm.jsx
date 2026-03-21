@@ -29,6 +29,10 @@ const PropertyForm = () => {
         possessionStatus: 'Ready to Move',
         furnishingStatus: 'Unfurnished'
     });
+    const [coverPhoto, setCoverPhoto] = useState(null);
+    const [existingCoverPhoto, setExistingCoverPhoto] = useState(null);
+    const [previewCoverPhoto, setPreviewCoverPhoto] = useState(null);
+
     const [photos, setPhotos] = useState([]); // For new files
     const [existingPhotos, setExistingPhotos] = useState([]); // For displaying existing images in edit mode
     const [previewPhotos, setPreviewPhotos] = useState([]);
@@ -95,6 +99,7 @@ const PropertyForm = () => {
                     setExistingBrochure(parseArray(data.brochure));
                     setExistingFloorPlan(parseArray(data.floorPlan));
                     setExistingMasterPlan(parseArray(data.masterPlan));
+                    setExistingCoverPhoto(data.coverPhoto || null);
                 } catch (err) {
                     console.error("Error fetching property", err);
                     const msg = err.response?.data?.message || "Failed to load property details. The server might be experiencing issues.";
@@ -109,6 +114,14 @@ const PropertyForm = () => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleCoverPhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setCoverPhoto(file);
+            setPreviewCoverPhoto(URL.createObjectURL(file));
+        }
     };
 
     const handleFileChange = (e) => {
@@ -148,6 +161,11 @@ const PropertyForm = () => {
         setPhotos([]);
         setPreviewPhotos([]);
     };
+    const handleClearCoverPhoto = () => {
+        setCoverPhoto(null);
+        setPreviewCoverPhoto(null);
+        document.getElementById('coverPhotoInput').value = '';
+    };
     const handleClearNewBrochure = () => {
         setBrochure([]);
         setPreviewBrochure([]);
@@ -163,6 +181,10 @@ const PropertyForm = () => {
 
     const handleRemoveExistingPhoto = (photoPath) => {
         setExistingPhotos(prev => prev.filter(p => p !== photoPath));
+    };
+
+    const handleRemoveExistingCoverPhoto = () => {
+        setExistingCoverPhoto(null);
     };
 
     const handleRemoveExistingBrochure = (brochurePath) => {
@@ -192,12 +214,14 @@ const PropertyForm = () => {
             }
         });
 
+        if (coverPhoto) data.append('coverPhoto', coverPhoto);
         photos.forEach(file => data.append('photos', file));
         brochure.forEach(file => data.append('brochure', file));
         floorPlan.forEach(file => data.append('floorPlan', file));
         masterPlan.forEach(file => data.append('masterPlan', file));
 
         if (isEdit) {
+            data.append('existingCoverPhoto', existingCoverPhoto || '');
             if (existingPhotos.length === 0) data.append('existingPhotos', '');
             else existingPhotos.forEach(photo => data.append('existingPhotos', photo));
 
@@ -388,6 +412,27 @@ const PropertyForm = () => {
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Description</label>
                     <textarea name="description" value={formData.description} onChange={handleChange} className="form-textarea" rows="4" />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Cover Photo (Main Image)</label>
+                        {previewCoverPhoto && (
+                            <button type="button" onClick={handleClearCoverPhoto} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New File</button>
+                        )}
+                    </div>
+                    <input type="file" id="coverPhotoInput" accept="image/*" onChange={handleCoverPhotoChange} className="form-input" />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {existingCoverPhoto && !previewCoverPhoto && (
+                            <div style={{ position: 'relative' }}>
+                                <img src={`${API_BASE_URL}${existingCoverPhoto}`} alt="Existing Cover" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #10b981', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${existingCoverPhoto}`)} />
+                                <button type="button" onClick={handleRemoveExistingCoverPhoto} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
+                            </div>
+                        )}
+                        {previewCoverPhoto && (
+                            <img src={previewCoverPhoto} alt="Preview Cover" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: '2px solid #10b981' }} onClick={() => setModalImage(previewCoverPhoto)} />
+                        )}
+                    </div>
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>

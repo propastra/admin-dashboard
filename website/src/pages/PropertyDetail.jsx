@@ -344,9 +344,19 @@ const PropertyDetail = () => {
         );
     }
 
-    const photos = property.photos && property.photos.length > 0
-        ? property.photos.map(p => p.startsWith('http') ? p : `${BACKEND_URL}${p.startsWith('/') ? '' : '/'}${p}`)
-        : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'];
+    let photos = [];
+    if (property.coverPhoto) {
+        photos.push(property.coverPhoto.startsWith('http') ? property.coverPhoto : `${BACKEND_URL}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`);
+    }
+    if (property.photos && property.photos.length > 0) {
+        property.photos.forEach(p => {
+            const tempUrl = p.startsWith('http') ? p : `${BACKEND_URL}${p.startsWith('/') ? '' : '/'}${p}`;
+            if (!photos.includes(tempUrl)) photos.push(tempUrl);
+        });
+    }
+    if (photos.length === 0) {
+        photos.push('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop');
+    }
 
     const amenities = property.amenities || [];
 
@@ -1126,7 +1136,7 @@ const PropertyDetail = () => {
                                         {similarProperties.map(prop => (
                                             <th key={prop.id} className="property-column text-center">
                                                 <div className="prop-img-wrap">
-                                                    <img src={prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${BACKEND_URL}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop'} alt={getDisplayTitle(prop)} />
+                                                    <img src={prop.coverPhoto ? (prop.coverPhoto.startsWith('http') ? prop.coverPhoto : `${BACKEND_URL}${prop.coverPhoto.startsWith('/') ? '' : '/'}${prop.coverPhoto}`) : (prop.photos && prop.photos.length > 0 ? (prop.photos[0].startsWith('http') ? prop.photos[0] : `${BACKEND_URL}${prop.photos[0].startsWith('/') ? '' : '/'}${prop.photos[0]}`) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop')} alt={getDisplayTitle(prop)} />
                                                 </div>
                                                 <h4 className="compare-prop-name">{getDisplayTitle(prop)}</h4>
                                             </th>

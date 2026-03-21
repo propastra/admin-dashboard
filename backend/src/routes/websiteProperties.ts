@@ -4,6 +4,46 @@ const { Property, Interaction, Visitor, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../config/logger');
 
+const enrichPropertiesWithCoverPhoto = async (properties: any[]) => {
+    if (!properties || properties.length === 0) return properties;
+
+    const propsWithCovers = await Property.findAll({
+        attributes: ['propertyName', 'projectName', 'coverPhoto'],
+        where: {
+            coverPhoto: { [Op.not]: null, [Op.ne]: '' }
+        }
+    });
+
+    const getProjectName = (p: any) => {
+        if (p.projectName && p.projectName.trim()) return p.projectName.trim().toLowerCase();
+        if (p.propertyName) {
+            const beforeHyphen = p.propertyName.split('-')[0].trim();
+            if (beforeHyphen) return beforeHyphen.toLowerCase();
+            return p.propertyName.split(' ').slice(0, 2).join(' ').trim().toLowerCase();
+        }
+        return '';
+    };
+
+    const projectCovers = new Map();
+    for (const p of propsWithCovers) {
+        const pName = getProjectName(p);
+        if (pName && !projectCovers.has(pName)) {
+            projectCovers.set(pName, p.coverPhoto);
+        }
+    }
+
+    return properties.map((p: any) => {
+        const pData = p.toJSON ? p.toJSON() : JSON.parse(JSON.stringify(p));
+        if (!pData.coverPhoto) {
+            const pName = getProjectName(pData);
+            if (pName && projectCovers.has(pName)) {
+                pData.coverPhoto = projectCovers.get(pName);
+            }
+        }
+        return pData;
+    });
+};
+
 // @route   GET /api/website/properties
 // @desc    Search/filter properties with pagination
 // @access  Public
@@ -176,11 +216,13 @@ router.get('/', async (req, res) => {
             logging: console.log // Log the actual SQL query
         });
 
+        const enrichedRows = await enrichPropertiesWithCoverPhoto(rows);
+
         res.json({
-            properties: rows,
+            properties: enrichedRows,
             total: count,
-            page: parseInt(page),
-            totalPages: Math.ceil(count / parseInt(limit)),
+            page: parseInt(page as string),
+            totalPages: Math.ceil(count / parseInt(limit as string)),
         });
     } catch (err) {
         console.error(err.message);
@@ -245,7 +287,8 @@ router.get('/featured', async (req, res) => {
             where,
             order: [['createdAt', 'DESC']]
         });
-        res.json(properties);
+        const enrichedProperties = await enrichPropertiesWithCoverPhoto(properties);
+        res.json(enrichedProperties);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -321,7 +364,8 @@ router.get('/:id', async (req, res) => {
             });
         }
 
-        res.json(property);
+        const enrichedProperties = await enrichPropertiesWithCoverPhoto([property]);
+        res.json(enrichedProperties[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');

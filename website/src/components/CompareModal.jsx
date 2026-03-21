@@ -71,6 +71,11 @@ const CompareModal = ({ isOpen, onClose }) => {
   };
 
   const getPhotoUrl = (property) => {
+    if (property.coverPhoto) {
+      if (property.coverPhoto.startsWith('http')) return property.coverPhoto;
+      const baseUrl = BACKEND_URL.replace('/api', '');
+      return `${baseUrl}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`;
+    }
     if (property.photos && property.photos.length > 0) {
       const photo = property.photos[0];
       if (photo.startsWith('http')) return photo;
