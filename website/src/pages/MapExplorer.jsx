@@ -110,77 +110,82 @@ const MapExplorer = () => {
             const res = await getProperties({ limit: 1000 });
             const allProps = res.data.properties || [];
 
-            // Separate properties with and without coordinates
-            let currentProps = allProps.filter(p => p.latitude && p.longitude);
-            setProperties(currentProps);
-            setLoading(false); // Hide loading spinner so user isn't blocked
+            const isWithinIndia = (lat, lon) =>
+                lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
 
-            const missing = allProps.filter(p => !p.latitude || !p.longitude);
-            if (missing.length > 0) {
-                const uniqueLocs = [...new Set(missing.map(p => p.location).filter(Boolean))];
+            let validProps = [];
+            let needsGeocoding = [];
 
-                // Helper: validate the result is actually within India's geographic bounding box
-                const isWithinIndia = (lat, lon) =>
-                    lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
+            // Pass 1: Categorize properties
+            allProps.forEach(p => {
+                const lat = parseFloat(p.latitude);
+                const lon = parseFloat(p.longitude);
+                if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0 && isWithinIndia(lat, lon)) {
+                    validProps.push({ ...p, latitude: lat, longitude: lon });
+                } else {
+                    needsGeocoding.push(p);
+                }
+            });
 
-                // Geocode a location string using Nominatim with fallback queries
+            // If we have some valid ones, show them immediately
+            setProperties([...validProps]);
+            setLoading(false);
+
+            if (needsGeocoding.length > 0) {
+                const uniqueLocs = [...new Set(needsGeocoding.map(p => p.location).filter(Boolean))];
+
                 const geocode = async (loc) => {
-                    // Try more specific query first (Karnataka), then broader India
-                    const queries = [
-                        `${loc}, Karnataka, India`,
-                        `${loc}, India`,
-                    ];
+                    const queries = [`${loc}, Karnataka, India`, `${loc}, India`];
                     for (const query of queries) {
                         try {
                             const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
-                            const response = await fetch(geoUrl, {
-                                headers: { 'Accept-Language': 'en' }
-                            });
+                            const response = await fetch(geoUrl, { headers: { 'Accept-Language': 'en' } });
                             const data = await response.json();
-
                             if (data && data.length > 0) {
                                 for (const result of data) {
-                                    const lat = parseFloat(result.lat);
-                                    const lon = parseFloat(result.lon);
-                                    // Only accept results that fall within India's bounding box
-                                    if (isWithinIndia(lat, lon)) {
-                                        return { lat, lon };
-                                    }
+                                    const rLat = parseFloat(result.lat);
+                                    const rLon = parseFloat(result.lon);
+                                    if (isWithinIndia(rLat, rLon)) return { lat: rLat, lon: rLon };
                                 }
                             }
                         } catch (e) {
-                            console.error('Geocoding query failed:', query, e);
+                            // ignore errors and try next
                         }
-                        // Respect Nominatim rate limit between queries
-                        await new Promise(r => setTimeout(r, 1000));
+                        await new Promise(r => setTimeout(r, 800)); // Respect limits
                     }
                     return null;
                 };
 
-                // Fetch coordinates sequentially with delay to respect rate limits
+                // Default Bangalore fallback
+                const DEFAULT_LAT = 12.9716;
+                const DEFAULT_LON = 77.5946;
+
                 for (const loc of uniqueLocs) {
-                    try {
-                        const coords = await geocode(loc);
-
-                        if (coords) {
-                            // Apply a tiny jitter so overlapping properties don't stack on same pixel
-                            const newlyResolved = missing.filter(p => p.location === loc).map(p => ({
-                                ...p,
-                                latitude: coords.lat + (Math.random() - 0.5) * 0.005,
-                                longitude: coords.lon + (Math.random() - 0.5) * 0.005
-                            }));
-
-                            currentProps = [...currentProps, ...newlyResolved];
-                            setProperties([...currentProps]);
-                        } else {
-                            console.warn(`Could not resolve location within India: "${loc}"`);
-                        }
-
-                        // Extra delay between each unique location
-                        await new Promise(r => setTimeout(r, 1200));
-                    } catch (e) {
-                        console.error('Geocoding failed for', loc, e);
+                    let coords = await geocode(loc);
+                    if (!coords) {
+                        console.warn(`Geocoding failed for ${loc}. Falling back to default.`);
+                        coords = { lat: DEFAULT_LAT, lon: DEFAULT_LON };
                     }
+
+                    const newlyResolved = needsGeocoding.filter(p => p.location === loc).map(p => ({
+                        ...p,
+                        latitude: coords.lat + (Math.random() - 0.5) * 0.02, // Larger jitter for visibility
+                        longitude: coords.lon + (Math.random() - 0.5) * 0.02
+                    }));
+
+                    validProps = [...validProps, ...newlyResolved];
+                    setProperties([...validProps]);
+                }
+                
+                // Final sweep for properties without ANY location string
+                const homeless = needsGeocoding.filter(p => !p.location).map(p => ({
+                    ...p,
+                    latitude: DEFAULT_LAT + (Math.random() - 0.5) * 0.05,
+                    longitude: DEFAULT_LON + (Math.random() - 0.5) * 0.05
+                }));
+                if(homeless.length > 0) {
+                    validProps = [...validProps, ...homeless];
+                    setProperties([...validProps]);
                 }
             }
         } catch (err) {
