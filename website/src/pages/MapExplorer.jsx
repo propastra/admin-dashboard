@@ -31,20 +31,33 @@ const LocationMarker = ({ properties }) => {
 
     useEffect(() => {
         if (properties.length > 0) {
-            const bounds = L.latLngBounds(properties.filter(p => p.latitude && p.longitude).map(p => [p.latitude, p.longitude]));
+            const bounds = L.latLngBounds(properties.filter(p => p.latitude && p.longitude).map(p => {
+                const lat = parseFloat(p.latitude);
+                const lon = parseFloat(p.longitude);
+                if(isNaN(lat) || isNaN(lon)) return null;
+                return [lat, lon];
+            }).filter(Boolean));
+            
             if (bounds.isValid()) {
-                map.fitBounds(bounds, { padding: [50, 50] });
+                setTimeout(() => {
+                    map.invalidateSize();
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }, 400); // Give CSS time to settle
             }
         }
     }, [properties, map]);
 
     return (
         <>
-            {properties.map(prop => (
-                prop.latitude && prop.longitude && (
+            {properties.map(prop => {
+                const lat = parseFloat(prop.latitude);
+                const lon = parseFloat(prop.longitude);
+                if(isNaN(lat) || isNaN(lon)) return null;
+                
+                return (
                     <Marker
                         key={prop.id}
-                        position={[prop.latitude, prop.longitude]}
+                        position={[lat, lon]}
                         icon={customIcon}
                         eventHandlers={{
                             mouseover: (e) => e.target.openPopup(),
@@ -77,8 +90,8 @@ const LocationMarker = ({ properties }) => {
                             </div>
                         </Popup>
                     </Marker>
-                )
-            ))}
+                );
+            })}
         </>
     );
 };
@@ -94,7 +107,7 @@ const MapExplorer = () => {
 
     const loadProperties = async () => {
         try {
-            const res = await getProperties({ limit: 100 });
+            const res = await getProperties({ limit: 1000 });
             const allProps = res.data.properties || [];
 
             // Separate properties with and without coordinates
