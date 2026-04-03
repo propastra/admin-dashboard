@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import GlobalTopNav from './components/GlobalTopNav';
 const AuthSelect = React.lazy(() => import('./pages/AuthSelect'));
 const Login = React.lazy(() => import('./pages/Login'));
 const MobileLogin = React.lazy(() => import('./pages/MobileLogin'));
@@ -61,6 +62,7 @@ function App() {
 
   return (
     <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
+      <GlobalTopNav />
       <Routes>
         {/* Auth Pages */}
         <Route path="/auth" element={<AuthSelect />} />

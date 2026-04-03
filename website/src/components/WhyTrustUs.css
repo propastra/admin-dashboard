@@ -1,8 +1,8 @@
 .why-trust-us {
-    padding: 60px 20px;
+    padding: 40px 20px;
     background-color: #fcfcfc;
     border-radius: var(--radius-xl, 24px);
-    margin: 40px 0;
+    margin: 20px 0;
     font-family: var(--font-family);
 }
 

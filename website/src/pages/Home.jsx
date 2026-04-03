@@ -453,20 +453,20 @@ const Home = () => {
                 {/* Decorative elements */}
                 <div className="hero-decor hero-decor-1"></div>
                 <div className="hero-decor hero-decor-2"></div>
-            </div>
-
-            <React.Suspense fallback={null}>
-                <PropertyTypeBar 
-                    onResidentialClick={handleResidentialClick}
-                    onResaleClick={handleResaleClick}
-                    onCompareClick={() => setIsCompareModalOpen(true)}
-                />
                 
-                <CompareModal 
-                    isOpen={isCompareModalOpen} 
-                    onClose={() => setIsCompareModalOpen(false)} 
-                />
-            </React.Suspense>
+                <React.Suspense fallback={null}>
+                    <PropertyTypeBar 
+                        onResidentialClick={handleResidentialClick}
+                        onResaleClick={handleResaleClick}
+                        onCompareClick={() => setIsCompareModalOpen(true)}
+                    />
+                    
+                    <CompareModal 
+                        isOpen={isCompareModalOpen} 
+                        onClose={() => setIsCompareModalOpen(false)} 
+                    />
+                </React.Suspense>
+            </div>
 
             {/* Promotional Banner with CTA */}
             <div className="promo-banner-section">

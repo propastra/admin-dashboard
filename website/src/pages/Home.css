@@ -9,6 +9,8 @@
     padding: var(--space-lg) var(--space-lg) var(--space-3xl);
     position: relative;
     overflow: hidden;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
     border-radius: 0 0 40px 40px;
     min-height: 480px;
 }
@@ -62,12 +64,12 @@
     width: auto;
     object-fit: contain;
     transition: all 0.3s ease;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
 }
 
 .home-logo-img:hover {
     transform: scale(1.08);
-    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.2)) brightness(1.1);
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2)) brightness(1.1);
 }
 
 .home-header-location {
@@ -349,13 +351,15 @@
 }
 
 .property-scroll-item {
+    width: 300px;
     min-width: 300px;
-    max-width: 340px;
+    max-width: 300px;
     flex-shrink: 0;
     scroll-snap-align: start;
     animation: fadeInUp 0.5s ease forwards;
     opacity: 0;
     will-change: transform, opacity;
+    display: flex;
 }
 
 /* Locations */
@@ -453,9 +457,10 @@
 
 @media (max-width: 768px) {
     .hero-decor {
-        display: none; /* Hide confusing background blobs on mobile */
+        display: none;
+        /* Hide confusing background blobs on mobile */
     }
-    
+
     .section-header {
         margin-bottom: var(--space-lg);
     }
@@ -467,8 +472,9 @@
     }
 
     .property-scroll-item {
-        min-width: 320px;
-        max-width: 360px;
+        width: 340px;
+        min-width: 340px;
+        max-width: 340px;
     }
 }
 
@@ -538,6 +544,7 @@
     border-color: var(--brand);
     box-shadow: 0 4px 12px rgba(59, 63, 140, 0.2);
 }
+
 /* Promotional Banner */
 .promo-banner-section {
     width: 88%;
@@ -588,7 +595,7 @@
     margin: 0;
     text-align: center;
     letter-spacing: 0.2px;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* Orange CTA button matching screenshot */
@@ -602,10 +609,10 @@
     font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(224, 114, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow: 0 4px 16px rgba(224, 114, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: transform 0.22s ease, box-shadow 0.22s ease;
     letter-spacing: 0.3px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .promo-cta-btn:hover {
@@ -627,7 +634,7 @@
     font-weight: 700;
     padding: 14px 24px;
     border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 480px) {
@@ -648,6 +655,7 @@
         margin: 8px auto 16px;
         border-radius: 12px;
     }
+
     .promo-banner-img {
         height: 150px;
     }
@@ -660,7 +668,8 @@
     align-items: center;
     background: linear-gradient(135deg, #1e5eff, #1742ff);
     color: white;
-    margin: 24px 0; /* Changed from 20px to 0 for better fit in container */
+    margin: 24px 0;
+    /* Changed from 20px to 0 for better fit in container */
     padding: 24px 32px;
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(30, 94, 255, 0.2);
@@ -679,7 +688,8 @@
 }
 
 .cta-banner-btn {
-    background-color: #10b981; /* Green color from screenshot */
+    background-color: #10b981;
+    /* Green color from screenshot */
     color: white;
     border: none;
     padding: 12px 24px;
@@ -705,7 +715,7 @@
         gap: 16px;
         padding: 20px;
     }
-    
+
     .cta-banner-btn {
         width: 100%;
     }
@@ -813,12 +823,10 @@
     left: -100%;
     width: 60%;
     height: 100%;
-    background: linear-gradient(
-        120deg,
-        transparent,
-        rgba(255, 255, 255, 0.4),
-        transparent
-    );
+    background: linear-gradient(120deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent);
     transition: left 0.5s ease;
 }
 
@@ -830,9 +838,10 @@
     .home-header {
         margin-bottom: var(--space-lg);
     }
-    
+
     .home-logo-img {
-        height: 60px; /* Smaller logo for mobile */
+        height: 60px;
+        /* Smaller logo for mobile */
     }
 
     .location-city {
@@ -852,7 +861,8 @@
         font-size: 13px;
     }
 
-    .map-btn, .filter-btn {
+    .map-btn,
+    .filter-btn {
         width: 34px;
         height: 34px;
     }
@@ -863,7 +873,7 @@
         gap: 12px;
         margin-bottom: var(--space-xl);
     }
-    
+
     .listing-type-btn {
         width: 100%;
         max-width: 100%;
@@ -933,13 +943,14 @@
 .pointing-hand {
     transform: rotate(90deg);
     animation: pointAnimation 1s infinite alternate ease-in-out;
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1));
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.1));
 }
 
 @keyframes pointAnimation {
     0% {
         transform: rotate(90deg) translateY(0);
     }
+
     100% {
         transform: rotate(90deg) translateY(-4px);
     }
@@ -950,13 +961,15 @@
         margin-top: 8px;
     }
 }
+
 @media (max-width: 380px) {
     .home-search {
         padding: 8px 10px;
         gap: 5px;
     }
-    
-    .map-btn, .filter-btn {
+
+    .map-btn,
+    .filter-btn {
         width: 30px;
         height: 30px;
     }

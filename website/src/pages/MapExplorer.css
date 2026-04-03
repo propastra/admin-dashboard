@@ -259,3 +259,12 @@
         /* Extra clearance for mobile bottom nav */
     }
 }
+
+/* FIX FOR LEAFLET TILE SHIFT ISSUE */
+.leaflet-container img {
+    max-width: none !important;
+    max-height: none !important;
+    width: auto;
+    height: auto;
+    display: inline-block;
+}

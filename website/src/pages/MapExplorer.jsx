@@ -110,14 +110,30 @@ const MapExplorer = () => {
             const res = await getProperties({ limit: 1000 });
             const allProps = res.data.properties || [];
 
+            // Deduplicate properties by base name and location
+            const uniqueMap = new Map();
+            const deduplicatedProps = [];
+
+            allProps.forEach(p => {
+                const baseName = p.projectName ? p.projectName.trim().toLowerCase() : 
+                                 (p.propertyName ? p.propertyName.split('-')[0].trim().toLowerCase() : 'unknown');
+                const locKey = p.location ? p.location.trim().toLowerCase() : 'unknown_loc';
+                const key = `${baseName}_${locKey}`;
+
+                if (!uniqueMap.has(key)) {
+                    uniqueMap.set(key, true);
+                    deduplicatedProps.push(p);
+                }
+            });
+
             const isWithinIndia = (lat, lon) =>
                 lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
 
             let validProps = [];
             let needsGeocoding = [];
 
-            // Pass 1: Categorize properties
-            allProps.forEach(p => {
+            // Pass 1: Categorize clustered properties
+            deduplicatedProps.forEach(p => {
                 const lat = parseFloat(p.latitude);
                 const lon = parseFloat(p.longitude);
                 if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0 && isWithinIndia(lat, lon)) {

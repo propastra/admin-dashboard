@@ -3,6 +3,7 @@
     min-height: 100vh;
     padding-bottom: 80px;
     font-family: 'Inter', system-ui, sans-serif;
+    position: relative;
 }
 
 .detail-back {
