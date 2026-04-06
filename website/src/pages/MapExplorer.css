@@ -1,10 +1,10 @@
 .map-explorer {
     position: fixed;
-    top: 0;
+    top: 124px; /* Height of the global header on desktop */
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 1000;
+    z-index: 900; /* Behind the global header */
     background: #f8fafc;
 }
 
@@ -13,7 +13,7 @@
     top: 20px;
     left: 20px;
     right: 20px;
-    z-index: 1100;
+    z-index: 990;
     display: flex;
     align-items: center;
     gap: 15px;
@@ -220,6 +220,7 @@
 /* Center Bottom Nav spacing */
 @media (max-width: 768px) {
     .map-explorer {
+        top: 94px; /* Height of the global header on mobile */
         padding-bottom: 70px;
     }
 

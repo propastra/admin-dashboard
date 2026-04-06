@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand, Menu, X } from 'lucide-react';
 import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry, getDevelopers } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
@@ -78,6 +78,7 @@ const Home = () => {
     const [developers, setDevelopers] = useState([]);
     const [loadingDevelopers, setLoadingDevelopers] = useState(true);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -395,37 +396,7 @@ const Home = () => {
         <div className="home-page">
             {/* Hero Section with branded gradient */}
             <div className="home-hero">
-                <div className="home-hero-content">
-                    <header className="home-header">
-                        <div className="home-header-left">
-                            <img src="/images/header-logo.png" alt="PropAstra Logo" className="home-logo-img" fetchpriority="high" decoding="async" />
-                        </div>
-                        <div className="home-header-right">
-                            <div className="home-header-location" onClick={() => navigate('/city')}>
-                                <div className="location-icon-wrap">
-                                    <MapPin size={18} />
-                                </div>
-                                <div className="location-text-wrap">
-                                    <span className="location-label">Location</span>
-                                    <span className="location-city">{displayCity || selectedCity || 'Select City'} <ChevronRight size={14} /></span>
-                                </div>
-                            </div>
-                            <button
-                                className="avatar-btn"
-                                onClick={() => {
-                                    if (user) navigate('/profile');
-                                    else ensureIdentified(() => navigate('/profile'), 'Sign in to see your profile');
-                                }}
-                            >
-                                {user?.avatar ? (
-                                    <img src={user.avatar} alt="Avatar" className="user-avatar-img" />
-                                ) : (
-                                    user ? user.name?.charAt(0).toUpperCase() : <img src="/images/PROPASTRA%20P%20.png" alt="P" className="user-avatar-img" />
-                                )}
-                            </button>
-                        </div>
-                    </header>
-
+                <div className="home-hero-content" style={{ marginTop: '140px' }}>
                     {/* Hero Text */}
                     <div className="hero-text">
                         <h1>Find Your <span className="hero-highlight">Dream Home</span></h1>
