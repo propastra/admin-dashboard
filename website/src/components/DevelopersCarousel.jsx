@@ -1,28 +1,38 @@
-import React, { useRef } from 'react';
-import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BACKEND_URL } from '../services/api';
 import './DevelopersCarousel.css';
 
 const DevelopersCarousel = ({ developers }) => {
     const navigate = useNavigate();
-    const scrollRef = useRef(null);
 
     if (!developers || developers.length === 0) return null;
 
-    const scroll = (direction) => {
-        if (scrollRef.current) {
-            const { scrollLeft, clientWidth } = scrollRef.current;
-            const scrollTo = direction === 'left' 
-                ? scrollLeft - clientWidth * 0.8 
-                : scrollLeft + clientWidth * 0.8;
-            
-            scrollRef.current.scrollTo({
-                left: scrollTo,
-                behavior: 'smooth'
-            });
-        }
-    };
+    // Create a robust set of developers to ensure it fills the longest screens perfectly
+    const devSet = [...developers, ...developers, ...developers, ...developers];
+
+    const renderCard = (dev, index, offset) => (
+        <div 
+            key={`${dev.id}-${offset}-${index}`} 
+            className="developer-card" 
+            onClick={() => navigate(`/search?q=${encodeURIComponent(dev.name)}`)}
+        >
+            <div className="developer-logo-wrap">
+                <img 
+                    src={dev.logo?.startsWith('http') ? dev.logo : `${BACKEND_URL}${dev.logo}`} 
+                    alt={dev.name} 
+                    className="developer-logo" 
+                    loading="lazy"
+                    onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(dev.name)}&background=2563eb&color=fff&bold=true&size=128`;
+                    }}
+                />
+            </div>
+            <div className="developer-info">
+                <h3 className="developer-name">{dev.name}</h3>
+            </div>
+        </div>
+    );
 
     return (
         <section className="developers-section animate-section">
@@ -33,42 +43,25 @@ const DevelopersCarousel = ({ developers }) => {
                 </div>
             </div>
             
-            <div className="developers-wrapper">
-                <button className="side-control-btn prev" onClick={() => scroll('left')} aria-label="Scroll Left">
-                    <ChevronLeft size={24} />
-                </button>
-                
-                <div className="developers-container" ref={scrollRef}>
-                    <div className="developers-grid">
-                        {developers.map((dev, index) => (
-                            <div 
-                                key={dev.id} 
-                                className="developer-card" 
-                                style={{ animationDelay: `${index * 0.05}s` }}
-                                onClick={() => navigate(`/search?q=${encodeURIComponent(dev.name)}`)}
-                            >
-                                <div className="developer-logo-wrap">
-                                    <img 
-                                        src={dev.logo?.startsWith('http') ? dev.logo : `${BACKEND_URL}${dev.logo}`} 
-                                        alt={dev.name} 
-                                        className="developer-logo" 
-                                        loading="lazy"
-                                        onError={(e) => {
-                                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(dev.name)}&background=2563eb&color=fff&bold=true&size=128`;
-                                        }}
-                                    />
-                                </div>
-                                <div className="developer-info">
-                                    <h3 className="developer-name">{dev.name}</h3>
-                                </div>
-                            </div>
-                        ))}
+            <div className="developers-marquee">
+                {/* Top Row - Moves Left */}
+                <div className="marquee-track">
+                    <div className="marquee-content">
+                        {devSet.map((dev, index) => renderCard(dev, index, 'top-a'))}
+                    </div>
+                    <div className="marquee-content">
+                        {devSet.map((dev, index) => renderCard(dev, index, 'top-b'))}
                     </div>
                 </div>
-
-                <button className="side-control-btn next" onClick={() => scroll('right')} aria-label="Scroll Right">
-                    <ChevronRight size={24} />
-                </button>
+                {/* Bottom Row - Moves Right */}
+                <div className="marquee-track reverse" style={{ marginTop: '16px' }}>
+                    <div className="marquee-content">
+                        {devSet.map((dev, index) => renderCard(dev, index, 'bottom-a'))}
+                    </div>
+                    <div className="marquee-content">
+                        {devSet.map((dev, index) => renderCard(dev, index, 'bottom-b'))}
+                    </div>
+                </div>
             </div>
         </section>
     );

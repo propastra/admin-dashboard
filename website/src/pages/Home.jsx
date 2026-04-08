@@ -12,6 +12,7 @@ import './Home.css';
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
+const StatsCounter = React.lazy(() => import('../components/StatsCounter'));
 const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
 const CompareModal = React.lazy(() => import('../components/CompareModal'));
 
@@ -90,6 +91,7 @@ const Home = () => {
         showFirstVisitPopup(user);
         trackInteraction({
             interactionType: 'View',
+            websiteUserId: user?.id,
             ipAddress: 'website-user',
             userAgent: navigator.userAgent,
             metadata: { page: 'home', city: selectedCity }
@@ -589,6 +591,11 @@ const Home = () => {
                         <WhyTrustUs />
                     </React.Suspense>
                 )}
+                
+                {/* Animated Stats Section */}
+                <React.Suspense fallback={null}>
+                    <StatsCounter />
+                </React.Suspense>
                 
 
                 {/* Top Locations */}

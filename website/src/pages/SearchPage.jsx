@@ -183,6 +183,7 @@ const SearchPage = () => {
             if (filters.search) {
                 trackInteraction({
                     interactionType: 'Search',
+                    websiteUserId: user?.id,
                     ipAddress: 'website-user',
                     userAgent: navigator.userAgent,
                     metadata: { query: filters.search, filters }

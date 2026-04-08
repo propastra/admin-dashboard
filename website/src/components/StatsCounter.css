@@ -1,0 +1,129 @@
+.stats-section {
+    position: relative;
+    background: transparent;
+    padding: 60px 20px;
+    margin: 40px 0;
+}
+
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.stat-card {
+    background: var(--brand);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    aspect-ratio: 1 / 1;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(30px);
+    box-shadow: 0 10px 30px rgba(59, 63, 140, 0.15); /* Soft brand shadow */
+}
+
+.stat-card.animate-in {
+    animation: slideUpFade 0.7s ease forwards;
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(59, 63, 140, 0.25);
+}
+
+.stat-icon-wrap {
+    color: var(--white);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+}
+
+.stat-number-wrap {
+    margin-bottom: 8px;
+}
+
+.stat-number {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1.1;
+    letter-spacing: -1px;
+}
+
+.stat-main-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0 0 10px 0;
+    line-height: 1.2;
+}
+
+.stat-subtext {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+@keyframes slideUpFade {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .stats-section {
+        padding: 40px 20px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .stat-card {
+        padding: 30px 20px;
+        aspect-ratio: auto;
+        min-height: 240px;
+    }
+
+    .stat-number {
+        font-size: 36px;
+    }
+
+    .stat-main-text {
+        font-size: 20px;
+    }
+}

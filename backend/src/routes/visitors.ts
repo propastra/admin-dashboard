@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Visitor, Interaction, Property } = require('../models');
+const { Visitor, Interaction, Property, WebsiteUser } = require('../models');
 const auth = require('../middleware/auth');
 
 // @route   GET api/visitors
@@ -8,7 +8,15 @@ const auth = require('../middleware/auth');
 // @access  Private
 router.get('/', auth, async (req, res) => {
     try {
-        const visitors = await Visitor.findAll({ order: [['lastVisit', 'DESC']] });
+        const visitors = await Visitor.findAll({ 
+            order: [['lastVisit', 'DESC']],
+            include: [{
+                model: Interaction,
+                limit: 1,
+                order: [['createdAt', 'DESC']],
+                include: [{ model: WebsiteUser, attributes: ['name', 'email', 'phone'] }]
+            }]
+        });
         res.json(visitors);
     } catch (err) {
         console.error(err.message);
@@ -41,7 +49,10 @@ router.get('/:id/history', async (req, res) => {
     try {
         const interactions = await Interaction.findAll({
             where: { visitorId: req.params.id },
-            include: [{ model: Property, attributes: ['propertyName'] }],
+            include: [
+                { model: Property, attributes: ['propertyName'] },
+                { model: WebsiteUser, attributes: ['name', 'email', 'phone'] }
+            ],
             order: [['createdAt', 'DESC']]
         });
         res.json(interactions);

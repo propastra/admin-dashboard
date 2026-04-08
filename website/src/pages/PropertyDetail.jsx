@@ -214,7 +214,8 @@ const PropertyDetail = () => {
             // Track the property view interaction
             trackInteraction({
                 interactionType: 'View',
-                propertyId: id
+                propertyId: id,
+                websiteUserId: user?.id
             }).catch(err => console.error("Tracking error", err));
 
         } catch (err) {

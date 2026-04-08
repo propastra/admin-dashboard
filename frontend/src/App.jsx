@@ -8,6 +8,7 @@ import PropertyForm from './pages/PropertyForm';
 import VisitorList from './pages/VisitorList';
 import InquiryList from './pages/InquiryList';
 import LeadList from './pages/LeadList';
+import UserInterests from './pages/UserInterests';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/visitors" element={<VisitorList />} />
         <Route path="/inquiries" element={<InquiryList />} />
         <Route path="/leads" element={<LeadList />} />
+        <Route path="/user-interests" element={<UserInterests />} />
       </Route>
     </Routes>
   );
