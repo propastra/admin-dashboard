@@ -1,0 +1,131 @@
+.company-stats-section {
+    background-color: transparent; /* Blends perfectly with the page background */
+    padding: 60px 20px;
+    width: 100%;
+    position: relative;
+}
+
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 30px;
+}
+
+@media (min-width: 640px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+    }
+}
+
+.stat-card {
+    position: relative;
+    background: var(--white);
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    cursor: default;
+    overflow: hidden;
+    opacity: 0; 
+}
+
+/* Hover interactivity */
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-card:hover .stat-card-border {
+    opacity: 1;
+}
+
+.stat-icon-wrapper {
+    color: var(--brand); /* Brand Color */
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-icon-wrapper {
+    transform: scale(1.15) translateY(-4px);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+.stat-value {
+    font-size: 46px;
+    font-weight: 800;
+    color: var(--gray-900); 
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: -1px;
+}
+
+.stat-subtitle {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--brand); 
+    margin: 0 0 16px 0;
+    line-height: 1.1;
+}
+
+.stat-description {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-500);
+    margin: 0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Glowing border effect on hover */
+.stat-card-border {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    border: 3px solid transparent;
+    background-image: linear-gradient(var(--white), var(--white)), var(--gradient-brand);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Entrance Animation */
+.fade-in-up {
+    animation: fadeInUpStats 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fadeInUpStats {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

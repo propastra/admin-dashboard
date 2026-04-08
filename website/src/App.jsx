@@ -14,6 +14,7 @@ const Profile = React.lazy(() => import('./pages/Profile'));
 const AgentDashboard = React.lazy(() => import('./pages/AgentDashboard'));
 const BottomNav = React.lazy(() => import('./components/BottomNav'));
 const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
+const RightSidebar = React.lazy(() => import('./components/RightSidebar'));
 import { useHeartbeat } from './hooks/useHeartbeat';
 import { useAuth } from './context/AuthContext';
 import { useInquiryPopup } from './context/InquiryPopupContext';
@@ -83,6 +84,7 @@ function App() {
 
       {showBottomNav && <BottomNav />}
       {isMainSite && <InquiryPopup />}
+      {isMainSite && <RightSidebar />}
     </React.Suspense>
   );
 }

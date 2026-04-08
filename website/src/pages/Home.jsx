@@ -7,10 +7,12 @@ import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
 import ServiceCards from '../components/ServiceCards';
+import HeroSlideshow from '../components/HeroSlideshow';
 import './Home.css';
 
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
+const CompanyStats = React.lazy(() => import('../components/CompanyStats'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
 const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
 const CompareModal = React.lazy(() => import('../components/CompareModal'));
@@ -393,8 +395,9 @@ const Home = () => {
 
     return (
         <div className="home-page">
-            {/* Hero Section with branded gradient */}
+            {/* Hero Section with branded gradient and slideshow */}
             <div className="home-hero">
+                <HeroSlideshow />
                 <div className="home-hero-content">
                     <header className="home-header">
                         <div className="home-header-left">
@@ -468,29 +471,65 @@ const Home = () => {
                 />
             </React.Suspense>
 
-            {/* Promotional Banner with CTA */}
-            <div className="promo-banner-section">
-                <img
-                    src="/images/promo-banner-new.png"
-                    alt="Promotional Banner"
-                    className="promo-banner-img"
-                />
-                <div className="promo-banner-cta">
-                    {bannerCtaSubmitted ? (
-                        <div className="promo-cta-success">
-                            ✅ We will reach out soon...
+            {/* Promotional Banner with CTA - Enhanced Financial Dashboard version */}
+            <div className="promo-banner-section premium-banner investment-dashboard">
+                <div className="banner-overlay"></div>
+                <div className="banner-grid-overlay"></div>
+                
+                <div className="banner-graph-bg">
+                    <div className="svg-graph">
+                        <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+                            {/* Main Trend Line Area */}
+                            <path d="M0,250 C150,220 250,280 400,180 C500,100 650,220 800,140 C900,100 1000,120 1000,120 L1000,300 L0,300 Z" fill="rgba(245,145,10,0.05)" />
+                            
+                            {/* Secondary Trend Line */}
+                            <path d="M0,220 C200,200 300,240 500,150 C650,100 800,180 1000,100" fill="none" stroke="rgba(0,210,255,0.15)" strokeWidth="3" strokeDasharray="1000" className="animate-path" />
+                            
+                            {/* Primary Trend Line */}
+                            <path d="M0,250 C150,220 250,280 400,180 C500,100 650,220 800,140 C900,100 1000,120 1000,120" fill="none" stroke="rgba(245,145,10,0.4)" strokeWidth="4" strokeDasharray="1000" className="animate-path-slow" />
+                            
+                            {/* Glowing Data points */}
+                            <circle cx="400" cy="180" r="6" fill="#f5910a" className="pulse-point" />
+                            <circle cx="800" cy="140" r="6" fill="#00d2ff" className="pulse-point-delay" />
+                        </svg>
+                    </div>
+                    
+                    {/* Floating Stat Chips */}
+                    <div className="floating-stats">
+                        <div className="stat-chip chip-3">
+                            <span className="stat-icon">🛡️</span>
+                            <span className="stat-label">Safe Assets</span>
                         </div>
-                    ) : (
-                        <button
-                            className="promo-cta-btn"
-                            onClick={() => ensureIdentified(
-                                handleBannerExpertClick,
-                                'To talk to our expert, please verify your details'
+                    </div>
+                </div>
+                
+                <div className="premium-banner-content">
+                    <div className="banner-text-side">
+                        <div className="investment-badge">INVESTMENT DASHBOARD</div>
+                        <h2 className="banner-title">Get your personalized <br /> investment plan</h2>
+                        <p className="banner-description">Experience the next generation of real estate investment. Get a data-backed plan tailored to your financial goals with premium high-yield opportunities.</p>
+                    </div>
+                    
+                    <div className="banner-btn-side">
+                        <div className="promo-banner-cta">
+                            {bannerCtaSubmitted ? (
+                                <div className="promo-cta-success">
+                                    ✅ We will reach out soon...
+                                </div>
+                            ) : (
+                                <button
+                                    className="promo-cta-btn"
+                                    onClick={() => ensureIdentified(
+                                        handleBannerExpertClick,
+                                        'To talk to our expert, please verify your details'
+                                    )}
+                                >
+                                    Talk to Our Expert
+                                    <span className="btn-shine"></span>
+                                </button>
                             )}
-                        >
-                            Talk to Our Expert
-                        </button>
-                    )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -611,10 +650,11 @@ const Home = () => {
                     </button>
                 </div>
 
-                {/* Trusted Developers */}
+                {/* Trusted Developers & Company Stats */}
                 {!loadingDevelopers && developers.length > 0 && (
                     <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
                         <DevelopersCarousel developers={developers} />
+                        <CompanyStats />
                         <WhyTrustUs />
                     </React.Suspense>
                 )}

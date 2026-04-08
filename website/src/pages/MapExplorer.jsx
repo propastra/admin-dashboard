@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ChevronLeft, Maximize, MapPin, Navigation } from 'lucide-react';
@@ -48,7 +49,11 @@ const LocationMarker = ({ properties }) => {
     }, [properties, map]);
 
     return (
-        <>
+        <MarkerClusterGroup
+            chunkedLoading
+            maxClusterRadius={40}
+            spiderfyOnMaxZoom={true}
+        >
             {properties.map(prop => {
                 const lat = parseFloat(prop.latitude);
                 const lon = parseFloat(prop.longitude);
@@ -92,7 +97,7 @@ const LocationMarker = ({ properties }) => {
                     </Marker>
                 );
             })}
-        </>
+        </MarkerClusterGroup>
     );
 };
 
@@ -112,6 +117,19 @@ const MapExplorer = () => {
 
             const isWithinIndia = (lat, lon) =>
                 lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
+                
+            // Heuristic to detect properties that are accidentally placed in the Arabian Sea / Bay of Bengal
+            const isInOcean = (lat, lon) => {
+                // West Coast (Arabian Sea)
+                if (lat < 16.0 && lon < 73.5) return true;
+                if (lat < 14.5 && lon < 74.5) return true; // Fix for offshore Mangaluru
+                if (lat < 12.5 && lon < 74.8) return true; // Kerala Coast
+                if (lat < 10.0 && lon < 76.0) return true;
+                // East Coast (Bay of Bengal)
+                if (lat < 16.0 && lon > 81.5) return true;
+                if (lat < 13.0 && lon > 80.5) return true; // Chennai offshore
+                return false;
+            };
 
             let validProps = [];
             let needsGeocoding = [];
@@ -120,7 +138,8 @@ const MapExplorer = () => {
             allProps.forEach(p => {
                 const lat = parseFloat(p.latitude);
                 const lon = parseFloat(p.longitude);
-                if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0 && isWithinIndia(lat, lon)) {
+                // IF it's valid, inside India, AND NOT in the ocean, accept it. Otherwise geocode it.
+                if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0 && isWithinIndia(lat, lon) && !isInOcean(lat, lon)) {
                     validProps.push({ ...p, latitude: lat, longitude: lon });
                 } else {
                     needsGeocoding.push(p);

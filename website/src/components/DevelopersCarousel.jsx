@@ -1,28 +1,15 @@
-import React, { useRef } from 'react';
-import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BACKEND_URL } from '../services/api';
 import './DevelopersCarousel.css';
 
 const DevelopersCarousel = ({ developers }) => {
     const navigate = useNavigate();
-    const scrollRef = useRef(null);
 
     if (!developers || developers.length === 0) return null;
 
-    const scroll = (direction) => {
-        if (scrollRef.current) {
-            const { scrollLeft, clientWidth } = scrollRef.current;
-            const scrollTo = direction === 'left' 
-                ? scrollLeft - clientWidth * 0.8 
-                : scrollLeft + clientWidth * 0.8;
-            
-            scrollRef.current.scrollTo({
-                left: scrollTo,
-                behavior: 'smooth'
-            });
-        }
-    };
+    // Duplicate list 4 times to ensure it fills the space for an infinite marquee loop
+    const marqueeItems = [...developers, ...developers, ...developers, ...developers];
 
     return (
         <section className="developers-section animate-section">
@@ -33,18 +20,13 @@ const DevelopersCarousel = ({ developers }) => {
                 </div>
             </div>
             
-            <div className="developers-wrapper">
-                <button className="side-control-btn prev" onClick={() => scroll('left')} aria-label="Scroll Left">
-                    <ChevronLeft size={24} />
-                </button>
-                
-                <div className="developers-container" ref={scrollRef}>
-                    <div className="developers-grid">
-                        {developers.map((dev, index) => (
+            <div className="developers-wrapper marquee-wrapper">
+                <div className="developers-container marquee-container">
+                    <div className="developers-grid marquee-track">
+                        {marqueeItems.map((dev, index) => (
                             <div 
-                                key={dev.id} 
+                                key={`${dev.id}-${index}`} 
                                 className="developer-card" 
-                                style={{ animationDelay: `${index * 0.05}s` }}
                                 onClick={() => navigate(`/search?q=${encodeURIComponent(dev.name)}`)}
                             >
                                 <div className="developer-logo-wrap">
@@ -65,10 +47,6 @@ const DevelopersCarousel = ({ developers }) => {
                         ))}
                     </div>
                 </div>
-
-                <button className="side-control-btn next" onClick={() => scroll('right')} aria-label="Scroll Right">
-                    <ChevronRight size={24} />
-                </button>
             </div>
         </section>
     );

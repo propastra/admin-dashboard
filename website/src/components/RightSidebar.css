@@ -1,0 +1,221 @@
+/* Container rests off-screen on the right */
+.right-sidebar-container {
+    position: fixed;
+    top: 50%;
+    right: -320px; /* Hide panel completely */
+    transform: translateY(-50%);
+    width: 320px;
+    z-index: 9999;
+    transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    align-items: flex-start;
+}
+
+.right-sidebar-container.open {
+    right: 0;
+}
+
+/* The vertical tab sticking out to the left of the container */
+.sidebar-tab {
+    position: absolute;
+    left: -48px; /* Stick out from the left edge of the hidden panel */
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--brand);
+    color: white;
+    width: 48px;
+    height: 140px; /* Tall enough for vertical text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    border: none;
+    transition: background 0.3s ease, width 0.3s ease;
+}
+
+.sidebar-tab:hover {
+    background: var(--brand-light);
+}
+
+.tab-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.right-sidebar-container.open .sidebar-tab {
+    height: 48px;
+    border-radius: 8px 0 0 8px;
+}
+
+/* The Panel Itself */
+.sidebar-panel {
+    background: #ffffff;
+    width: 320px;
+    height: 100%;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    position: relative;
+    border-top: 4px solid var(--brand);
+}
+
+.sidebar-header {
+    background: var(--gray-50);
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--gray-200);
+    text-align: center;
+}
+
+.sidebar-header h3 {
+    margin: 0 0 6px 0;
+    color: var(--gray-900);
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.sidebar-header p {
+    margin: 0;
+    color: var(--gray-600);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.sidebar-content {
+    padding: 24px 20px;
+}
+
+/* Form Styling */
+.sidebar-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sidebar-input-group {
+    display: flex;
+    align-items: center;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sidebar-input-group:focus-within {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(59, 63, 140, 0.1);
+}
+
+.sidebar-input-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    height: 44px;
+    border-right: 1px solid var(--gray-200);
+}
+
+.sidebar-input-group input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px;
+    font-size: 14px;
+    color: var(--gray-900);
+    width: 100%;
+}
+
+.sidebar-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--gradient-brand);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(59, 63, 140, 0.2);
+}
+
+.sidebar-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 63, 140, 0.3);
+}
+
+.sidebar-submit-btn:active {
+    transform: translateY(0);
+}
+
+.sidebar-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Success / Error Messages */
+.sidebar-success {
+    text-align: center;
+    padding: 30px 20px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+}
+
+.success-icon {
+    width: 48px;
+    height: 48px;
+    background: #22c55e;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 16px;
+}
+
+.sidebar-success p {
+    color: #166534;
+    font-weight: 600;
+    margin: 0;
+    font-size: 14px;
+}
+
+.sidebar-error {
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Overlay */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}

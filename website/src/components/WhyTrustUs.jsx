@@ -36,7 +36,7 @@ const WhyTrustUs = () => {
 
     return (
         <section className="why-trust-us">
-            <h2 className="why-trust-title">Why Choose <span className="highlight-text">Prop Astra</span></h2>
+            <h2 className="why-trust-title"> Why Homebuyers Trust <span className="highlight-text">Prop Astra</span></h2>
             <div className="trust-features-grid">
                 {features.map((feature, index) => (
                     <div key={index} className="trust-feature-card">
