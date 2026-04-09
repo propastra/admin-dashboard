@@ -62,14 +62,20 @@ const VisitorList = () => {
     };
 
     const handleExport = () => {
-        const headers = ["IP Address", "User Agent", "Time Spent (seconds)", "Last Visit", "Status"];
-        const rows = visitors.map(v => [
-            v.ipAddress,
-            `"${v.userAgent ? v.userAgent.replace(/"/g, '""') : ''}"`, // Escaped for CSV
-            v.totalDuration || 0,
-            `"${new Date(v.lastVisit).toLocaleString()}"`,
-            v.isBlocked ? 'Blocked' : 'Active'
-        ]);
+        const headers = ["IP Address", "User Name", "Email", "Phone", "User Agent", "Time Spent (seconds)", "Last Visit", "Status"];
+        const rows = visitors.map(v => {
+            const user = v.Interactions?.[0]?.WebsiteUser;
+            return [
+                v.ipAddress,
+                user ? `"${user.name}"` : '"Anon"',
+                user ? `"${user.email}"` : '""',
+                user ? `"${user.phone || ''}"` : '""',
+                `"${v.userAgent ? v.userAgent.replace(/"/g, '""') : ''}"`, // Escaped for CSV
+                v.totalDuration || 0,
+                `"${new Date(v.lastVisit).toLocaleString()}"`,
+                v.isBlocked ? 'Blocked' : 'Active'
+            ];
+        });
 
         const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -110,46 +116,66 @@ const VisitorList = () => {
                     </thead>
                     <tbody>
                         {visitors.map(visitor => (
-                            <tr key={visitor.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <tr key={visitor.id} style={{ borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
                                 <td style={{ padding: '12px' }}>
-                                    {visitor.ipAddress}
-                                    <div style={{ fontSize: '0.8em', color: '#6b7280' }}>{visitor.userAgent?.substring(0, 50)}...</div>
+                                    <div style={{ fontWeight: '500', color: '#1e293b' }}>{visitor.ipAddress}</div>
+                                    {visitor.Interactions && visitor.Interactions[0]?.WebsiteUser && (
+                                        <div style={{ marginTop: '8px', padding: '8px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ fontWeight: '700', color: '#2563eb', fontSize: '1rem' }}>
+                                                {visitor.Interactions[0].WebsiteUser.name}
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <FaEnvelope size={10} /> {visitor.Interactions[0].WebsiteUser.email}
+                                            </div>
+                                            {visitor.Interactions[0].WebsiteUser.phone && (
+                                                <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <FaPhoneAlt size={10} /> {visitor.Interactions[0].WebsiteUser.phone}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '6px' }}>{visitor.userAgent?.substring(0, 45)}...</div>
                                 </td>
                                 <td style={{ padding: '12px' }}>{formatDuration(visitor.totalDuration)}</td>
                                 <td style={{ padding: '12px' }}>{new Date(visitor.lastVisit).toLocaleString()}</td>
                                 <td style={{ padding: '12px' }}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        backgroundColor: visitor.isBlocked ? '#fee2e2' : '#d1fae5',
-                                        color: visitor.isBlocked ? '#991b1b' : '#065f46'
-                                    }}>
-                                        {visitor.isBlocked ? 'Blocked' : 'Active'}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                                        <span style={{
+                                            padding: '4px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            backgroundColor: visitor.isBlocked ? '#fee2e2' : '#d1fae5',
+                                            color: visitor.isBlocked ? '#991b1b' : '#065f46',
+                                            display: 'inline-block'
+                                        }}>
+                                            {visitor.isBlocked ? 'Blocked' : 'Active'}
+                                        </span>
+                                    </div>
                                 </td>
-                                <td style={{ padding: '12px', display: 'flex', gap: '10px' }}>
-                                    <button
-                                        onClick={() => handleViewHistory(visitor)}
-                                        className="btn"
-                                        style={{ backgroundColor: '#3b82f6', color: 'white', padding: '4px 8px', fontSize: '14px' }}
-                                    >
-                                        History
-                                    </button>
-                                    <button
-                                        onClick={() => toggleBlock(visitor.id)}
-                                        className="btn"
-                                        style={{ backgroundColor: visitor.isBlocked ? '#10b981' : '#f59e0b', color: 'white', padding: '4px 8px', fontSize: '14px' }}
-                                    >
-                                        {visitor.isBlocked ? 'Unblock' : 'Block'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(visitor.id)}
-                                        className="btn"
-                                        style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 8px', fontSize: '14px' }}
-                                    >
-                                        Delete
-                                    </button>
+                                <td style={{ padding: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        <button
+                                            onClick={() => handleViewHistory(visitor)}
+                                            className="btn"
+                                            style={{ backgroundColor: '#3b82f6', color: 'white', padding: '4px 8px', fontSize: '14px' }}
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            onClick={() => toggleBlock(visitor.id)}
+                                            className="btn"
+                                            style={{ backgroundColor: visitor.isBlocked ? '#10b981' : '#f59e0b', color: 'white', padding: '4px 8px', fontSize: '14px' }}
+                                        >
+                                            {visitor.isBlocked ? 'Unblock' : 'Block'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(visitor.id)}
+                                            className="btn"
+                                            style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 8px', fontSize: '14px' }}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { Interaction, Property, Visitor, sequelize } = require('../models');
+const { Interaction, Property, Visitor, WebsiteUser, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // @route   POST api/analytics/track
 // @desc    Track user interaction (View/Click/Search)
 // @access  Public
 router.post('/track', async (req, res) => {
-    const { interactionType, propertyId, ipAddress: bodyIp, userAgent: bodyUserAgent, metadata } = req.body;
+    const { interactionType, propertyId, ipAddress: bodyIp, userAgent: bodyUserAgent, metadata, websiteUserId } = req.body;
     // Always resolve ip and userAgent: from body, request, or fallback (frontend often sends only interactionType + propertyId)
     const ipAddress = (bodyIp && String(bodyIp).trim()) || req.ip || (req.headers['x-forwarded-for'] && String(req.headers['x-forwarded-for']).split(',')[0].trim()) || 'anonymous';
     const userAgent = (bodyUserAgent && String(bodyUserAgent).trim()) || req.get('User-Agent') || 'unknown';
@@ -34,13 +34,15 @@ router.post('/track', async (req, res) => {
             metadata: metadata && typeof metadata === 'object' ? metadata : undefined
         };
         if (propertyId) interactionPayload.propertyId = propertyId;
+        if (websiteUserId) interactionPayload.websiteUserId = websiteUserId;
 
         try {
             await Interaction.create(interactionPayload);
         } catch (createErr) {
             const msg = (createErr && createErr.message) || '';
-            if (propertyId && (msg.includes('propertyId') || msg.includes('SQLITE_ERROR') || msg.includes('column') || msg.includes('FOREIGN KEY') || msg.includes('SQLITE_CONSTRAINT'))) {
+            if ((propertyId || websiteUserId) && (msg.includes('propertyId') || msg.includes('websiteUserId') || msg.includes('SQLITE_ERROR') || msg.includes('column') || msg.includes('FOREIGN KEY') || msg.includes('SQLITE_CONSTRAINT'))) {
                 delete interactionPayload.propertyId;
+                delete interactionPayload.websiteUserId;
                 await Interaction.create(interactionPayload);
             } else {
                 throw createErr;
@@ -84,7 +86,8 @@ router.get('/activity', async (req, res) => {
         const activity = await Interaction.findAll({
             include: [
                 { model: Property, attributes: ['propertyName'] },
-                { model: Visitor, attributes: ['ipAddress'] }
+                { model: Visitor, attributes: ['ipAddress'] },
+                { model: WebsiteUser, attributes: ['name', 'email'] }
             ],
             order: [['createdAt', 'DESC']],
             limit: 50 // Latest 50 actions
@@ -150,6 +153,92 @@ router.get('/dashboard', async (req, res) => {
 
     } catch (err) {
         console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/analytics/user-interests
+// @desc    Get aggregated user interests and lead scores
+// @access  Private (Admin)
+router.get('/user-interests', async (req, res) => {
+    try {
+        // Fetch users who have at least one interaction
+        const users = await WebsiteUser.findAll({
+            attributes: ['id', 'name', 'email', 'phone', 'city'],
+            include: [{
+                model: Interaction,
+                required: true,
+                include: [{ model: Property, attributes: ['category', 'location', 'propertyName'] }]
+            }]
+        });
+
+        const interestProfiles = users.map(user => {
+            const interactions = user.Interactions || [];
+            const categoryCounts: any = {};
+            const locationCounts: any = {};
+            let leadScore = 0;
+            const comparisons: any[] = [];
+            const recentProperties: any[] = [];
+
+            interactions.forEach((act: any) => {
+                // Scoring
+                if (act.interactionType === 'View') leadScore += 1;
+                if (act.interactionType === 'Click') leadScore += 2;
+                if (act.interactionType === 'Search') leadScore += 3;
+                if (act.interactionType === 'Comparison') {
+                    leadScore += 10;
+                    if (act.metadata && act.metadata.propertyNames) {
+                        comparisons.push({
+                            date: act.createdAt,
+                            names: act.metadata.propertyNames
+                        });
+                    }
+                }
+                if (act.interactionType === 'Inquiry') leadScore += 20;
+
+                // Interests aggregation
+                if (act.Property) {
+                    const cat = act.Property.category;
+                    const loc = act.Property.location;
+                    if (cat) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                    if (loc) locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+                    
+                    if (recentProperties.length < 5 && !recentProperties.find(p => p.id === act.Property.id)) {
+                        recentProperties.push({
+                            id: act.Property.id,
+                            name: act.Property.propertyName
+                        });
+                    }
+                }
+            });
+
+            // Find top category and location
+            const topCategory = Object.entries(categoryCounts).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A';
+            const topLocation = Object.entries(locationCounts).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+            return {
+                userId: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                city: user.city,
+                leadScore,
+                engagementLevel: leadScore > 50 ? 'High' : leadScore > 15 ? 'Medium' : 'Low',
+                topCategory,
+                topLocation,
+                comparisonCount: comparisons.length,
+                recentComparisons: comparisons.slice(0, 3),
+                recentProperties: recentProperties,
+                interactionCount: interactions.length
+            };
+        });
+
+        // Sort by lead score descending
+        interestProfiles.sort((a, b) => b.leadScore - a.leadScore);
+
+        res.json(interestProfiles);
+    } catch (err) {
+        console.error('User interests error:', err.message);
         res.status(500).send('Server error');
     }
 });

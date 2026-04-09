@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, ChevronRight, Scale, MapPin, Ruler, Home, IndianRupee } from 'lucide-react';
-import { getProperties, BACKEND_URL } from '../services/api';
+import { getProperties, BACKEND_URL, trackInteraction } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './CompareModal.css';
 
 const CompareModal = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const [searchTerm1, setSearchTerm1] = useState('');
   const [searchTerm2, setSearchTerm2] = useState('');
   const [results1, setResults1] = useState([]);
@@ -170,7 +172,18 @@ const CompareModal = ({ isOpen, onClose }) => {
               <button 
                 className={`compare-action-btn ${prop1 && prop2 ? 'active' : ''}`}
                 disabled={!prop1 || !prop2}
-                onClick={() => setIsComparing(true)}
+                onClick={() => {
+                  setIsComparing(true);
+                  // Track comparison
+                  trackInteraction({
+                    interactionType: 'Comparison',
+                    websiteUserId: user?.id,
+                    metadata: {
+                      propertyIds: [prop1.id, prop2.id],
+                      propertyNames: [prop1.propertyName, prop2.propertyName]
+                    }
+                  }).catch(err => console.error("Tracking error", err));
+                }}
               >
                 <Scale size={24} />
                 <span>COMPARE</span>

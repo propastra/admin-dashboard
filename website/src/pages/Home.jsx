@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand, Menu, X } from 'lucide-react';
 import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry, getDevelopers } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import './Home.css';
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
+const StatsCounter = React.lazy(() => import('../components/StatsCounter'));
 const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
 const CompareModal = React.lazy(() => import('../components/CompareModal'));
 
@@ -78,6 +79,7 @@ const Home = () => {
     const [developers, setDevelopers] = useState([]);
     const [loadingDevelopers, setLoadingDevelopers] = useState(true);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -89,6 +91,7 @@ const Home = () => {
         showFirstVisitPopup(user);
         trackInteraction({
             interactionType: 'View',
+            websiteUserId: user?.id,
             ipAddress: 'website-user',
             userAgent: navigator.userAgent,
             metadata: { page: 'home', city: selectedCity }
@@ -395,37 +398,7 @@ const Home = () => {
         <div className="home-page">
             {/* Hero Section with branded gradient */}
             <div className="home-hero">
-                <div className="home-hero-content">
-                    <header className="home-header">
-                        <div className="home-header-left">
-                            <img src="/images/header-logo.png" alt="PropAstra Logo" className="home-logo-img" fetchpriority="high" decoding="async" />
-                        </div>
-                        <div className="home-header-right">
-                            <div className="home-header-location" onClick={() => navigate('/city')}>
-                                <div className="location-icon-wrap">
-                                    <MapPin size={18} />
-                                </div>
-                                <div className="location-text-wrap">
-                                    <span className="location-label">Location</span>
-                                    <span className="location-city">{displayCity || selectedCity || 'Select City'} <ChevronRight size={14} /></span>
-                                </div>
-                            </div>
-                            <button
-                                className="avatar-btn"
-                                onClick={() => {
-                                    if (user) navigate('/profile');
-                                    else ensureIdentified(() => navigate('/profile'), 'Sign in to see your profile');
-                                }}
-                            >
-                                {user?.avatar ? (
-                                    <img src={user.avatar} alt="Avatar" className="user-avatar-img" />
-                                ) : (
-                                    user ? user.name?.charAt(0).toUpperCase() : <img src="/images/PROPASTRA%20P%20.png" alt="P" className="user-avatar-img" />
-                                )}
-                            </button>
-                        </div>
-                    </header>
-
+                <div className="home-hero-content" style={{ marginTop: '140px' }}>
                     {/* Hero Text */}
                     <div className="hero-text">
                         <h1>Find Your <span className="hero-highlight">Dream Home</span></h1>
@@ -618,6 +591,11 @@ const Home = () => {
                         <WhyTrustUs />
                     </React.Suspense>
                 )}
+                
+                {/* Animated Stats Section */}
+                <React.Suspense fallback={null}>
+                    <StatsCounter />
+                </React.Suspense>
                 
 
                 {/* Top Locations */}
