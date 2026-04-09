@@ -57,6 +57,7 @@ jobs:
             echo "=== [1/6] Protecting production data ==="
             mkdir -p /home/ubuntu/persistent_data/uploads
             mkdir -p /home/ubuntu/persistent_data/db_backups
+            rm -rf /home/ubuntu/deploy_tmp
             mkdir -p /home/ubuntu/deploy_tmp
 
             # Backup DB (quick file copy)
