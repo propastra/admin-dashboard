@@ -3,47 +3,26 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main 
+      - main
+
+# Cancel any in-progress deploy when a new push arrives
+concurrency:
+  group: deploy-to-ec2
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 16.112.176.154
-          username: ubuntu
-          key: |
-            -----BEGIN RSA PRIVATE KEY-----
-            MIIEpAIBAAKCAQEA6f73e6RHl8zBw0omufamZfYJhgX6bacyGruFtzFMKpH+zxPr
-            UXkTV6m8YB1kGn9hlckxZK79rc0qEzxw0CkCHgLOZ5CPu52HHzirRwBbD2tP9YCw
-            9aE2Y0amhgX+AgUB/lWFq2IxBSKfHsBYbnH8tvd7cpNoYG8FiAEX7CKZH2Wy/GC/
-            DCi3hQluY3tHt/mhu/6PJQqfDvW1JrhUhnvQFwBAGLfZ/rVjPCRqstGCANS1AfVA
-            nhHK6SIbvXCXe3+hHn+sUcN0+1pTpgt0PxvsU6V+eSdOvB0feQ35SYEPxT0mx9GN
-            /cKLZ72UHl77G448O6+hPjMnFIhovpdk2BxvDQIDAQABAoIBAF2o6HZc8ysXkhcQ
-            /x9AUqpNKNK0YeCyI6P/my4QVWRUu6E3X+FkjRFxpyzxlrfkdLL3rQWX5YJDtKuu
-            bZlkUKyiguuBOYbnLsaYcDYjNk+drIufzzUCKjridJUAoQM97eZXZQGMdAKSMQ6l
-            /r92cKjrtkXOKuEujxA5H9Ispw2ha2r10LZ/K5D7HNQaka5aWLAKDqXkhz+J8f8r
-            fqCyI317VQKfG+oMTu6Kj7j4u/vGC23VSQTucffP8/3LL1xcRehmJZxGCRVAOmon
-            9+g/PQClffDHj6LT2khK90jXbtxSLQ0xaVSB3StdFpqLK1F8WN9lOEokya5sOHmS
-            nJYk+wECgYEA9p8m3gyF/0fJxCo74xfu/qvECroz2fmMlAt8KUT7TezZIS5UNve+
-            5I296r4/wv2RVNot+doEMKk2x2OOcO6ms7rR+IV713Nuv4IQMpRVA2Tb79ZOYBub
-            mVQHWXE9csC/05PjeFTBcJ/r1OYYa1PBhbZSPHgIH1XP0YOw/YoiUikCgYEA8uTn
-            efqP4lGjdowWqSn03TRFddF5MFDP75j01QXY2IRCk/djGsd82SO6mddJowTOClDW
-            bweXVVQfDfOdyWn91WAgLRlhP7vTYSLJgQ9XwumcNfZo0Numov20Qw6xduGouFAh
-            FJZkUYlW120JD7ItRAevw2d+m9E+pvG3RAInOkUCgYEA2c+8CxaybcDgYQEP/URR
-            Dtly/ipvyw7MaqAuG2DSNoN9TQHW3Ok3zjGlTyKRu8wpQ/Ch9G3pj3STbcvurK0J
-            y+iuszhpJOLNKBRd6933q1SzroHunJElfmipSQRrSeMUSG/v0YHBio+jQFerr3a8
-            jzR0MvWr7sjiD1+ovHP4VekCgYATz0l1sFLF0YS0aW57s3lOBTJZDpGEuEKNNvtY
-            2FY8KmVHrhh+GaD8EKbqXx2ZVw3612b1vTfBdM/nkmPfBm72VRWqt/Qvf4EY3f5z
-            MS4mLmlYGVWpGxD3IBvwkCU3HeZlyds4058w6zOS9EiV6CE6+CmElU9FJAapFPOu
-            b0KFxQKBgQC5P9Zbc3Il4QjePtWLyKZCssMB3tBlqZr8U4sJdu6jaVaqlYRzgiud
-            6gq5BD0woQDHHDTazTSTvdh4d7sLqEoJACtlneqyRdhBwnCyMVamDW1S+tTJ9HkD
-            zUuE/sdT+RfLMe2y7UfNZlTQfsmOiUGV7jLDnqQv2WhEPVwoh2IcsQ==
-            -----END RSA PRIVATE KEY-----
-          command_timeout: 30m
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 12m
           script: |
             set -e
 
@@ -52,11 +31,11 @@ jobs:
             SAFE_DB="/home/ubuntu/persistent_data/db_backups"
 
             # ============================================================
-            # STEP 1: PROTECT DATA (fast - just move files, no copy)
+            # STEP 1: PROTECT DATA
             # ============================================================
             echo "=== [1/6] Protecting production data ==="
-            mkdir -p /home/ubuntu/persistent_data/uploads
-            mkdir -p /home/ubuntu/persistent_data/db_backups
+            mkdir -p "$SAFE_UPLOADS"
+            mkdir -p "$SAFE_DB"
             rm -rf /home/ubuntu/deploy_tmp
             mkdir -p /home/ubuntu/deploy_tmp
 
@@ -65,7 +44,7 @@ jobs:
               TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
               cp "$BACKEND_DIR/database.sqlite" "$SAFE_DB/database_$TIMESTAMP.sqlite"
               # Keep only last 5 backups
-              ls -t "$SAFE_DB/"*.sqlite 2>/dev/null | tail -n +6 | xargs rm -f || true
+              ls -t "$SAFE_DB/"*.sqlite 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
               # Move DB out before git reset
               mv "$BACKEND_DIR/database.sqlite" /home/ubuntu/deploy_tmp/database.sqlite
             fi
@@ -75,7 +54,7 @@ jobs:
               mv "$BACKEND_DIR/uploads" /home/ubuntu/deploy_tmp/uploads
             fi
 
-            # Sync any new uploads to permanent store (only new files, skips existing)
+            # Sync any new uploads to permanent store
             if [ -d "/home/ubuntu/deploy_tmp/uploads" ]; then
               rsync -a --ignore-existing /home/ubuntu/deploy_tmp/uploads/ "$SAFE_UPLOADS/" 2>/dev/null || true
             fi
@@ -94,50 +73,40 @@ jobs:
             echo "=== [3/6] Restoring production data ==="
             mkdir -p "$BACKEND_DIR/uploads"
 
-            mv /home/ubuntu/deploy_tmp/database.sqlite "$BACKEND_DIR/database.sqlite" 2>/dev/null || true
+            if [ -f /home/ubuntu/deploy_tmp/database.sqlite ]; then
+              mv /home/ubuntu/deploy_tmp/database.sqlite "$BACKEND_DIR/database.sqlite"
+            fi
             if [ -d "/home/ubuntu/deploy_tmp/uploads" ]; then
               rsync -a --ignore-existing /home/ubuntu/deploy_tmp/uploads/ "$BACKEND_DIR/uploads/"
-              rm -rf /home/ubuntu/deploy_tmp
             fi
+            rm -rf /home/ubuntu/deploy_tmp
+
             # Merge from permanent store to catch any missed files
             rsync -a --ignore-existing "$SAFE_UPLOADS/" "$BACKEND_DIR/uploads/" 2>/dev/null || true
 
-            echo "Uploads restored: $(ls $BACKEND_DIR/uploads | wc -l) files"
+            echo "Uploads restored: $(ls "$BACKEND_DIR/uploads" 2>/dev/null | wc -l) files"
 
             # ============================================================
             # STEP 4: DEPLOY BACKEND
-            # Only reinstall if package.json changed (saves ~1-2 min)
             # ============================================================
             echo "=== [4/6] Deploying Backend ==="
             cd "$BACKEND_DIR"
 
-            # Smart install: reuse node_modules if lockfile unchanged
-            LOCKFILE_CHANGED=false
-            if [ ! -d "node_modules" ]; then
-              LOCKFILE_CHANGED=true
-            elif ! git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "backend/package-lock.json"; then
-              echo "package-lock.json unchanged - reusing node_modules"
-            else
-              LOCKFILE_CHANGED=true
-            fi
-
-            if [ "$LOCKFILE_CHANGED" = true ]; then
-              echo "Installing backend dependencies..."
-              rm -rf node_modules
-              npm ci --prefer-offline 2>/dev/null || npm install
-            fi
+            # Always install to avoid stale node_modules issues
+            echo "Installing backend dependencies..."
+            npm install --prefer-offline 2>/dev/null || npm install
 
             npm run build
 
             # Migration (fast - skips if already applied)
             npm run migrate || true
 
-            # Only seed if DB is empty (skip the slow logo-downloading seed otherwise)
+            # Only seed if DB is empty
             PROP_COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Properties;" 2>/dev/null || echo "0")
             DEV_COUNT=$(sqlite3 database.sqlite "SELECT COUNT(*) FROM Developers;" 2>/dev/null || echo "0")
             echo "Properties: $PROP_COUNT | Developers: $DEV_COUNT"
 
-            if [ "$PROP_COUNT" -eq 0 ]; then
+            if [ "$PROP_COUNT" -eq 0 ] 2>/dev/null; then
               echo "Empty DB - running full seed..."
               node dist/seed.js || true
               npm run seed:all || true
@@ -145,10 +114,10 @@ jobs:
               echo "DB has data - skipping seed (preserving all $PROP_COUNT properties)"
             fi
 
-            echo "Final: $(sqlite3 database.sqlite 'SELECT COUNT(*) FROM Properties;') properties, $(ls uploads | wc -l) uploads"
+            echo "Final: $(sqlite3 database.sqlite 'SELECT COUNT(*) FROM Properties;' 2>/dev/null || echo 'N/A') properties, $(ls uploads 2>/dev/null | wc -l) uploads"
 
             # Restart backend
-            npx pm2 delete backend || true
+            npx pm2 delete backend 2>/dev/null || true
             npx pm2 start npm --name "backend" -- run start
             npx pm2 save
 
@@ -161,14 +130,7 @@ jobs:
             sudo chown -R ubuntu:ubuntu dist 2>/dev/null || true
             rm -rf dist
 
-            # Smart install
-            if [ ! -d "node_modules" ] || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "frontend/package-lock.json"; then
-              rm -rf node_modules
-              npm ci --prefer-offline 2>/dev/null || npm install
-            else
-              echo "Reusing frontend node_modules"
-            fi
-
+            npm install --prefer-offline 2>/dev/null || npm install
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Frontend deployed!"
@@ -182,14 +144,7 @@ jobs:
             sudo chown -R ubuntu:ubuntu dist 2>/dev/null || true
             rm -rf dist
 
-            # Smart install
-            if [ ! -d "node_modules" ] || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "website/package-lock.json"; then
-              rm -rf node_modules
-              npm ci --prefer-offline 2>/dev/null || npm install
-            else
-              echo "Reusing website node_modules"
-            fi
-
+            npm install --prefer-offline 2>/dev/null || npm install
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Website deployed!"
@@ -199,6 +154,6 @@ jobs:
             # ============================================================
             echo ""
             echo "=== DEPLOYMENT COMPLETE ==="
-            echo "Properties: $(sqlite3 /home/ubuntu/Admin_dashboard/backend/database.sqlite 'SELECT COUNT(*) FROM Properties;')"
-            echo "Uploads:    $(ls /home/ubuntu/Admin_dashboard/backend/uploads | wc -l) files"
-            echo "Safe store: $(ls $SAFE_UPLOADS | wc -l) files backed up"
+            echo "Properties: $(sqlite3 /home/ubuntu/Admin_dashboard/backend/database.sqlite 'SELECT COUNT(*) FROM Properties;' 2>/dev/null || echo 'N/A')"
+            echo "Uploads:    $(ls /home/ubuntu/Admin_dashboard/backend/uploads 2>/dev/null | wc -l) files"
+            echo "Safe store: $(ls $SAFE_UPLOADS 2>/dev/null | wc -l) files backed up"
