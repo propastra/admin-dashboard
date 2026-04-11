@@ -22,3 +22,9 @@ admin-dashboard/
 backend/logs/
 node_modules/
 backend/node_modules/
+
+# ===== SECURITY: NEVER COMMIT =====
+*.pem
+ec2_key.pem
+*.key
+*.p12

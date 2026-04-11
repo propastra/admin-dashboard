@@ -125,6 +125,14 @@ const Property = sequelize.define('Property', {
     investmentType: {
         type: DataTypes.STRING,
     },
+    city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    country: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     timestamps: true,
 });

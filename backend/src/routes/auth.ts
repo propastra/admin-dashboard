@@ -2,11 +2,18 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const auth = require('../middleware/auth');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set. Server cannot start securely.');
+    process.exit(1);
+}
 
 // @route   POST api/auth/register
 // @desc    Register admin
-// @access  Public (should be protected in prod, but open for initial setup)
-router.post('/register', async (req, res) => {
+// @access  Private (Admin only — requires valid JWT)
+router.post('/register', auth, async (req, res) => {
     const { username, password } = req.body;
 
     try {
@@ -25,7 +32,7 @@ router.post('/register', async (req, res) => {
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'secret',
+            JWT_SECRET,
             { expiresIn: '12h' },
             (err, token) => {
                 if (err) throw err;
@@ -63,7 +70,7 @@ router.post('/login', async (req, res) => {
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'secret',
+            JWT_SECRET,
             { expiresIn: '12h' },
             (err, token) => {
                 if (err) throw err;

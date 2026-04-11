@@ -5,6 +5,12 @@ const auth = require('../middleware/auth');
 const { Op } = require('sequelize');
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set.');
+    process.exit(1);
+}
+
 // @route   POST api/inquiries
 // @desc    Submit a new inquiry (Public)
 // @access  Public
@@ -59,7 +65,7 @@ router.post('/', async (req, res) => {
                 websiteUserId = user.id;
 
                 const payload = { websiteUser: { id: user.id } };
-                authToken = jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+                authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
                 autoLoggedUser = {
                     id: user.id,
                     name: user.name,
@@ -93,48 +99,7 @@ router.post('/', async (req, res) => {
             propertyId: propertyId || null
         };
 
-        let newInquiry;
-        let retryCount = 0;
-        let success = false;
-
-        while (!success && retryCount < 5) {
-            try {
-                newInquiry = await Inquiry.create(payload);
-                success = true;
-            } catch (createErr: any) {
-                const msg = createErr.message || '';
-                console.error(`Inquiry create attempt ${retryCount + 1} failed:`, msg);
-
-                // If it's a column error, strip the problematic field and try again
-                if (msg.includes('no column named') || msg.includes('SQLITE_ERROR') || msg.includes('column')) {
-                    let stripped = false;
-
-                    // Match the specific column name from the error message if possible
-                    const columnMatch = msg.match(/no column named (\w+)/) || msg.match(/column (\w+) /);
-                    if (columnMatch && columnMatch[1]) {
-                        const col = columnMatch[1];
-                        console.log(`Explicitly stripping missing column: ${col}`);
-                        delete payload[col];
-                        stripped = true;
-                    } else {
-                        // Fallback: strip known optional columns if mentioned in error
-                        if (msg.includes('email')) { delete payload.email; stripped = true; }
-                        if (msg.includes('websiteUserId')) { delete payload.websiteUserId; stripped = true; }
-                        if (msg.includes('propertyId')) { delete payload.propertyId; stripped = true; }
-                    }
-
-                    if (!stripped) {
-                        // If we can't identify the column but it's a column error, we must fail
-                        throw createErr;
-                    }
-
-                    retryCount++;
-                    console.log(`Retrying inquiry creation (${retryCount}) with stripped payload:`, payload);
-                } else {
-                    throw createErr;
-                }
-            }
-        }
+        const newInquiry = await Inquiry.create(payload);
 
         res.status(201).json({
             inquiry: newInquiry,

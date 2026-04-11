@@ -91,11 +91,15 @@ app.get('/', (req, res) => {
     res.send('Real Estate Admin Dashboard API is running');
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => {
+// Global Error Handler (Express requires exactly 4 params to identify this as error middleware)
+app.use((err: any, req: any, res: any, next: any) => {
     logger.error('Unhandled Global Error:', err);
     if (err instanceof require('multer').MulterError) {
         return res.status(400).json({ message: 'File upload error: ' + err.message, error: err.code });
+    }
+    // Handle multer file filter errors (custom Error thrown by fileFilter)
+    if (err.message && err.message.includes('File type')) {
+        return res.status(400).json({ message: err.message });
     }
     res.status(err.status || 500).json({ 
         message: err.message || 'Internal Server Error',
@@ -132,6 +136,20 @@ sequelize.sync()
         try {
             await sequelize.query('ALTER TABLE Properties ADD COLUMN masterPlan TEXT;');
             logger.info('Added masterPlan to Properties');
+        } catch (e) {
+            // Column already exists
+        }
+        
+        try {
+            await sequelize.query('ALTER TABLE Properties ADD COLUMN city VARCHAR(255);');
+            logger.info('Added city to Properties');
+        } catch (e) {
+            // Column already exists
+        }
+
+        try {
+            await sequelize.query('ALTER TABLE Properties ADD COLUMN country VARCHAR(255);');
+            logger.info('Added country to Properties');
         } catch (e) {
             // Column already exists
         }

@@ -64,7 +64,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         e.stopPropagation();
         const title = displayTitle;
         const url = `${window.location.origin}/property/${property.id}`;
-        const text = `Check out ${title} on Ayora`;
+        const text = `Check out ${title} on Propastra`;
 
         if (navigator.share) {
             try {

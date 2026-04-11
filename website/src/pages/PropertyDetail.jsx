@@ -51,8 +51,8 @@ const PropertyDetail = () => {
         if (user && property) {
             import('../services/api').then(({ getFavorites }) => {
                 getFavorites().then(res => {
-                    const favs = res.data.favorites || [];
-                    setIsFavorite(favs.some(f => f.propertyId && f.propertyId._id === property.id || f.propertyId === property.id));
+                    const favs = Array.isArray(res.data) ? res.data : (res.data.favorites || []);
+                    setIsFavorite(favs.some(f => f.propertyId === property.id || (f.Property && f.Property.id === property.id)));
                 }).catch(err => console.error(err));
             });
         }
@@ -84,7 +84,7 @@ const PropertyDetail = () => {
     const handleShare = async () => {
         const title = getDisplayTitle(property);
         const url = window.location.href;
-        const text = `Check out ${title} on Ayora`;
+        const text = `Check out ${title} on Propastra`;
 
         if (navigator.share) {
             try {

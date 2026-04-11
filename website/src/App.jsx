@@ -12,6 +12,7 @@ const MapExplorer = React.lazy(() => import('./pages/MapExplorer'));
 const Favorites = React.lazy(() => import('./pages/Favorites'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const AgentDashboard = React.lazy(() => import('./pages/AgentDashboard'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 const Header = React.lazy(() => import('./components/Header'));
 const Footer = React.lazy(() => import('./components/Footer'));
 const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
@@ -51,11 +52,7 @@ function App() {
     const hasToken = !!localStorage.getItem('website_token');
 
     if (isMainSite && isProtected && !user && !hasToken) {
-      // Only redirect if we are sure there is no token AND user is not logged in
-      const timer = setTimeout(() => {
-        navigate('/', { replace: true });
-      }, 300);
-      return () => clearTimeout(timer);
+      navigate('/', { replace: true });
     }
   }, [location.pathname, user, loading, isMainSite, navigate]);
 
@@ -80,6 +77,7 @@ function App() {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/agent-dashboard" element={<AgentDashboard />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {isMainSite && <Footer />}
