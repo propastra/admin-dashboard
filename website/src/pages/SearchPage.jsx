@@ -76,8 +76,8 @@ const SearchPage = () => {
         furnishingStatus: [],
     });
 
-    const [sortBy, setSortBy] = useState('createdAt');
-    const [sortOrder, setSortOrder] = useState('DESC');
+    const [sortBy, setSortBy] = useState('propertyName');
+    const [sortOrder, setSortOrder] = useState('ASC');
 
     const dropdownRef = useRef(null);
 
@@ -175,6 +175,16 @@ const SearchPage = () => {
             });
 
             const deduped = [...grouped, ...noProject];
+            
+            // Sort frontend-side if alphabetical is requested (grouping might shift order)
+            if (sortBy === 'propertyName') {
+                deduped.sort((a, b) => {
+                    const nameA = (a.projectName || a.propertyName || '').toLowerCase();
+                    const nameB = (b.projectName || b.propertyName || '').toLowerCase();
+                    return sortOrder === 'ASC' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+                });
+            }
+
             setProperties(deduped);
             setTotal(res.data.total || 0);
             setTotalPages(res.data.totalPages || 1);
@@ -271,6 +281,39 @@ const SearchPage = () => {
         return `Up to ${formatPriceLabel(filters.maxPrice)}`;
     };
 
+    const getGroupedProperties = () => {
+        if (sortBy !== 'propertyName') return null;
+        
+        const groups = {};
+        properties.forEach(prop => {
+            const name = (prop.projectName || prop.propertyName || '').trim();
+            const firstLetter = name.charAt(0).toUpperCase();
+            const key = /[A-Z]/.test(firstLetter) ? firstLetter : '#';
+            
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(prop);
+        });
+        
+        return Object.keys(groups).sort().reduce((acc, key) => {
+            acc[key] = groups[key];
+            return acc;
+        }, {});
+    };
+
+    const jumpToLetter = (letter) => {
+        const element = document.getElementById(`letter-section-${letter}`);
+        if (element) {
+            const headerOffset = 120;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     return (
         <div className="search-page">
             <div className="search-top-bar">
@@ -319,6 +362,8 @@ const SearchPage = () => {
                             style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--gray-700)', fontWeight: 500, paddingLeft: '8px', cursor: 'pointer' }}
                         >
                             <option value="createdAt-DESC">Newest First</option>
+                            <option value="propertyName-ASC">Name: A to Z</option>
+                            <option value="propertyName-DESC">Name: Z to A</option>
                             <option value="price-ASC">Price: Low to High</option>
                             <option value="price-DESC">Price: High to Low</option>
                             <option value="relevance-DESC">Relevance</option>
@@ -488,19 +533,53 @@ const SearchPage = () => {
             {loading ? (
                 <div className="loading-screen"><div className="spinner"></div></div>
             ) : properties.length > 0 ? (
-                <div className="search-results-grid">
-                    {properties.map((prop) => (
-                        <PropertyCard
-                            key={prop.id}
-                            property={prop}
-                            isFavorited={favoriteIds.has(prop.id)}
-                            onFavoriteToggle={handleFavoriteToggle}
-                            variantCount={prop.variantCount}
-                            allConfigurations={prop.allConfigurations}
-                            maxPrice={prop.maxPrice}
-                            maxPriceUnit={prop.maxPriceUnit}
-                        />
-                    ))}
+                <div className="results-container">
+                    {sortBy === 'propertyName' && sortOrder === 'ASC' && (
+                        <div className="alphabet-nav">
+                            {Object.keys(getGroupedProperties() || {}).map(letter => (
+                                <button key={letter} onClick={() => jumpToLetter(letter)}>{letter}</button>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {sortBy === 'propertyName' && sortOrder === 'ASC' ? (
+                        <div className="search-results-grouped">
+                            {Object.entries(getGroupedProperties()).map(([letter, group]) => (
+                                <div key={letter} id={`letter-section-${letter}`} className="alphabet-section">
+                                    <h3 className="alphabet-header">{letter}</h3>
+                                    <div className="search-results-grid">
+                                        {group.map((prop) => (
+                                            <PropertyCard
+                                                key={prop.id}
+                                                property={prop}
+                                                isFavorited={favoriteIds.has(prop.id)}
+                                                onFavoriteToggle={handleFavoriteToggle}
+                                                variantCount={prop.variantCount}
+                                                allConfigurations={prop.allConfigurations}
+                                                maxPrice={prop.maxPrice}
+                                                maxPriceUnit={prop.maxPriceUnit}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="search-results-grid">
+                            {properties.map((prop) => (
+                                <PropertyCard
+                                    key={prop.id}
+                                    property={prop}
+                                    isFavorited={favoriteIds.has(prop.id)}
+                                    onFavoriteToggle={handleFavoriteToggle}
+                                    variantCount={prop.variantCount}
+                                    allConfigurations={prop.allConfigurations}
+                                    maxPrice={prop.maxPrice}
+                                    maxPriceUnit={prop.maxPriceUnit}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="empty-state">

@@ -26,6 +26,20 @@ const customIcon = new L.Icon({
     className: 'custom-leaflet-marker'
 });
 
+// Custom Cluster Icon Function
+const createClusterCustomIcon = (cluster) => {
+    return new L.DivIcon({
+        html: `
+            <div class="custom-cluster-marker">
+                <img src="/custom-marker.png" alt="logo" />
+                <div class="cluster-count">${cluster.getChildCount()}</div>
+            </div>
+        `,
+        className: 'custom-cluster-base',
+        iconSize: L.point(50, 50, true),
+    });
+};
+
 const LocationMarker = ({ properties }) => {
     const map = useMap();
     const navigate = useNavigate();
@@ -53,6 +67,7 @@ const LocationMarker = ({ properties }) => {
             chunkedLoading
             maxClusterRadius={40}
             spiderfyOnMaxZoom={true}
+            iconCreateFunction={createClusterCustomIcon}
         >
             {properties.map(prop => {
                 const lat = parseFloat(prop.latitude);

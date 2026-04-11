@@ -261,41 +261,66 @@
 }
 
 /* =========================================
-   Custom Marker Cluster Styling
-   Creates a professional, branded look
+   Custom Branded Map Markers
 ========================================= */
 
-.marker-cluster-small,
-.marker-cluster-medium,
-.marker-cluster-large {
-    background-color: rgba(59, 63, 140, 0.6) !important; /* var(--brand) with opacity */
+.custom-leaflet-marker {
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.3));
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.marker-cluster-small div,
-.marker-cluster-medium div,
-.marker-cluster-large div {
-    background-color: rgba(59, 63, 140, 0.9) !important; /* solid var(--brand) */
-    color: white !important;
-    font-weight: 800 !important;
-    font-size: 14px !important;
+.custom-leaflet-marker:hover {
+    transform: scale(1.15) translateY(-5px);
+    z-index: 1000 !important;
+}
+
+/* Custom Cluster Marker Styling */
+.custom-cluster-base {
+    background: transparent !important;
+    border: none !important;
+}
+
+.custom-cluster-marker {
+    position: relative;
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    /* Add a subtle glow for premium feel */
-    box-shadow: 0 0 15px rgba(59, 63, 140, 0.5);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.custom-cluster-marker img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+}
+
+.cluster-count {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    background: var(--brand); /* Branded background */
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
 }
 
-/* Ensure the span text is centered nicely */
-.marker-cluster span {
-    line-height: 1;
+.custom-cluster-marker:hover {
+    transform: scale(1.1);
 }
 
-.marker-cluster {
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.marker-cluster:hover {
-    transform: scale(1.1) !important;
-}
+.custom-cluster-marker:hover img {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+}

@@ -12,7 +12,6 @@ import './Home.css';
 
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
-const CompanyStats = React.lazy(() => import('../components/CompanyStats'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
 const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
 const CompareModal = React.lazy(() => import('../components/CompareModal'));
@@ -215,6 +214,11 @@ const Home = () => {
             }
 
             const groupedProps = groupProperties(fetchedProps);
+            groupedProps.sort((a, b) => {
+                const nameA = (a.displayTitle || a.projectName || a.propertyName || '').toLowerCase();
+                const nameB = (b.displayTitle || b.projectName || b.propertyName || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
             setProperties(groupedProps.slice(0, 4)); // Show fewer cards initially for speed
             setCities(cityRes.data);
         } catch (err) {
@@ -276,6 +280,11 @@ const Home = () => {
                         ...p,
                         distance: parseFloat(p.distance).toFixed(1)
                     })));
+                    grouped.sort((a, b) => {
+                        const nameA = (a.displayTitle || a.projectName || a.propertyName || '').toLowerCase();
+                        const nameB = (b.displayTitle || b.projectName || b.propertyName || '').toLowerCase();
+                        return nameA.localeCompare(nameB);
+                    });
                     setNearbyProperties(grouped.slice(0, 20));
                     setLoadingNearby(false);
                     return;
@@ -286,6 +295,11 @@ const Home = () => {
             }
 
             const groupedNearbyProps = groupProperties(props);
+            groupedNearbyProps.sort((a, b) => {
+                const nameA = (a.displayTitle || a.projectName || a.propertyName || '').toLowerCase();
+                const nameB = (b.displayTitle || b.projectName || b.propertyName || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
             const displayLimit = (categoryFilter && categoryFilter !== 'All') ? 50 : 8;
             setNearbyProperties(groupedNearbyProps.slice(0, displayLimit));
         } catch (err) {
@@ -654,7 +668,6 @@ const Home = () => {
                 {!loadingDevelopers && developers.length > 0 && (
                     <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
                         <DevelopersCarousel developers={developers} />
-                        <CompanyStats />
                         <WhyTrustUs />
                     </React.Suspense>
                 )}

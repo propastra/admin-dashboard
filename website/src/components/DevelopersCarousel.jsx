@@ -8,9 +8,6 @@ const DevelopersCarousel = ({ developers }) => {
 
     if (!developers || developers.length === 0) return null;
 
-    // Duplicate list 4 times to ensure it fills the space for an infinite marquee loop
-    const marqueeItems = [...developers, ...developers, ...developers, ...developers];
-
     return (
         <section className="developers-section animate-section">
             <div className="section-header">
@@ -20,10 +17,10 @@ const DevelopersCarousel = ({ developers }) => {
                 </div>
             </div>
             
-            <div className="developers-wrapper marquee-wrapper">
-                <div className="developers-container marquee-container">
-                    <div className="developers-grid marquee-track">
-                        {marqueeItems.map((dev, index) => (
+            <div className="developers-wrapper">
+                <div className="developers-container">
+                    <div className="developers-grid">
+                        {developers.map((dev, index) => (
                             <div 
                                 key={`${dev.id}-${index}`} 
                                 className="developer-card" 

@@ -298,3 +298,77 @@
         bottom: 90px;
     }
 }
+
+/* Alphabetical Grouping Styles */
+.results-container {
+    position: relative;
+    padding-top: 10px;
+}
+
+.alphabet-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px 20px;
+    background: transparent;
+    position: sticky;
+    top: 72px; /* Below search bar */
+    z-index: 50;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid #edf2f7;
+    margin-bottom: 20px;
+}
+
+.alphabet-nav button {
+    background: white;
+    border: 1px solid #e2e8f0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alphabet-nav button:hover {
+    background: var(--p-red-light);
+    color: var(--p-red);
+    border-color: var(--p-red-border);
+    transform: translateY(-2px);
+}
+
+.alphabet-section {
+    scroll-margin-top: 140px; /* Offset for sticky headers */
+    margin-bottom: 40px;
+}
+
+.alphabet-header {
+    margin: 0 16px 12px;
+    padding: 8px 16px;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--p-text-dark);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alphabet-header::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(to right, #e2e8f0, transparent);
+    border-radius: 2px;
+}
+
+.search-results-grouped {
+    display: flex;
+    flex-direction: column;
+}
