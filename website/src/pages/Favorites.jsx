@@ -23,7 +23,8 @@ const Favorites = () => {
     const loadFavorites = async () => {
         try {
             const res = await getFavorites();
-            setFavorites(res.data);
+            const favs = Array.isArray(res.data) ? res.data : (res.data.favorites || []);
+            setFavorites(favs);
         } catch (err) {
             console.error('Failed to load favorites:', err);
         } finally {

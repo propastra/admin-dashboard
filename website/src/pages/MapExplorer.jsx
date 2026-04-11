@@ -39,33 +39,31 @@ const MapController = ({ selectedPos }) => {
     return null;
 };
 
+// Custom Cluster Icon - Matches the brand marker
+const createCustomClusterIcon = (cluster) => {
+    return new L.DivIcon({
+        html: `<div class="custom-cluster-marker">
+                <img src="/custom-marker.png" alt="cluster" />
+                <div class="cluster-badge">
+                    <span>${cluster.getChildCount()}</span>
+                </div>
+              </div>`,
+        className: 'custom-cluster-wrapper',
+        iconSize: L.point(60, 60, true),
+        iconAnchor: [30, 30]
+    });
+};
+
 const LocationMarker = ({ properties, selectedCity }) => {
-    const map = useMap();
     const navigate = useNavigate();
-    const prevCity = React.useRef();
-
-    useEffect(() => {
-        // Only fit bounds if city changed OR it's the first time
-        if (properties.length > 0 && (prevCity.current !== selectedCity)) {
-            const validPoints = properties.filter(p => p.lat != null && p.lng != null).map(p => [p.lat, p.lng]);
-
-            if (validPoints.length > 0) {
-                const bounds = L.latLngBounds(validPoints);
-                if (bounds.isValid()) {
-                    setTimeout(() => {
-                        map.invalidateSize();
-                        // For a specific city, we zoom in closer. For "All Cities", we fit all.
-                        const padding = selectedCity ? [100, 100] : [50, 50];
-                        map.fitBounds(bounds, { padding, maxZoom: selectedCity ? 14 : 12 });
-                    }, 400);
-                }
-            }
-            prevCity.current = selectedCity;
-        }
-    }, [properties, map, selectedCity]);
-
     return (
-        <MarkerClusterGroup chunkedLoading maxClusterRadius={50} spiderfyOnMaxZoom={true}>
+        <MarkerClusterGroup 
+            chunkedLoading 
+            maxClusterRadius={40} 
+            spiderfyOnMaxZoom={true}
+            iconCreateFunction={createCustomClusterIcon}
+            showCoverageOnHover={false}
+        >
             {properties.map(prop => {
                 if (prop.lat == null || prop.lng == null) return null;
 
@@ -96,14 +94,12 @@ const LocationMarker = ({ properties, selectedCity }) => {
                                         <MapPin size={10} />
                                         <span>{prop.location}</span>
                                     </div>
+                                    <div className="popup-coords" style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', fontFamily: 'monospace' }}>
+                                        {prop.lat.toFixed(6)}, {prop.lng.toFixed(6)}
+                                    </div>
                                     <div className="popup-meta">
                                         {prop.configuration && <span><BiBed size={12} /> {prop.configuration}</span>}
                                         <span><Maximize size={12} /> {prop.dimensions}</span>
-                                    </div>
-                                    <div className="popup-debug-coords" style={{ fontSize: '10px', color: '#777', padding: '6px 0', borderTop: '1px solid #eee', marginTop: '6px' }}>
-                                        <strong>Raw DB Match:</strong><br />
-                                        Lat: {prop.lat ? prop.lat.toFixed(5) : 'N/A'}<br />
-                                        Lng: {prop.lng ? prop.lng.toFixed(5) : 'N/A'}
                                     </div>
                                     <button className="popup-btn">View Details</button>
                                 </div>
@@ -116,44 +112,97 @@ const LocationMarker = ({ properties, selectedCity }) => {
     );
 };
 
+// Component to handle map fitting/zooming
+const MapAutoZoom = ({ filteredProperties, selectedCountry, selectedCity }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (filteredProperties.length > 0) {
+            const bounds = L.latLngBounds(filteredProperties.map(p => [p.lat, p.lng]));
+            
+            // If only one property, zoom in closer
+            if (filteredProperties.length === 1) {
+                map.setView([filteredProperties[0].lat, filteredProperties[0].lng], 14, { animate: true });
+            } else {
+                // Determine zoom level based on selection type
+                let padding = [50, 50];
+                if (selectedCity) padding = [100, 100];
+                else if (selectedCountry) padding = [60, 60];
+
+                map.fitBounds(bounds, { padding, animate: true, maxZoom: selectedCity ? 12 : 10 });
+            }
+        }
+    }, [selectedCountry, selectedCity, filteredProperties, map]);
+
+    return null;
+};
+
 const MapExplorer = () => {
     const navigate = useNavigate();
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedCity, setSelectedCity] = useState('');
+    const [countries, setCountries] = useState([]);
     const [cities, setCities] = useState([]);
     const [showResults, setShowResults] = useState(false);
     const [selectedPos, setSelectedPos] = useState(null);
+
+    const parseLocation = (prop) => {
+        // Prioritize explicit values from database if available
+        if (prop.country && prop.city) return { country: prop.country, city: prop.city };
+        if (prop.country) return { country: prop.country, city: prop.city || 'Other' };
+        
+        const loc = (prop.location || '').toLowerCase();
+        let country = 'India';
+        let city = 'Other';
+        if (loc.includes('uae') || loc.includes('dubai') || loc.includes('abu dhabi')) country = 'UAE';
+        if (loc.includes('dubai')) city = 'Dubai';
+        else if (loc.includes('abu dhabi')) city = 'Abu Dhabi';
+        else if (loc.includes('sharjah')) city = 'Sharjah';
+        else if (loc.includes('bangalore') || loc.includes('bengaluru')) city = 'Bangalore';
+        else if (loc.includes('goa')) city = 'Goa';
+        else if (loc.includes('mumbai')) city = 'Mumbai';
+        else if (loc.includes('pune')) city = 'Pune';
+        else if (loc.includes('hyderabad')) city = 'Hyderabad';
+        return { country, city };
+    };
 
     useEffect(() => {
         loadProperties();
     }, []);
 
-    // Generate unique city list from properties
+    useEffect(() => {
+        if (properties.length > 0) {
+            const countryCounts = {};
+            properties.forEach(p => {
+                const { country } = parseLocation(p);
+                countryCounts[country] = (countryCounts[country] || 0) + 1;
+            });
+            setCountries(Object.keys(countryCounts).sort().map(name => ({ name, count: countryCounts[name] })));
+        }
+    }, [properties]);
+
     useEffect(() => {
         if (properties.length > 0) {
             const cityCounts = {};
             properties.forEach(p => {
-                const city = p.city || "Other";
-                cityCounts[city] = (cityCounts[city] || 0) + 1;
+                const { country, city } = parseLocation(p);
+                if (selectedCountry === '' || country === selectedCountry) {
+                    cityCounts[city] = (cityCounts[city] || 0) + 1;
+                }
             });
-            const sortedCities = Object.keys(cityCounts).sort().map(name => ({
-                name,
-                count: cityCounts[name]
-            }));
-            setCities(sortedCities);
+            setCities(Object.keys(cityCounts).sort().map(name => ({ name, count: cityCounts[name] })));
         }
-    }, [properties]);
+    }, [properties, selectedCountry]);
 
     const filteredProperties = properties.filter(p => {
-        const matchesSearch = searchQuery === '' || 
-            p.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            (p.location && p.location.toLowerCase().includes(searchQuery.toLowerCase()));
-        
-        const matchesCity = selectedCity === '' || p.city === selectedCity;
-        
-        return matchesSearch && matchesCity;
+        const { country, city } = parseLocation(p);
+        const matchesSearch = searchQuery === '' || p.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) || (p.location && p.location.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchesCountry = selectedCountry === '' || country === selectedCountry;
+        const matchesCity = selectedCity === '' || city === selectedCity;
+        return matchesSearch && matchesCountry && matchesCity;
     });
 
     const loadProperties = async () => {
@@ -161,148 +210,35 @@ const MapExplorer = () => {
             const res = await getProperties({ limit: 1000 });
             const allProps = res.data.properties || [];
             let validProps = [];
-            let needsGeocoding = [];
+            
+            // Map to track used positions for jittering
+            const posMap = new Map();
 
-            // Distance calculation helper (Haversine formula in km)
-            const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
-                const R = 6371; // Radius of the earth in km
-                const dLat = (lat2 - lat1) * (Math.PI / 180);
-                const dLon = (lon2 - lon1) * (Math.PI / 180);
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                          Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c; 
-            };
-
-            // Authoritative Dictionary mapping common regions to core coordinates
-            const CITY_CENTERS = {
-                'bangalore': { lat: 12.9716, lng: 77.5946 },
-                'bengaluru': { lat: 12.9716, lng: 77.5946 },
-                'mumbai': { lat: 19.0760, lng: 72.8777 },
-                'delhi': { lat: 28.7041, lng: 77.1025 },
-                'pune': { lat: 18.5204, lng: 73.8567 },
-                'hyderabad': { lat: 17.3850, lng: 78.4867 }
-            };
-
-            // Pass 1: Parse and globally validate properties
             allProps.forEach(p => {
-                // Instantly log raw backend data to help admins debug underlying database errors
-                console.log(`[RAW DB] ${p.propertyName} | LAT: ${p.latitude} | LNG: ${p.longitude}`);
-
                 let lat = parseFloat(p.latitude);
                 let lng = parseFloat(p.longitude);
-
-                // Try GeoJSON fallback if raw properties fail
-                if ((!lat || !lng) && p.location?.coordinates) {
-                    lng = parseFloat(p.location.coordinates[0]);
-                    lat = parseFloat(p.location.coordinates[1]);
-                }
-
-                // If completely missing, push to Geocoder instantly
-                if (!lat || !lng || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-                    needsGeocoding.push(p);
-                    return;
-                }
-
-                // Mathematical Swap Fallback: Catch explicitly flipped Global Inputs
-                if (lat < -90 || lat > 90) {
-                    if (lng >= -90 && lng <= 90) {
-                        const temp = lat;
-                        lat = lng;
-                        lng = temp;
-                    }
-                }
-
-                // Strict Haversine Distance Checker
-                // Discards points severely offset (> 100km) from identified host cities.
-                let isValidLocation = true;
-                const propLocationText = (p.location || p.city || "").toLowerCase();
-                
-                for (const [cityKey, centerCoords] of Object.entries(CITY_CENTERS)) {
-                    if (propLocationText.includes(cityKey)) {
-                        const distance = getDistanceFromLatLonInKm(lat, lng, centerCoords.lat, centerCoords.lng);
-                        if (distance > 100) {
-                            console.warn(`[Map Debug] INVALID DISTANCE: ${p.propertyName} (${cityKey}). Distance: ${Math.round(distance)}km away. Clamping to Geocoder.`);
-                            isValidLocation = false;
-                        }
-                        break;
-                    }
-                }
-
-                if (!isValidLocation) {
-                    needsGeocoding.push(p);
-                    return;
-                }
-
-                // Final Basic Global Integrity Check
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    const posKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+                    
+                    // If position already taken, add a tiny bit of jitter
+                    // This creates a "cloud" of markers instead of a single overlapping stack
+                    if (posMap.has(posKey)) {
+                        const count = posMap.get(posKey);
+                        posMap.set(posKey, count + 1);
+                        
+                        // Jitter intensity (±0.0001 roughly equals ±10 meters)
+                        lat += (Math.random() - 0.5) * 0.0002;
+                        lng += (Math.random() - 0.5) * 0.0002;
+                    } else {
+                        posMap.set(posKey, 1);
+                    }
+
                     validProps.push({ ...p, lat, lng });
-                } else {
-                    needsGeocoding.push(p);
                 }
             });
-
-            setProperties([...validProps]);
+            setProperties(validProps);
             setLoading(false);
-
-            // Pass 2: Handle Discarded/Missing Locations via Geocoding Pipeline
-            if (needsGeocoding.length > 0) {
-                const uniqueLocs = [...new Set(needsGeocoding.map(p => p.location).filter(Boolean))];
-
-                const geocode = async (loc) => {
-                    const queries = [`${loc}`, `${loc}, India`];
-                    for (const query of queries) {
-                        try {
-                            const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
-                            const response = await fetch(geoUrl, { headers: { 'Accept-Language': 'en' } });
-                            const data = await response.json();
-                            if (data && data.length > 0) {
-                                return {
-                                    lat: parseFloat(data[0].lat),
-                                    lng: parseFloat(data[0].lon)
-                                };
-                            }
-                        } catch (e) {}
-                        await new Promise(r => setTimeout(r, 800)); // Respect OSM limits
-                    }
-                    return null;
-                };
-
-                const DEFAULT_LAT = 12.9716;
-                const DEFAULT_LON = 77.5946;
-
-                for (const loc of uniqueLocs) {
-                    let coords = await geocode(loc);
-
-                    if (!coords) {
-                        coords = { lat: DEFAULT_LAT, lng: DEFAULT_LON };
-                    }
-
-                    // Spread clustered locations slightly apart
-                    const newlyResolved = needsGeocoding.filter(p => p.location === loc).map(p => ({
-                        ...p,
-                        lat: coords.lat + (Math.random() - 0.5) * 0.02,
-                        lng: coords.lng + (Math.random() - 0.5) * 0.02
-                    }));
-
-                    validProps = [...validProps, ...newlyResolved];
-                    setProperties([...validProps]);
-                }
-
-                // Final Sweep: Homeless properties (no location string) fall back to default
-                const homeless = needsGeocoding.filter(p => !p.location).map(p => ({
-                    ...p,
-                    lat: DEFAULT_LAT + (Math.random() - 0.5) * 0.05,
-                    lng: DEFAULT_LON + (Math.random() - 0.5) * 0.05
-                }));
-                if (homeless.length > 0) {
-                    validProps = [...validProps, ...homeless];
-                    setProperties([...validProps]);
-                }
-            }
         } catch (err) {
-            console.error('Failed to load map properties:', err);
             setLoading(false);
         }
     };
@@ -318,47 +254,47 @@ return (
                     <Search className="search-icon" size={18} />
                     <input 
                         type="text" 
-                        placeholder="Search properties or locations..." 
+                        placeholder="Search projects, locations or countries..." 
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
                             setShowResults(true);
+                            // Searching globally: reset specific filters if they might block search results
+                            if (e.target.value.length > 2) {
+                                // optional: setSelectedCountry(''); 
+                                // optional: setSelectedCity('');
+                            }
                         }}
                         onFocus={() => setShowResults(true)}
                     />
                     {searchQuery && (
-                        <button className="clear-btn" onClick={() => setSearchQuery('')}>
+                        <button className="clear-btn" onClick={() => {
+                            setSearchQuery('');
+                            setSelectedPos(null);
+                        }}>
                             <X size={16} />
                         </button>
                     )}
-                </div>
-
-                <select 
-                    className="city-select"
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                >
-                    <option value="">All Cities</option>
-                    {cities.map(city => (
-                        <option key={city.name} value={city.name}>
-                            {city.name} ({city.count})
-                        </option>
-                    ))}
-                </select>
-
-                {showResults && searchQuery && (
+                    {showResults && searchQuery && (
                     <div className="search-results">
                         <div className="results-header">
                             <span>{filteredProperties.length} matches found</span>
                             <button onClick={() => setShowResults(false)}>Close</button>
                         </div>
                         <div className="results-list">
-                            {filteredProperties.slice(0, 10).map(prop => (
+                            {filteredProperties.slice(0, 15).map(prop => (
                                 <div 
                                     key={prop.id} 
                                     className="result-item"
                                     onClick={() => {
+                                        // Update search query to property name or city for clarity
+                                        setSearchQuery(prop.propertyName);
+                                        // Trigger the map move
                                         setSelectedPos({ lat: prop.lat, lng: prop.lng });
+                                        // Reset filters to ensure this property is visible
+                                        const { country, city } = parseLocation(prop);
+                                        setSelectedCountry(country);
+                                        setSelectedCity(city);
                                         setShowResults(false);
                                     }}
                                 >
@@ -370,32 +306,65 @@ return (
                                 </div>
                             ))}
                             {filteredProperties.length === 0 && (
-                                <div className="no-results">No properties found matching your search.</div>
+                                <div className="no-results">No properties found. Try searching globally.</div>
                             )}
                         </div>
                     </div>
                 )}
-            </div>
-            <div className="map-header-stats desktop-only">
-                <p><span>{properties.length}</span> total</p>
-                <p><span>{filteredProperties.length}</span> visible</p>
+                </div>
+
+                <div className="map-filters">
+                    <select 
+                        className="country-select"
+                        value={selectedCountry}
+                        onChange={(e) => {
+                            setSelectedCountry(e.target.value);
+                            setSelectedCity('');
+                        }}
+                    >
+                        <option value="">All Countries</option>
+                        {countries.map(country => (
+                            <option key={country.name} value={country.name}>
+                                {country.name} ({country.count})
+                            </option>
+                        ))}
+                    </select>
+
+                    <select 
+                        className="city-select"
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                        disabled={!selectedCountry && countries.length > 1}
+                    >
+                        <option value="">{selectedCountry ? `All Cities in ${selectedCountry}` : 'All Cities'}</option>
+                        {cities.map(city => (
+                            <option key={city.name} value={city.name}>
+                                {city.name} ({city.count})
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
         </div>
 
-        <MapContainer
-            center={[12.9716, 77.5946]}
-            zoom={12}
-            style={{ height: '100%', width: '100%' }}
+        <MapContainer 
+            center={[20, 0]} 
+            zoom={2} 
             zoomControl={false}
-            touchZoom={true}
-            scrollWheelZoom={true}
-            doubleClickZoom={true}
-            dragging={true}
+            className="leaflet-map"
+            style={{ height: '100%', width: '100%' }}
         >
             <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
+            
+            <MapAutoZoom 
+                filteredProperties={filteredProperties} 
+                selectedCountry={selectedCountry} 
+                selectedCity={selectedCity} 
+            />
+
             <ZoomControl position="bottomright" />
             <MapController selectedPos={selectedPos} />
             {!loading && <LocationMarker properties={filteredProperties} selectedCity={selectedCity} />}

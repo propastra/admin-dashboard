@@ -4,6 +4,12 @@ const jwt = require('jsonwebtoken');
 const { WebsiteUser, LoginLead } = require('../models');
 const websiteUserAuth = require('../middleware/websiteUserAuth');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set.');
+    process.exit(1);
+}
+
 // @route   POST /api/website/auth/register
 // @desc    Register a new website user
 // @access  Public
@@ -44,7 +50,7 @@ router.post('/register', async (req, res) => {
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'secret',
+            JWT_SECRET,
             { expiresIn: '7d' },
             (err, token) => {
                 if (err) throw err;
@@ -109,7 +115,7 @@ router.post('/login', async (req, res) => {
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'secret',
+            JWT_SECRET,
             { expiresIn: '7d' },
             (err, token) => {
                 if (err) throw err;
@@ -186,8 +192,8 @@ router.post('/send-otp', async (req, res) => {
     }
 
     try {
-        // Hardcoded OTP for dev/staging – use random OTP + SMS in production
-        const otp = '9999';
+        // Generate a random 4-digit OTP
+        const otp = String(Math.floor(1000 + Math.random() * 9000));
 
         // Store OTP with 5-minute expiry
         otpStore.set(phone, {
@@ -272,7 +278,7 @@ router.post('/verify-otp', async (req, res) => {
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'secret',
+            JWT_SECRET,
             { expiresIn: '7d' },
             (err, token) => {
                 if (err) throw err;

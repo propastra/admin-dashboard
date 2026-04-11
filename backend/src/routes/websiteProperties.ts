@@ -3,46 +3,9 @@ const router = express.Router();
 const { Property, Interaction, Visitor, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../config/logger');
+const { enrichPropertiesWithCoverPhoto } = require('../utils/enrichCoverPhoto');
 
-const enrichPropertiesWithCoverPhoto = async (properties: any[]) => {
-    if (!properties || properties.length === 0) return properties;
 
-    const propsWithCovers = await Property.findAll({
-        attributes: ['propertyName', 'projectName', 'coverPhoto'],
-        where: {
-            coverPhoto: { [Op.not]: null, [Op.ne]: '' }
-        }
-    });
-
-    const getProjectName = (p: any) => {
-        if (p.projectName && p.projectName.trim()) return p.projectName.trim().toLowerCase();
-        if (p.propertyName) {
-            const beforeHyphen = p.propertyName.split('-')[0].trim();
-            if (beforeHyphen) return beforeHyphen.toLowerCase();
-            return p.propertyName.split(' ').slice(0, 2).join(' ').trim().toLowerCase();
-        }
-        return '';
-    };
-
-    const projectCovers = new Map();
-    for (const p of propsWithCovers) {
-        const pName = getProjectName(p);
-        if (pName && !projectCovers.has(pName)) {
-            projectCovers.set(pName, p.coverPhoto);
-        }
-    }
-
-    return properties.map((p: any) => {
-        const pData = p.toJSON ? p.toJSON() : JSON.parse(JSON.stringify(p));
-        if (!pData.coverPhoto) {
-            const pName = getProjectName(pData);
-            if (pName && projectCovers.has(pName)) {
-                pData.coverPhoto = projectCovers.get(pName);
-            }
-        }
-        return pData;
-    });
-};
 
 // @route   GET /api/website/properties
 // @desc    Search/filter properties with pagination
@@ -188,8 +151,6 @@ router.get('/', async (req, res) => {
             ];
         }
 
-        console.log('Search Params:', req.query);
-        console.log('Source Where Clause:', JSON.stringify(where, null, 2));
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -213,7 +174,7 @@ router.get('/', async (req, res) => {
             order: orderClause,
             limit: parseInt(limit),
             offset,
-            logging: console.log // Log the actual SQL query
+            logging: false
         });
 
         const enrichedRows = await enrichPropertiesWithCoverPhoto(rows);

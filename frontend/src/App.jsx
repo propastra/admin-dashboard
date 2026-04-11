@@ -9,6 +9,7 @@ import VisitorList from './pages/VisitorList';
 import InquiryList from './pages/InquiryList';
 import LeadList from './pages/LeadList';
 import UserInterests from './pages/UserInterests';
+import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/inquiries" element={<InquiryList />} />
         <Route path="/leads" element={<LeadList />} />
         <Route path="/user-interests" element={<UserInterests />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

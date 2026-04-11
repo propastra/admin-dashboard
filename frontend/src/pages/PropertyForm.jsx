@@ -20,6 +20,8 @@ const PropertyForm = () => {
         status: 'Available',
         latitude: '',
         longitude: '',
+        country: 'India',
+        city: '',
         projectName: '',
         builderInfo: '',
         isVerified: false,
@@ -77,6 +79,8 @@ const PropertyForm = () => {
                         status: data.status || 'Available',
                         latitude: data.latitude || '',
                         longitude: data.longitude || '',
+                        country: data.country || 'India',
+                        city: data.city || '',
                         possessionTime: data.possessionTime || '',
                         projectName: data.projectName || '',
                         builderInfo: data.builderInfo || '',
@@ -115,6 +119,19 @@ const PropertyForm = () => {
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
+    const getRegionHint = () => {
+        const lat = parseFloat(formData.latitude);
+        const lng = parseFloat(formData.longitude);
+        if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null;
+
+        if (lat > 40) return { text: 'Arctic / Russia (Likely Swapped)', color: '#ef4444' };
+        if (lat > 8 && lat < 38 && lng > 68 && lng < 98) return { text: 'India Region', color: '#10b981' };
+        if (lat > 22 && lat < 26 && lng > 51 && lng < 57) return { text: 'UAE Region', color: '#10b981' };
+        return { text: 'Foreign / Unknown Region', color: '#f59e0b' };
+    };
+
+    const region = getRegionHint();
 
     const handleCoverPhotoChange = (e) => {
         const file = e.target.files[0];
@@ -201,6 +218,33 @@ const PropertyForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Coordinate Validation
+        const lat = parseFloat(formData.latitude);
+        const lng = parseFloat(formData.longitude);
+        
+        if (formData.latitude && formData.longitude) {
+            if (isNaN(lat) || isNaN(lng)) {
+                setError('Invalid coordinates. Please enter numeric values.');
+                return;
+            }
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                setError('Coordinates out of range. Latitude must be -90 to 90, Longitude -180 to 180.');
+                return;
+            }
+
+            // Simple sanity check for India/UAE
+            if (formData.country === 'India') {
+                if (lng < 60 || lng > 100) {
+                    if (!window.confirm("The longitude seems incorrect for India. Are you sure you didn't swap Latitude and Longitude?")) return;
+                }
+            } else if (formData.country === 'UAE') {
+                if (lng < 50 || lng > 60) {
+                    if (!window.confirm("The longitude seems incorrect for UAE. Are you sure you didn't swap Latitude and Longitude?")) return;
+                }
+            }
+        }
+
         setLoading(true);
         setError('');
 
@@ -291,11 +335,34 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Location</label>
-                    <input name="location" value={formData.location} onChange={handleChange} className="form-input" />
+                    <label className="form-label">Location (Address)</label>
+                    <input name="location" value={formData.location} onChange={handleChange} className="form-input" placeholder="e.g. Whitefield, Bangalore" />
                 </div>
 
                 <div className="form-group">
+                    <label className="form-label">Country</label>
+                    <select name="country" value={formData.country} onChange={handleChange} className="form-select">
+                        <option value="India">India</option>
+                        <option value="UAE">UAE</option>
+                    </select>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">City</label>
+                    <input name="city" list="city-options" value={formData.city} onChange={handleChange} className="form-input" placeholder="e.g. Bangalore" />
+                    <datalist id="city-options">
+                        <option value="Bangalore" />
+                        <option value="Goa" />
+                        <option value="Mumbai" />
+                        <option value="Pune" />
+                        <option value="Hyderabad" />
+                        <option value="Dubai" />
+                        <option value="Abu Dhabi" />
+                        <option value="Sharjah" />
+                    </datalist>
+                </div>
+
+                <div className="form-group" style={{ position: 'relative' }}>
                     <label className="form-label">Latitude</label>
                     <input name="latitude" type="number" step="any" value={formData.latitude} onChange={handleChange} className="form-input" placeholder="e.g. 12.9716" />
                 </div>
@@ -303,6 +370,20 @@ const PropertyForm = () => {
                 <div className="form-group">
                     <label className="form-label">Longitude</label>
                     <input name="longitude" type="number" step="any" value={formData.longitude} onChange={handleChange} className="form-input" placeholder="e.g. 77.5946" />
+                    {region && (
+                        <div style={{ 
+                            fontSize: '12px', 
+                            marginTop: '4px', 
+                            color: region.color, 
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: region.color }}></div>
+                            Detected: {region.text}
+                        </div>
+                    )}
                 </div>
 
                 <div className="form-group">

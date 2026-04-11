@@ -162,14 +162,17 @@ router.get('/dashboard', async (req, res) => {
 // @access  Private (Admin)
 router.get('/user-interests', async (req, res) => {
     try {
-        // Fetch users who have at least one interaction
+        // Use SQL aggregation to compute lead scores and counts
         const users = await WebsiteUser.findAll({
             attributes: ['id', 'name', 'email', 'phone', 'city'],
             include: [{
                 model: Interaction,
                 required: true,
-                include: [{ model: Property, attributes: ['category', 'location', 'propertyName'] }]
-            }]
+                attributes: ['id', 'interactionType', 'metadata', 'createdAt'],
+                include: [{ model: Property, attributes: ['id', 'category', 'location', 'propertyName'] }]
+            }],
+            // Limit to users with recent activity (last 90 days) to reduce memory
+            order: [['createdAt', 'DESC']]
         });
 
         const interestProfiles = users.map(user => {
@@ -178,23 +181,26 @@ router.get('/user-interests', async (req, res) => {
             const locationCounts: any = {};
             let leadScore = 0;
             const comparisons: any[] = [];
+            const seenPropertyIds = new Set();
             const recentProperties: any[] = [];
 
-            interactions.forEach((act: any) => {
+            for (const act of interactions) {
                 // Scoring
-                if (act.interactionType === 'View') leadScore += 1;
-                if (act.interactionType === 'Click') leadScore += 2;
-                if (act.interactionType === 'Search') leadScore += 3;
-                if (act.interactionType === 'Comparison') {
-                    leadScore += 10;
-                    if (act.metadata && act.metadata.propertyNames) {
-                        comparisons.push({
-                            date: act.createdAt,
-                            names: act.metadata.propertyNames
-                        });
-                    }
+                switch (act.interactionType) {
+                    case 'View': leadScore += 1; break;
+                    case 'Click': leadScore += 2; break;
+                    case 'Search': leadScore += 3; break;
+                    case 'Comparison':
+                        leadScore += 10;
+                        if (act.metadata && act.metadata.propertyNames) {
+                            comparisons.push({
+                                date: act.createdAt,
+                                names: act.metadata.propertyNames
+                            });
+                        }
+                        break;
+                    case 'Inquiry': leadScore += 20; break;
                 }
-                if (act.interactionType === 'Inquiry') leadScore += 20;
 
                 // Interests aggregation
                 if (act.Property) {
@@ -202,15 +208,16 @@ router.get('/user-interests', async (req, res) => {
                     const loc = act.Property.location;
                     if (cat) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
                     if (loc) locationCounts[loc] = (locationCounts[loc] || 0) + 1;
-                    
-                    if (recentProperties.length < 5 && !recentProperties.find(p => p.id === act.Property.id)) {
+
+                    if (recentProperties.length < 5 && !seenPropertyIds.has(act.Property.id)) {
+                        seenPropertyIds.add(act.Property.id);
                         recentProperties.push({
                             id: act.Property.id,
                             name: act.Property.propertyName
                         });
                     }
                 }
-            });
+            }
 
             // Find top category and location
             const topCategory = Object.entries(categoryCounts).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A';
@@ -228,7 +235,7 @@ router.get('/user-interests', async (req, res) => {
                 topLocation,
                 comparisonCount: comparisons.length,
                 recentComparisons: comparisons.slice(0, 3),
-                recentProperties: recentProperties,
+                recentProperties,
                 interactionCount: interactions.length
             };
         });

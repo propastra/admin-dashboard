@@ -11,6 +11,12 @@ const PropertyList = () => {
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(false);
     
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const PAGE_SIZE = 25;
+
     // Excel Import States
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [importWorkbook, setImportWorkbook] = useState(null);
@@ -22,16 +28,35 @@ const PropertyList = () => {
     const [isPreviewStep, setIsPreviewStep] = useState(false);
 
     const fileInputRef = React.useRef(null);
+    const searchTimeoutRef = React.useRef(null);
 
     useEffect(() => {
         fetchProperties();
-    }, []);
+    }, [currentPage, filter]);
+
+    // Debounced search
+    useEffect(() => {
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+            setCurrentPage(1);
+            fetchProperties();
+        }, 400);
+        return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+    }, [searchTerm]);
 
 
     const fetchProperties = async () => {
         try {
-            const res = await api.get('/properties');
-            setProperties(res.data);
+            const params = new URLSearchParams();
+            params.set('page', String(currentPage));
+            params.set('limit', String(PAGE_SIZE));
+            if (filter !== 'All') params.set('category', filter);
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+
+            const res = await api.get(`/properties?${params.toString()}`);
+            setProperties(res.data.properties || []);
+            setTotalPages(res.data.totalPages || 1);
+            setTotalCount(res.data.total || 0);
         } catch (err) {
             console.error("Failed to fetch properties", err);
         } finally {
@@ -75,20 +100,32 @@ const PropertyList = () => {
                 let lat = row['Latitude'] || row.latitude || null;
                 let lng = row['Longitude'] || row.longitude || null;
                 
-                if (row['LONGITUDE,LATITUDE'] || row['LONGITUDE, LATITUDE']) {
-                    const val = String(row['LONGITUDE,LATITUDE'] || row['LONGITUDE, LATITUDE']);
-                    const parts = val.split(',');
+                // Support various coordinate formats and column names
+                const coordColumn = row['LONGITUDE,LATITUDE'] || row['LONGITUDE, LATITUDE'] || row['LATITUDE,LONGITUDE'] || row['LATITUDE, LONGITUDE'] || row['Coordinates'] || row['COORDINATES'];
+                
+                if (coordColumn) {
+                    const val = String(coordColumn);
+                    const parts = val.split(/[,\s]+/).map(s => s.trim()).filter(s => s);
                     if (parts.length >= 2) {
-                        lng = parseFloat(parts[0].trim());
-                        lat = parseFloat(parts[1].trim());
-                    } else {
-                        const spaceParts = val.split(' ');
-                        if(spaceParts.length >= 2) {
-                            lng = parseFloat(spaceParts[0].trim());
-                            lat = parseFloat(spaceParts[1].trim());
+                        const val1 = parseFloat(parts[0]);
+                        const val2 = parseFloat(parts[1]);
+                        
+                        // Smart detection: India/UAE have Longitude (50-100) > Latitude (8-30)
+                        // If the first value is larger than the second, it's likely [Lng, Lat]
+                        // If the first value is smaller, it's likely [Lat, Lng]
+                        if (Math.abs(val1) > Math.abs(val2)) {
+                            lng = val1;
+                            lat = val2;
+                        } else {
+                            lat = val1;
+                            lng = val2;
                         }
                     }
                 }
+                
+                // If they are separate columns, we trust the names
+                if (!lat && row['latitude']) lat = row['latitude'];
+                if (!lng && row['longitude']) lng = row['longitude'];
 
                 return {
                     propertyName: row['PROPERTY NAME'] || row['Property Name'] || row.propertyName || '',
@@ -301,33 +338,32 @@ const PropertyList = () => {
 
             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {['All', 'Villa', 'Plot', 'Farm Land', 'Residential', 'Resale', 'Rental'].map(cat => {
-                        const count = cat === 'All' ? properties.length : properties.filter(p => p.category === cat).length;
-                        return (
-                            <button
-                                key={cat}
-                                onClick={() => setFilter(cat)}
-                                style={{
-                                    padding: '8px 16px',
-                                    borderRadius: '20px',
-                                    border: 'none',
-                                    backgroundColor: filter === cat ? '#3b82f6' : '#e5e7eb',
-                                    color: filter === cat ? 'white' : '#374151',
-                                    cursor: 'pointer',
-                                    fontWeight: filter === cat ? 'bold' : 'normal',
-                                    display: 'flex', alignItems: 'center', gap: '6px'
-                                }}
-                            >
-                                {cat} 
+                    {['All', 'Villa', 'Plot', 'Farm Land', 'Residential', 'Resale', 'Rental'].map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => { setFilter(cat); setCurrentPage(1); }}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                border: 'none',
+                                backgroundColor: filter === cat ? '#3b82f6' : '#e5e7eb',
+                                color: filter === cat ? 'white' : '#374151',
+                                cursor: 'pointer',
+                                fontWeight: filter === cat ? 'bold' : 'normal',
+                                display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            {cat}
+                            {filter === cat && (
                                 <span style={{
-                                    backgroundColor: filter === cat ? 'rgba(255,255,255,0.2)' : '#cbd5e1',
+                                    backgroundColor: 'rgba(255,255,255,0.2)',
                                     padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold'
                                 }}>
-                                    {count}
+                                    {totalCount}
                                 </span>
-                            </button>
-                        );
-                    })}
+                            )}
+                    </button>
+                    ))}
                 </div>
                 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -356,18 +392,7 @@ const PropertyList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {properties
-                            .filter(p => filter === 'All' || p.category === filter)
-                            .filter(p => {
-                                if (!searchTerm) return true;
-                                const term = searchTerm.toLowerCase();
-                                const propName = (p.propertyName || '').toLowerCase();
-                                const projName = (p.projectName || '').toLowerCase();
-                                const priceStr = String(p.price || '').toLowerCase();
-                                return propName.includes(term) || projName.includes(term) || priceStr.includes(term);
-                            })
-                            .sort((a, b) => (a.propertyName || '').localeCompare(b.propertyName || ''))
-                            .map(property => (
+                        {properties.map(property => (
                             <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px' }}>
                                     {property.photos && property.photos.length > 0 ? (
@@ -423,6 +448,34 @@ const PropertyList = () => {
                     </tbody>
                 </table>
                 {properties.length === 0 && <p style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>No properties found.</p>}
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 12px', borderTop: '1px solid #e5e7eb' }}>
+                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                            Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} properties
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage <= 1}
+                                style={{ padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: '6px', backgroundColor: currentPage <= 1 ? '#f3f4f6' : '#fff', cursor: currentPage <= 1 ? 'default' : 'pointer', color: currentPage <= 1 ? '#9ca3af' : '#374151' }}
+                            >
+                                Previous
+                            </button>
+                            <span style={{ padding: '6px 12px', fontSize: '0.875rem', color: '#374151', display: 'flex', alignItems: 'center' }}>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage >= totalPages}
+                                style={{ padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: '6px', backgroundColor: currentPage >= totalPages ? '#f3f4f6' : '#fff', cursor: currentPage >= totalPages ? 'default' : 'pointer', color: currentPage >= totalPages ? '#9ca3af' : '#374151' }}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Import Options Modal */}

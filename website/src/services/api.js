@@ -48,6 +48,6 @@ export const getInquiries = () => api.get('/inquiries');
 export const updateInquiryStatus = (id, data) => api.put(`/inquiries/${id}`, data);
 export const getDashboardStats = () => api.get('/inquiries/dashboard/stats');
 
-export const BACKEND_URL = API_BASE;
+export const BACKEND_URL = API_BASE.replace(/\/api\/?$/, '');
 export { API_BASE };
 export default api;

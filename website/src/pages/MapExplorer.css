@@ -93,19 +93,84 @@
     color: var(--gray-500);
 }
 
+.map-filters {
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+    flex-shrink: 0;
+}
+
+.country-select,
 .city-select {
     height: 48px;
     padding: 0 15px;
     border-radius: 12px;
     background: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--gray-100);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--brand);
     cursor: pointer;
     outline: none;
-    min-width: 150px;
+    min-width: 140px;
+    transition: all 0.2s ease;
+}
+
+.country-select:hover,
+.city-select:hover:not(:disabled) {
+    border-color: var(--brand);
+    background: var(--brand-bg);
+    transform: translateY(-1px);
+}
+
+.city-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--gray-50);
+}
+
+/* Custom Cluster Styling - Unified with Marker Design */
+.custom-cluster-marker {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.custom-cluster-marker:hover {
+    transform: scale(1.15);
+}
+
+.custom-cluster-marker img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
+}
+
+.cluster-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #FF385C; /* Vibrant highlight color for counts */
+    color: white;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-weight: 900;
+    font-size: 11px;
+    z-index: 2;
+}
+
+.cluster-badge span {
+    line-height: 1;
 }
 
 .search-results {

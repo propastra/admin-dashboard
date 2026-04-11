@@ -16,15 +16,71 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage: storage });
+// File type validation — only allow images, PDFs, and common document types
+const fileFilter = (req, file, cb) => {
+    const allowedMimeTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error(`File type ${file.mimetype} is not allowed`), false);
+    }
+};
+
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB per file
+});
 
 // @route   GET api/properties
-// @desc    Get all properties
-// @access  Public
-router.get('/', async (req, res) => {
+// @desc    Get all properties (with pagination)
+// @access  Private (Admin)
+router.get('/', auth, async (req, res) => {
     try {
-        const properties = await Property.findAll({ order: [['createdAt', 'DESC']] });
-        res.json(properties);
+        const {
+            page = 1,
+            limit = 25,
+            search,
+            category
+        } = req.query;
+
+        const where: any = {};
+
+        if (category && category !== 'All') {
+            where.category = category;
+        }
+
+        if (search) {
+            const { Op } = require('sequelize');
+            where[Op.or] = [
+                { propertyName: { [Op.like]: `%${search}%` } },
+                { projectName: { [Op.like]: `%${search}%` } },
+                { location: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+        const { count, rows } = await Property.findAndCountAll({
+            where,
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit as string),
+            offset
+        });
+
+        res.json({
+            properties: rows,
+            total: count,
+            page: parseInt(page as string),
+            totalPages: Math.ceil(count / parseInt(limit as string))
+        });
     } catch (err) {
         console.error('Error fetching all properties:', err);
         res.status(500).json({ message: 'Server error fetching properties', error: err.message });
@@ -33,8 +89,8 @@ router.get('/', async (req, res) => {
 
 // @route   GET api/properties/:id
 // @desc    Get property by ID
-// @access  Public
-router.get('/:id', async (req, res) => {
+// @access  Private (Admin)
+router.get('/:id', auth, async (req, res) => {
     try {
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
@@ -63,7 +119,7 @@ router.get('/:id', async (req, res) => {
 // @access  Private
 router.post('/', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType, city, country } = req.body;
 
         const coverPhoto = req.files && req.files['coverPhoto'] ? `/uploads/${(req.files['coverPhoto'] as any[])[0].filename}` : null;
         const masterPlan = req.files && req.files['masterPlan'] ? (req.files['masterPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
@@ -193,7 +249,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingCoverPhoto, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingCoverPhoto, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType, city, country } = req.body;
 
         const parseArray = (val: any) => {
             if (!val) return [];
@@ -314,7 +370,9 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
             landParcel,
             floor,
             units,
-            investmentType
+            investmentType,
+            city,
+            country
         });
 
         res.json(property);
