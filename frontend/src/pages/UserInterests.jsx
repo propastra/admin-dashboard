@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { FaUserCircle, FaFire, FaMapMarkerAlt, FaTags, FaChartLine, FaEye, FaExchangeAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
+import { FaUserCircle, FaFire, FaMapMarkerAlt, FaTags, FaChartLine, FaEye, FaExchangeAlt, FaPhoneAlt, FaEnvelope, FaUsers } from 'react-icons/fa';
 
 const UserInterests = () => {
     const [interestProfiles, setInterestProfiles] = useState([]);
