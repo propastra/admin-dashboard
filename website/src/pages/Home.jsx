@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, User, ChevronRight, ArrowRight, Hand, Menu, X } from 'lucide-react';
 import { getFeaturedProperties, getProperties, getCities, getFavorites, trackInteraction, submitInquiry, getDevelopers } from '../services/api';
 import { useCity } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
@@ -79,6 +79,7 @@ const Home = () => {
     const [developers, setDevelopers] = useState([]);
     const [loadingDevelopers, setLoadingDevelopers] = useState(true);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Live Location States
     const [userCoords, setUserCoords] = useState(null);
@@ -90,6 +91,7 @@ const Home = () => {
         showFirstVisitPopup(user);
         trackInteraction({
             interactionType: 'View',
+            websiteUserId: user?.id,
             ipAddress: 'website-user',
             userAgent: navigator.userAgent,
             metadata: { page: 'home', city: selectedCity }
@@ -442,7 +444,6 @@ const Home = () => {
                             </button>
                         </div>
                     </header>
-
                     {/* Hero Text */}
                     <div className="hero-text">
                         <h1>Find Your <span className="hero-highlight">Dream Home</span></h1>
@@ -650,18 +651,21 @@ const Home = () => {
                 {/* CTA Banner - Moved here as requested */}
                 <div className="home-cta-banner" style={{ marginTop: '12px', marginBottom: '32px' }}>
                     <div className="cta-banner-content">
-                        <h2>Don't hesitate to call us</h2>
+                        <h2>Talk to a Property Expert Now</h2>
                         <p>Our experts are ready to help you find your dream home</p>
                     </div>
-                    <button
-                        className="cta-banner-btn"
-                        onClick={() => {
-                            if (user) window.location.href = 'tel:8147069579';
-                            else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
-                        }}
-                    >
-                        Contact Us Now
-                    </button>
+                    <div className="cta-banner-action" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <button
+                            className="cta-banner-btn"
+                            onClick={() => {
+                                if (user) window.location.href = 'tel:8147069579';
+                                else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
+                            }}
+                        >
+                            Get Free Consultation
+                        </button>
+                        <span className="cta-microcopy" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', textAlign: 'center' }}>Takes less than 30 seconds</span>
+                    </div>
                 </div>
 
                 {/* Trusted Developers & Company Stats */}
@@ -671,7 +675,6 @@ const Home = () => {
                         <WhyTrustUs />
                     </React.Suspense>
                 )}
-                
 
                 {/* Top Locations */}
                 <section className="home-section animate-section">

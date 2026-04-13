@@ -12,7 +12,8 @@ const MapExplorer = React.lazy(() => import('./pages/MapExplorer'));
 const Favorites = React.lazy(() => import('./pages/Favorites'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const AgentDashboard = React.lazy(() => import('./pages/AgentDashboard'));
-const BottomNav = React.lazy(() => import('./components/BottomNav'));
+const Header = React.lazy(() => import('./components/Header'));
+const Footer = React.lazy(() => import('./components/Footer'));
 const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
 const RightSidebar = React.lazy(() => import('./components/RightSidebar'));
 import { useHeartbeat } from './hooks/useHeartbeat';
@@ -21,7 +22,6 @@ import { useInquiryPopup } from './context/InquiryPopupContext';
 
 function App() {
   const location = useLocation();
-  const showBottomNav = !location.pathname.startsWith('/auth');
   const isMainSite = !location.pathname.startsWith('/auth');
   const { user, loading } = useAuth();
   const { showFirstVisitPopup } = useInquiryPopup();
@@ -62,6 +62,7 @@ function App() {
 
   return (
     <React.Suspense fallback={<div className="loading-screen"><div className="spinner"></div></div>}>
+      {isMainSite && <Header />}
       <Routes>
         {/* Auth Pages */}
         <Route path="/auth" element={<AuthSelect />} />
@@ -82,7 +83,7 @@ function App() {
         <Route path="/agent-dashboard" element={<AgentDashboard />} />
       </Routes>
 
-      {showBottomNav && <BottomNav />}
+      {isMainSite && <Footer />}
       {isMainSite && <InquiryPopup />}
       {isMainSite && <RightSidebar />}
     </React.Suspense>

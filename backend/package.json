@@ -17,6 +17,7 @@
     "seed:apartments": "ts-node src/seedApartments.ts",
     "seed:admin": "ts-node src/seed.ts",
     "seed:all": "npm run seed:villas && npm run seed:plots && npm run seed:farmlands && npm run seed:apartments",
+    "activity": "ts-node view_activity.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

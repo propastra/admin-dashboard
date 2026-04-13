@@ -175,16 +175,40 @@ const Dashboard = () => {
                                 <th style={{ padding: '8px' }}>Date/Time</th>
                                 <th style={{ padding: '8px' }}>Action</th>
                                 <th style={{ padding: '8px' }}>Property</th>
-                                <th style={{ padding: '8px' }}>IP Address</th>
+                                <th style={{ padding: '8px' }}>User / IP</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredActivity.length > 0 ? filteredActivity.map(act => (
                                 <tr key={act.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                     <td style={{ padding: '8px' }}>{new Date(act.createdAt).toLocaleString()}</td>
-                                    <td style={{ padding: '8px' }}>{act.interactionType}</td>
+                                    <td style={{ padding: '8px' }}>
+                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>{act.interactionType}</div>
+                                        {act.interactionType === 'Comparison' && act.metadata?.propertyNames && (
+                                            <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '4px' }}>
+                                                {act.metadata.propertyNames.join(' vs ')}
+                                            </div>
+                                        )}
+                                        {act.interactionType === 'Search' && act.metadata?.query && (
+                                            <div style={{ fontSize: '0.75em', color: '#059669', marginTop: '4px' }}>
+                                                "{act.metadata.query}"
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={{ padding: '8px' }}>{act.Property ? act.Property.propertyName : '-'}</td>
-                                    <td style={{ padding: '8px' }}>{act.Visitor ? act.Visitor.ipAddress : 'Unknown'}</td>
+                                    <td style={{ padding: '8px' }}>
+                                        {act.WebsiteUser ? (
+                                            <div>
+                                                <div style={{ fontWeight: '600', color: '#2563eb' }}>{act.WebsiteUser.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{act.WebsiteUser.email}</div>
+                                                {act.WebsiteUser.phone && (
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{act.WebsiteUser.phone}</div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            act.Visitor ? act.Visitor.ipAddress : 'Unknown'
+                                        )}
+                                    </td>
                                 </tr>
                             )) : (
                                 <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>No activity found for this period.</td></tr>

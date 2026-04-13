@@ -7,6 +7,9 @@
     cursor: pointer;
     border: 1px solid rgba(0, 0, 0, 0.04);
     will-change: transform;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .property-card:hover {
@@ -16,9 +19,10 @@
 
 .property-card-image {
     position: relative;
-    aspect-ratio: 16 / 9;
+    height: 220px;
     width: 100%;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .property-card-image img {
@@ -114,6 +118,9 @@
 
 .property-card-body {
     padding: var(--space-md) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
 .property-card-header {
@@ -177,6 +184,7 @@
 .property-card-cta {
     display: flex;
     gap: 8px;
+    margin-top: auto;
 }
 
 .cta-call {

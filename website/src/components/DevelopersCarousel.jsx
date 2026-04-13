@@ -8,6 +8,7 @@ const DevelopersCarousel = ({ developers }) => {
 
     if (!developers || developers.length === 0) return null;
 
+
     return (
         <section className="developers-section animate-section">
             <div className="section-header">
@@ -42,6 +43,7 @@ const DevelopersCarousel = ({ developers }) => {
                                 </div>
                             </div>
                         ))}
+                    </div>
                     </div>
                 </div>
             </div>

@@ -16,6 +16,9 @@ Interaction.belongsTo(Property, { foreignKey: 'propertyId' });
 Visitor.hasMany(Interaction, { foreignKey: 'visitorId' });
 Interaction.belongsTo(Visitor, { foreignKey: 'visitorId' });
 
+WebsiteUser.hasMany(Interaction, { foreignKey: 'websiteUserId' });
+Interaction.belongsTo(WebsiteUser, { foreignKey: 'websiteUserId' });
+
 Property.hasMany(Inquiry, { foreignKey: 'propertyId' });
 Inquiry.belongsTo(Property, { foreignKey: 'propertyId' });
 

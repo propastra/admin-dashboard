@@ -263,6 +263,7 @@
         padding: 0 12px;
     }
 }
+
 .floating-map-btn {
     position: fixed;
     bottom: 25px;
@@ -371,4 +372,41 @@
 .search-results-grouped {
     display: flex;
     flex-direction: column;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 16px;
+    margin-bottom: 24px;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--p-gray-border);
+    background: white;
+    border-radius: 8px;
+    color: var(--p-text-dark);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-btn:not(:disabled):hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.page-info {
+    font-size: 14px;
+    color: var(--p-text-muted);
+    font-weight: 500;
 }

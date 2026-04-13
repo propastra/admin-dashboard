@@ -17,6 +17,7 @@ const defaultCities = [
     { name: 'Kerala', icon: TreePalm },
     { name: 'Gujarat', icon: Building },
     { name: 'Amritsar', icon: Landmark },
+    { name: 'Dubai', icon: Building2 },
 ];
 
 const CitySelect = () => {

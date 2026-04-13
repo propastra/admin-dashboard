@@ -4,9 +4,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'rea
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ChevronLeft, Maximize, MapPin, Navigation } from 'lucide-react';
+import { ChevronLeft, Maximize, MapPin, Navigation, Search, X } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
 import { getProperties, API_BASE, BACKEND_URL } from '../services/api';
+import { useCity } from '../context/CityContext';
 import './MapExplorer.css';
 
 // Fix for default marker icons in Leaflet with React
@@ -40,44 +41,58 @@ const createClusterCustomIcon = (cluster) => {
     });
 };
 
-const LocationMarker = ({ properties }) => {
+const MapController = ({ selectedPos }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (selectedPos) {
+            map.flyTo([selectedPos.lat, selectedPos.lng], 16, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+        }
+    }, [selectedPos, map]);
+    return null;
+};
+
+const LocationMarker = ({ properties, selectedCity }) => {
     const map = useMap();
     const navigate = useNavigate();
+    const prevCity = React.useRef();
 
     useEffect(() => {
-        if (properties.length > 0) {
-            const bounds = L.latLngBounds(properties.filter(p => p.latitude && p.longitude).map(p => {
-                const lat = parseFloat(p.latitude);
-                const lon = parseFloat(p.longitude);
-                if(isNaN(lat) || isNaN(lon)) return null;
-                return [lat, lon];
-            }).filter(Boolean));
-            
-            if (bounds.isValid()) {
-                setTimeout(() => {
-                    map.invalidateSize();
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                }, 400); // Give CSS time to settle
+        // Only fit bounds if city changed OR it's the first time
+        if (properties.length > 0 && (prevCity.current !== selectedCity)) {
+            const validPoints = properties.filter(p => p.lat != null && p.lng != null).map(p => [p.lat, p.lng]);
+
+            if (validPoints.length > 0) {
+                const bounds = L.latLngBounds(validPoints);
+                if (bounds.isValid()) {
+                    setTimeout(() => {
+                        map.invalidateSize();
+                        // For a specific city, we zoom in closer. For "All Cities", we fit all.
+                        const padding = selectedCity ? [100, 100] : [50, 50];
+                        map.fitBounds(bounds, { padding, maxZoom: selectedCity ? 14 : 12 });
+                    }, 400);
+                }
             }
+            prevCity.current = selectedCity;
         }
-    }, [properties, map]);
+    }, [properties, map, selectedCity]);
 
     return (
         <MarkerClusterGroup
             chunkedLoading
-            maxClusterRadius={40}
+            maxClusterRadius={50}
             spiderfyOnMaxZoom={true}
             iconCreateFunction={createClusterCustomIcon}
         >
             {properties.map(prop => {
-                const lat = parseFloat(prop.latitude);
-                const lon = parseFloat(prop.longitude);
-                if(isNaN(lat) || isNaN(lon)) return null;
-                
+                if (prop.lat == null || prop.lng == null) return null;
+
                 return (
                     <Marker
                         key={prop.id}
-                        position={[lat, lon]}
+                        position={[prop.lat, prop.lng]}
                         icon={customIcon}
                         eventHandlers={{
                             mouseover: (e) => e.target.openPopup(),
@@ -105,6 +120,11 @@ const LocationMarker = ({ properties }) => {
                                         {prop.configuration && <span><BiBed size={12} /> {prop.configuration}</span>}
                                         <span><Maximize size={12} /> {prop.dimensions}</span>
                                     </div>
+                                    <div className="popup-debug-coords" style={{ fontSize: '10px', color: '#777', padding: '6px 0', borderTop: '1px solid #eee', marginTop: '6px' }}>
+                                        <strong>Raw DB Match:</strong><br />
+                                        Lat: {prop.lat ? prop.lat.toFixed(5) : 'N/A'}<br />
+                                        Lng: {prop.lng ? prop.lng.toFixed(5) : 'N/A'}
+                                    </div>
                                     <button className="popup-btn">View Details</button>
                                 </div>
                             </div>
@@ -118,18 +138,65 @@ const LocationMarker = ({ properties }) => {
 
 const MapExplorer = () => {
     const navigate = useNavigate();
+    const { selectedCity: globalCity } = useCity();
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCity, setSelectedCity] = useState(
+        globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area' ? globalCity : ''
+    );
+    const [cities, setCities] = useState([]);
+    const [showResults, setShowResults] = useState(false);
+    const [selectedPos, setSelectedPos] = useState(null);
 
     useEffect(() => {
         loadProperties();
     }, []);
 
+    // Generate unique city list from properties
+    useEffect(() => {
+        if (properties.length > 0) {
+            const cityCounts = {};
+            properties.forEach(p => {
+                const city = p.city || "Other";
+                cityCounts[city] = (cityCounts[city] || 0) + 1;
+            });
+            const sortedCities = Object.keys(cityCounts).sort().map(name => ({
+                name,
+                count: cityCounts[name]
+            }));
+            setCities(sortedCities);
+
+            // Sync the selectedCity state with the actual data variants if there is a mismatch
+            if (globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area') {
+                const normalize = (c) => (c || '').toLowerCase().trim().replace('bengaluru', 'bangalore');
+                const exactMatch = sortedCities.find(c => c.name === selectedCity);
+                if (!exactMatch) {
+                    const aliasFound = sortedCities.find(c => normalize(c.name) === normalize(selectedCity || globalCity));
+                    if (aliasFound) {
+                        setSelectedCity(aliasFound.name);
+                    } else {
+                        setSelectedCity(''); // fallback if genuinely no properties
+                    }
+                }
+            }
+        }
+    }, [properties, globalCity]);
+
+    const filteredProperties = properties.filter(p => {
+        const matchesSearch = searchQuery === '' || 
+            p.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (p.location && p.location.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        const matchesCity = selectedCity === '' || p.city === selectedCity;
+        
+        return matchesSearch && matchesCity;
+    });
+
     const loadProperties = async () => {
         try {
             const res = await getProperties({ limit: 1000 });
             const allProps = res.data.properties || [];
-
             const isWithinIndia = (lat, lon) =>
                 lat >= 6.0 && lat <= 37.5 && lon >= 68.0 && lon <= 98.0;
                 
@@ -145,79 +212,154 @@ const MapExplorer = () => {
                 if (lat < 13.0 && lon > 80.5) return true; // Chennai offshore
                 return false;
             };
-
             let validProps = [];
             let needsGeocoding = [];
 
-            // Pass 1: Categorize properties
+            // Distance calculation helper (Haversine formula in km)
+            const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+                const R = 6371; // Radius of the earth in km
+                const dLat = (lat2 - lat1) * (Math.PI / 180);
+                const dLon = (lon2 - lon1) * (Math.PI / 180);
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c; 
+            };
+
+            // Authoritative Dictionary mapping common regions to core coordinates
+            const CITY_CENTERS = {
+                'bangalore': { lat: 12.9716, lng: 77.5946 },
+                'bengaluru': { lat: 12.9716, lng: 77.5946 },
+                'mumbai': { lat: 19.0760, lng: 72.8777 },
+                'delhi': { lat: 28.7041, lng: 77.1025 },
+                'pune': { lat: 18.5204, lng: 73.8567 },
+                'hyderabad': { lat: 17.3850, lng: 78.4867 },
+                'dubai': { lat: 25.2048, lng: 55.2708 }
+            };
+
+            // Pass 1: Parse and globally validate properties
             allProps.forEach(p => {
-                const lat = parseFloat(p.latitude);
-                const lon = parseFloat(p.longitude);
-                // IF it's valid, inside India, AND NOT in the ocean, accept it. Otherwise geocode it.
-                if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0 && isWithinIndia(lat, lon) && !isInOcean(lat, lon)) {
-                    validProps.push({ ...p, latitude: lat, longitude: lon });
+                // Instantly log raw backend data to help admins debug underlying database errors
+                console.log(`[RAW DB] ${p.propertyName} | LAT: ${p.latitude} | LNG: ${p.longitude}`);
+
+                let lat = parseFloat(p.latitude);
+                let lng = parseFloat(p.longitude);
+
+                // Try GeoJSON fallback if raw properties fail
+                if ((!lat || !lng) && p.location?.coordinates) {
+                    lng = parseFloat(p.location.coordinates[0]);
+                    lat = parseFloat(p.location.coordinates[1]);
+                }
+
+                // If completely missing, push to Geocoder instantly
+                if (!lat || !lng || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+                    needsGeocoding.push(p);
+                    return;
+                }
+
+                // Mathematical Swap Fallback: Catch explicitly flipped Global Inputs
+                if (lat < -90 || lat > 90) {
+                    if (lng >= -90 && lng <= 90) {
+                        const temp = lat;
+                        lat = lng;
+                        lng = temp;
+                    }
+                }
+
+                // Strict Haversine Distance Checker
+                // Discards points severely offset (> 100km) from identified host cities.
+                let isValidLocation = true;
+                const propLocationText = (p.location || p.city || "").toLowerCase();
+                
+                for (const [cityKey, centerCoords] of Object.entries(CITY_CENTERS)) {
+                    if (propLocationText.includes(cityKey)) {
+                        const distance = getDistanceFromLatLonInKm(lat, lng, centerCoords.lat, centerCoords.lng);
+                        if (distance > 100) {
+                            console.warn(`[Map Debug] INVALID DISTANCE: ${p.propertyName} (${cityKey}). Distance: ${Math.round(distance)}km away. Clamping to Geocoder.`);
+                            isValidLocation = false;
+                        }
+                        break;
+                    }
+                }
+
+                if (!isValidLocation) {
+                    needsGeocoding.push(p);
+                    return;
+                }
+
+                // Final Basic Global Integrity Check + India/Ocean Check
+                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && isWithinIndia(lat, lng) && !isInOcean(lat, lng)) {
+                    validProps.push({ ...p, lat, lng });
                 } else {
                     needsGeocoding.push(p);
                 }
             });
 
-            // If we have some valid ones, show them immediately
             setProperties([...validProps]);
             setLoading(false);
 
+            // Pass 2: Handle Discarded/Missing Locations via Geocoding Pipeline
             if (needsGeocoding.length > 0) {
                 const uniqueLocs = [...new Set(needsGeocoding.map(p => p.location).filter(Boolean))];
 
                 const geocode = async (loc) => {
-                    const queries = [`${loc}, Karnataka, India`, `${loc}, India`];
+                    const queries = [`${loc}`, `${loc}, India`];
                     for (const query of queries) {
                         try {
-                            const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
+                            const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
                             const response = await fetch(geoUrl, { headers: { 'Accept-Language': 'en' } });
                             const data = await response.json();
                             if (data && data.length > 0) {
-                                for (const result of data) {
-                                    const rLat = parseFloat(result.lat);
-                                    const rLon = parseFloat(result.lon);
-                                    if (isWithinIndia(rLat, rLon)) return { lat: rLat, lon: rLon };
-                                }
+                                return {
+                                    lat: parseFloat(data[0].lat),
+                                    lng: parseFloat(data[0].lon)
+                                };
                             }
-                        } catch (e) {
-                            // ignore errors and try next
-                        }
-                        await new Promise(r => setTimeout(r, 800)); // Respect limits
+                        } catch (e) {}
+                        await new Promise(r => setTimeout(r, 800)); // Respect OSM limits
                     }
                     return null;
                 };
 
-                // Default Bangalore fallback
                 const DEFAULT_LAT = 12.9716;
                 const DEFAULT_LON = 77.5946;
 
                 for (const loc of uniqueLocs) {
                     let coords = await geocode(loc);
-                    if (!coords) {
-                        console.warn(`Geocoding failed for ${loc}. Falling back to default.`);
-                        coords = { lat: DEFAULT_LAT, lon: DEFAULT_LON };
+
+                    let locCityCenter = { lat: 12.9716, lng: 77.5946 };
+                    if (loc) {
+                        for (const [key, val] of Object.entries(CITY_CENTERS)) {
+                            if (loc.toLowerCase().includes(key)) {
+                                locCityCenter = val;
+                                break;
+                            }
+                        }
                     }
 
+                    if (!coords) {
+                        coords = locCityCenter;
+                    }
+
+                    // Spread clustered locations slightly apart
                     const newlyResolved = needsGeocoding.filter(p => p.location === loc).map(p => ({
                         ...p,
-                        latitude: coords.lat + (Math.random() - 0.5) * 0.02, // Larger jitter for visibility
-                        longitude: coords.lon + (Math.random() - 0.5) * 0.02
+                        lat: coords.lat + (Math.random() - 0.5) * 0.02,
+                        lng: coords.lng + (Math.random() - 0.5) * 0.02
                     }));
 
                     validProps = [...validProps, ...newlyResolved];
                     setProperties([...validProps]);
                 }
-                
-                // Final sweep for properties without ANY location string
+
+                // Final Sweep: Homeless properties (no location string) fall back to default
                 const homeless = needsGeocoding.filter(p => !p.location).map(p => ({
                     ...p,
-                    latitude: DEFAULT_LAT + (Math.random() - 0.5) * 0.05,
-                    longitude: DEFAULT_LON + (Math.random() - 0.5) * 0.05
+                    lat: DEFAULT_LAT + (Math.random() - 0.5) * 0.05,
+                    lng: DEFAULT_LON + (Math.random() - 0.5) * 0.05
                 }));
-                if(homeless.length > 0) {
+                if (homeless.length > 0) {
                     validProps = [...validProps, ...homeless];
                     setProperties([...validProps]);
                 }
@@ -228,50 +370,114 @@ const MapExplorer = () => {
         }
     };
 
-    return (
-        <div className="map-explorer">
-            <div className="map-header">
-                <button className="back-btn" onClick={() => navigate(-1)}>
-                    <ChevronLeft size={24} />
-                </button>
-                <div className="map-header-title">
-                    <h1>Explore Properties</h1>
-                    <p>{properties.length} locations found</p>
+return (
+    <div className="map-explorer">
+        <div className="map-header">
+            <button className="back-btn" onClick={() => navigate(-1)}>
+                <ChevronLeft size={24} />
+            </button>
+            <div className="map-search-container">
+                <div className="map-search-bar">
+                    <Search className="search-icon" size={18} />
+                    <input 
+                        type="text" 
+                        placeholder="Search properties or locations..." 
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setShowResults(true);
+                        }}
+                        onFocus={() => setShowResults(true)}
+                    />
+                    {searchQuery && (
+                        <button className="clear-btn" onClick={() => setSearchQuery('')}>
+                            <X size={16} />
+                        </button>
+                    )}
                 </div>
+
+                <select 
+                    className="city-select"
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                >
+                    <option value="">All Cities</option>
+                    {cities.map(city => (
+                        <option key={city.name} value={city.name}>
+                            {city.name} ({city.count})
+                        </option>
+                    ))}
+                </select>
+
+                {showResults && searchQuery && (
+                    <div className="search-results">
+                        <div className="results-header">
+                            <span>{filteredProperties.length} matches found</span>
+                            <button onClick={() => setShowResults(false)}>Close</button>
+                        </div>
+                        <div className="results-list">
+                            {filteredProperties.slice(0, 10).map(prop => (
+                                <div 
+                                    key={prop.id} 
+                                    className="result-item"
+                                    onClick={() => {
+                                        setSelectedPos({ lat: prop.lat, lng: prop.lng });
+                                        setShowResults(false);
+                                    }}
+                                >
+                                    <div className="result-info">
+                                        <div className="result-name">{prop.propertyName}</div>
+                                        <div className="result-location">{prop.location}</div>
+                                    </div>
+                                    <div className="result-tag">{prop.category}</div>
+                                </div>
+                            ))}
+                            {filteredProperties.length === 0 && (
+                                <div className="no-results">No properties found matching your search.</div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
-
-            <MapContainer
-                center={[12.9716, 77.5946]}
-                zoom={12}
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={false}
-                touchZoom={true}
-                scrollWheelZoom={true}
-                doubleClickZoom={true}
-                dragging={true}
-            >
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <ZoomControl position="bottomright" />
-                {!loading && <LocationMarker properties={properties} />}
-            </MapContainer>
-
-            {loading && (
-                <div className="map-loading">
-                    <div className="spinner"></div>
-                    <span>Loading Map...</span>
-                </div>
-            )}
-
-            <div className="map-controls">
-                <button className="control-btn" onClick={() => window.location.reload()}>
-                    <Navigation size={20} />
-                </button>
+            <div className="map-header-stats desktop-only">
+                <p><span>{properties.length}</span> total</p>
+                <p><span>{filteredProperties.length}</span> visible</p>
             </div>
         </div>
-    );
+
+        <MapContainer
+            center={[12.9716, 77.5946]}
+            zoom={12}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+            touchZoom={true}
+            scrollWheelZoom={true}
+            doubleClickZoom={true}
+            dragging={true}
+        >
+            <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            />
+            <ZoomControl position="bottomright" />
+            <MapController selectedPos={selectedPos} />
+            {!loading && <LocationMarker properties={filteredProperties} selectedCity={selectedCity} />}
+        </MapContainer>
+
+        {loading && (
+            <div className="map-loading">
+                <div className="spinner"></div>
+                <span>Loading Map...</span>
+            </div>
+        )}
+
+        <div className="map-controls">
+            <button className="control-btn" onClick={() => window.location.reload()}>
+                <Navigation size={20} />
+            </button>
+        </div>
+    </div>
+);
 };
 
 export default MapExplorer;

@@ -22,6 +22,16 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    (function() {
+      var script = document.createElement('script');
+      script.src = 'https://assets.sophiai.pro/chatbot-widgets/chatbot-widget-v2.js';
+      script.setAttribute('data-chatbot-key', 'c4dee548-323f-4cad-8682-221fbc40ca9b');
+      script.setAttribute('data-api-base', 'https://api.sophiai.pro/api');
+      script.async = true;
+      document.head.appendChild(script);
+    })();
+  </script>
 </body>
 
 </html>
