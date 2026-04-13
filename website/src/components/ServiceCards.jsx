@@ -88,7 +88,7 @@ const ServiceCards = ({ setActiveCategory, setBuyListingType, investSubmitted, h
     <section className="service-cards-section">
       <div className="service-cards-container">
         <div className="section-header-centered">
-          <h2>See How We Can Help You Find the <span className="highlight-text">Right Property</span></h2>
+          <h2>See How We Can Help You Find The <span className="highlight-text">Right Property</span></h2>
           <p>Your one-stop destination for buying, renting, and selling real estate with confidence.</p>
         </div>
 

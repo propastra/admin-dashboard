@@ -1,8 +1,6 @@
-/* ====== SERVICE CARDS SECTION ====== */
 .service-cards-section {
   padding: 56px 24px 48px;
   background: #f7f8fa;
-  border-bottom: 1px solid #e5e7eb;
   content-visibility: auto;
   contain-intrinsic-size: 0 480px;
 }

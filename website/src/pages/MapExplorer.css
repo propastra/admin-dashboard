@@ -444,3 +444,47 @@
         /* Extra clearance for mobile bottom nav */
     }
 }
+
+/* Cluster Icon Styling */
+.marker-cluster {
+    background-clip: padding-box;
+    border-radius: 50%;
+    background-color: rgba(43, 90, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.marker-cluster div {
+    width: 32px;
+    height: 32px;
+    background-color: var(--brand);
+    color: white;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border: 2px solid white;
+}
+
+.marker-cluster-small {
+    background-color: rgba(43, 90, 255, 0.2);
+}
+
+.marker-cluster-medium {
+    background-color: rgba(240, 160, 0, 0.3);
+}
+.marker-cluster-medium div {
+    background-color: #f0a000;
+}
+
+.marker-cluster-large {
+    background-color: rgba(240, 50, 50, 0.3);
+}
+.marker-cluster-large div {
+    background-color: #f03232;
+}

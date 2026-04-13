@@ -65,7 +65,7 @@ const InquiryPopup = () => {
     if (!showPopup) return null;
 
     return (
-        <div className="inquiry-popup-overlay" onClick={handleClose}>
+        <div className="inquiry-popup-overlay">
             <div className="inquiry-popup-modal" onClick={(e) => e.stopPropagation()}>
                 <button type="button" className="inquiry-popup-close" onClick={handleClose} aria-label="Close">
                     <X size={22} />

@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { ChevronLeft, Maximize, MapPin, Navigation, Search, X } from 'lucide-react';
 import { BiBed } from 'react-icons/bi';
 import { getProperties, API_BASE, BACKEND_URL } from '../services/api';
+import { useCity } from '../context/CityContext';
 import './MapExplorer.css';
 
 // Fix for default marker icons in Leaflet with React
@@ -118,10 +119,13 @@ const LocationMarker = ({ properties, selectedCity }) => {
 
 const MapExplorer = () => {
     const navigate = useNavigate();
+    const { selectedCity: globalCity } = useCity();
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCity, setSelectedCity] = useState(
+        globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area' ? globalCity : ''
+    );
     const [cities, setCities] = useState([]);
     const [showResults, setShowResults] = useState(false);
     const [selectedPos, setSelectedPos] = useState(null);
@@ -143,8 +147,22 @@ const MapExplorer = () => {
                 count: cityCounts[name]
             }));
             setCities(sortedCities);
+
+            // Sync the selectedCity state with the actual data variants if there is a mismatch
+            if (globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area') {
+                const normalize = (c) => (c || '').toLowerCase().trim().replace('bengaluru', 'bangalore');
+                const exactMatch = sortedCities.find(c => c.name === selectedCity);
+                if (!exactMatch) {
+                    const aliasFound = sortedCities.find(c => normalize(c.name) === normalize(selectedCity || globalCity));
+                    if (aliasFound) {
+                        setSelectedCity(aliasFound.name);
+                    } else {
+                        setSelectedCity(''); // fallback if genuinely no properties
+                    }
+                }
+            }
         }
-    }, [properties]);
+    }, [properties, globalCity]);
 
     const filteredProperties = properties.filter(p => {
         const matchesSearch = searchQuery === '' || 
@@ -182,7 +200,8 @@ const MapExplorer = () => {
                 'mumbai': { lat: 19.0760, lng: 72.8777 },
                 'delhi': { lat: 28.7041, lng: 77.1025 },
                 'pune': { lat: 18.5204, lng: 73.8567 },
-                'hyderabad': { lat: 17.3850, lng: 78.4867 }
+                'hyderabad': { lat: 17.3850, lng: 78.4867 },
+                'dubai': { lat: 25.2048, lng: 55.2708 }
             };
 
             // Pass 1: Parse and globally validate properties
@@ -275,8 +294,18 @@ const MapExplorer = () => {
                 for (const loc of uniqueLocs) {
                     let coords = await geocode(loc);
 
+                    let locCityCenter = { lat: 12.9716, lng: 77.5946 };
+                    if (loc) {
+                        for (const [key, val] of Object.entries(CITY_CENTERS)) {
+                            if (loc.toLowerCase().includes(key)) {
+                                locCityCenter = val;
+                                break;
+                            }
+                        }
+                    }
+
                     if (!coords) {
-                        coords = { lat: DEFAULT_LAT, lng: DEFAULT_LON };
+                        coords = locCityCenter;
                     }
 
                     // Spread clustered locations slightly apart

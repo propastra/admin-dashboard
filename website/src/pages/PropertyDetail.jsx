@@ -940,8 +940,11 @@ const PropertyDetail = () => {
                 {/* Inquiry Modal */}
                 {
                     showInquiry && (
-                        <div className="inquiry-overlay" onClick={() => setShowInquiry(false)}>
-                            <div className="inquiry-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="inquiry-overlay">
+                            <div className="inquiry-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+                                <button type="button" onClick={() => setShowInquiry(false)} aria-label="Close" style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', justifyItems: 'center', borderRadius: '50%', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                                    <X size={20} />
+                                </button>
                                 {inquirySent ? (
                                     <div className="inquiry-success">
                                         <Check size={48} color="var(--accent)" />

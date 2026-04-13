@@ -12,7 +12,6 @@ import './Home.css';
 // Lazy load components below the fold
 const DevelopersCarousel = React.lazy(() => import('../components/DevelopersCarousel'));
 const WhyTrustUs = React.lazy(() => import('../components/WhyTrustUs'));
-const StatsCounter = React.lazy(() => import('../components/StatsCounter'));
 const PropertyTypeBar = React.lazy(() => import('../components/PropertyTypeBar'));
 const CompareModal = React.lazy(() => import('../components/CompareModal'));
 
@@ -570,18 +569,21 @@ const Home = () => {
                 {/* CTA Banner - Moved here as requested */}
                 <div className="home-cta-banner" style={{ marginTop: '12px', marginBottom: '32px' }}>
                     <div className="cta-banner-content">
-                        <h2>Don't hesitate to call us</h2>
+                        <h2>Talk to a Property Expert Now</h2>
                         <p>Our experts are ready to help you find your dream home</p>
                     </div>
-                    <button
-                        className="cta-banner-btn"
-                        onClick={() => {
-                            if (user) window.location.href = 'tel:8147069579';
-                            else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
-                        }}
-                    >
-                        Contact Us Now
-                    </button>
+                    <div className="cta-banner-action" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <button
+                            className="cta-banner-btn"
+                            onClick={() => {
+                                if (user) window.location.href = 'tel:8147069579';
+                                else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
+                            }}
+                        >
+                            Get Free Consultation
+                        </button>
+                        <span className="cta-microcopy" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', textAlign: 'center' }}>Takes less than 30 seconds</span>
+                    </div>
                 </div>
 
                 {/* Trusted Developers */}
@@ -591,12 +593,6 @@ const Home = () => {
                         <WhyTrustUs />
                     </React.Suspense>
                 )}
-                
-                {/* Animated Stats Section */}
-                <React.Suspense fallback={null}>
-                    <StatsCounter />
-                </React.Suspense>
-                
 
                 {/* Top Locations */}
                 <section className="home-section animate-section">
