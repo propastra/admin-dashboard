@@ -44,7 +44,6 @@ const DevelopersCarousel = ({ developers }) => {
                             </div>
                         ))}
                     </div>
-                    </div>
                 </div>
             </div>
         </section>

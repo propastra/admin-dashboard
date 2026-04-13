@@ -1,127 +1,111 @@
 .developers-section {
-    padding: 40px 20px 20px;
+    padding: 60px 20px;
     max-width: 1400px;
     margin: 0 auto;
     position: relative;
-    overflow: hidden;
 }
 
 .section-header {
-    margin-bottom: 40px;
+    margin-bottom: 50px;
     text-align: center;
 }
 
-
 .title-group h2 {
     margin: 0;
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 800;
     color: #1a1a1a;
+    letter-spacing: -1px;
+}
+
+.hero-highlight {
+    color: #fbbf24;
 }
 
 .section-subtitle {
     color: #666;
-    font-size: 16px;
-    margin-top: 10px;
+    font-size: 18px;
+    margin-top: 12px;
 }
 
-.developers-marquee {
-    overflow: hidden;
+.developers-wrapper {
     width: 100%;
-    position: relative;
-    padding: 20px 0;
-    /* Soft edges using mask */
-    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
 }
 
-.marquee-track {
-    display: flex;
-    width: max-content;
-    animation: scroll-marquee 350s linear infinite;
-    gap: 16px;
+.developers-container {
+    padding: 10px;
 }
 
-.marquee-track.reverse {
-    animation-direction: reverse;
-}
-
-.marquee-track:hover {
-    animation-play-state: paused;
-}
-
-.marquee-content {
+.developers-grid {
     display: grid;
-    grid-template-rows: 1fr;
-    grid-auto-flow: column;
-    grid-auto-columns: 230px;
-    gap: 16px;
-}
-
-@keyframes scroll-marquee {
-    0% {
-        transform: translateX(0);
-    }
-
-    100% {
-        transform: translateX(calc(-50% - 8px));
-    }
-
-    /* Shift exactly one content block width plus half gap */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    width: 100%;
 }
 
 .developer-card {
     background: #ffffff;
     border-radius: 20px;
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 16px;
-    width: 230px;
-    min-height: 90px;
+    gap: 20px;
     border: 1px solid rgba(229, 231, 235, 0.8);
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     cursor: pointer;
     position: relative;
     overflow: hidden;
 }
 
 .developer-card:hover {
-    transform: translateY(-15px) scale(1.02);
+    transform: translateY(-8px);
     box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.12);
-    border-color: var(--brand);
-    animation-play-state: paused;
+    border-color: #2563eb;
 }
 
-/* Shine effect on hover */
-.developer-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(to right,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.3) 50%,
-            rgba(255, 255, 255, 0) 100%);
-    transform: skewX(-25deg);
-    transition: none;
-    z-index: 1;
+.developer-logo-wrap {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid #f1f5f9;
+    transition: all 0.4s ease;
 }
 
-.developer-card:hover::before {
-    animation: shine 0.8s ease;
+.developer-card:hover .developer-logo-wrap {
+    transform: scale(1.1);
+    background: white;
 }
 
-@keyframes shine {
-    100% {
-        left: 200%;
-    }
+.developer-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
+.developer-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.developer-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Animations and Premium touches */
 .developer-card::after {
     content: '';
     position: absolute;
@@ -129,96 +113,12 @@
     left: 0;
     width: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--brand), transparent);
-    transition: width 0.4s ease;
+    background: #2563eb;
+    transition: width 0.3s ease;
 }
 
 .developer-card:hover::after {
     width: 100%;
-}
-
-.developer-logo-wrap {
-    width: 60px;
-    height: 60px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #fdfdfd;
-    border-radius: 14px;
-    padding: 10px;
-    border: 1px solid #f1f5f9;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    transition: all 0.4s ease;
-}
-
-.developer-card:hover .developer-logo-wrap {
-    transform: scale(1.1) rotate(-5deg);
-    background: white;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-}
-
-.developer-logo {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    filter: grayscale(20%);
-    transition: filter 0.3s ease;
-}
-
-.developer-card:hover .developer-logo {
-    filter: grayscale(0%);
-}
-
-.developer-info {
-    flex: 1;
-    min-width: 0;
-    z-index: 2;
-}
-
-.developer-name {
-    font-size: 15px;
-    font-weight: 800;
-    color: #1a1a1a;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: -0.2px;
-}
-
-/* Removed side-control-btn styles */
-
-/* Specific styling for the brand highlight */
-.hero-highlight {
-    color: #fbbf24;
-    /* Golden highlight as in screenshot */
-}
-
-@media (max-width: 1200px) {
-    .marquee-content {
-        grid-auto-columns: 210px;
-        gap: 12px;
-    }
-
-    .marquee-track {
-        gap: 12px;
-    }
-
-    .developer-card {
-        width: 210px;
-        padding: 12px;
-        gap: 10px;
-    }
-
-    .developer-logo-wrap {
-        width: 45px;
-        height: 45px;
-    }
-
-    .developer-name {
-        font-size: 13px;
-    }
 }
 
 @media (max-width: 768px) {
@@ -226,36 +126,26 @@
         padding: 40px 16px;
     }
 
-    .marquee-content {
-        grid-auto-columns: calc(50vw - 24px);
-        gap: 12px;
+    .title-group h2 {
+        font-size: 28px;
     }
 
-    .marquee-track {
-        gap: 12px;
+    .developers-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
     }
 
     .developer-card {
-        width: calc(50vw - 24px);
-        padding: 14px 12px;
-        gap: 10px;
-        min-height: 80px;
-        border-radius: 16px;
+        padding: 16px;
+        gap: 16px;
     }
 
     .developer-logo-wrap {
-        width: 40px;
-        height: 40px;
-        flex-shrink: 0;
-        padding: 6px;
+        width: 50px;
+        height: 50px;
     }
 
     .developer-name {
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 14px;
     }
-<<<<<<< HEAD
-}
-
-/* ==================================
 }
