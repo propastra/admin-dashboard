@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import viteCompression from 'vite-plugin-compression'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -28,5 +29,15 @@ export default defineConfig({
   },
   server: {
     hmr: true,
+    proxy: {
+      '/nominatim': {
+        target: 'https://nominatim.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/nominatim/, ''),
+        headers: {
+          'User-Agent': 'PropastraAdminDash/1.0 (contact@propastra.com)'
+        }
+      }
+    }
   },
 })
