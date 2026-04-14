@@ -5,19 +5,25 @@
 
 /* ====== HERO SECTION ====== */
 .home-hero {
-    background: var(--gradient-hero);
-    padding: var(--space-lg) var(--space-lg) var(--space-3xl);
+    padding: 0;
     position: relative;
     overflow: hidden;
-    border-radius: 0 0 40px 40px;
-    min-height: 480px;
+    border-bottom-left-radius: 40px;
+    border-bottom-right-radius: 40px;
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f236b; /* Fallback color */
 }
 
 .home-hero-content {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
+    padding: 100px var(--space-lg) 60px;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 .hero-decor {

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useInquiryPopup } from '../context/InquiryPopupContext';
 import PropertyCard from '../components/PropertyCard';
 import ServiceCards from '../components/ServiceCards';
+import HeroSlideshow from '../components/HeroSlideshow';
 import './Home.css';
 
 // Lazy load components below the fold
@@ -395,9 +396,10 @@ const Home = () => {
 
     return (
         <div className="home-page">
-            {/* Hero Section with branded gradient */}
+            {/* Hero Section with dynamic slideshow background */}
             <div className="home-hero">
-                <div className="home-hero-content" style={{ marginTop: '140px' }}>
+                <HeroSlideshow />
+                <div className="home-hero-content">
                     {/* Hero Text */}
                     <div className="hero-text">
                         <h1>Find Your <span className="hero-highlight">Dream Home</span></h1>
