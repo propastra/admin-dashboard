@@ -442,29 +442,45 @@ const Home = () => {
                 />
             </React.Suspense>
 
-            {/* Promotional Banner with CTA */}
+            {/* Modern Promotional Banner with HTML Text Overlay */}
             <div className="promo-banner-section">
-                <img
-                    src="/images/promo-banner-new.png"
-                    alt="Promotional Banner"
-                    className="promo-banner-img"
-                />
-                <div className="promo-banner-cta">
-                    {bannerCtaSubmitted ? (
-                        <div className="promo-cta-success">
-                            ✅ We will reach out soon...
-                        </div>
-                    ) : (
-                        <button
-                            className="promo-cta-btn"
-                            onClick={() => ensureIdentified(
-                                handleBannerExpertClick,
-                                'To talk to our expert, please verify your details'
-                            )}
-                        >
-                            Talk to Our Expert
-                        </button>
-                    )}
+                <div className="promo-banner-bg-wrapper">
+                    <img
+                        src="/images/promo-banner-clean.png"
+                        alt="Background"
+                        className="promo-banner-img"
+                    />
+                    <div className="promo-banner-overlay"></div>
+                </div>
+                
+                <div className="promo-banner-content">
+                    <div className="promo-text-group">
+                        <h2 className="promo-title">Get your personalized <br /><span className="highlight-white">investment plan</span></h2>
+                        <p className="promo-description">
+                            Discover smart real estate investment opportunities tailored to your goals with expert guidance and trusted market insights
+                        </p>
+                    </div>
+
+                    <div className="promo-banner-cta">
+                        {bannerCtaSubmitted ? (
+                            <div className="promo-cta-success">
+                                ✅ We will reach out soon...
+                            </div>
+                        ) : (
+                            <div className="promo-action-group">
+                                <button
+                                    className="promo-cta-btn"
+                                    onClick={() => ensureIdentified(
+                                        handleBannerExpertClick,
+                                        'To talk to our expert, please verify your details'
+                                    )}
+                                >
+                                    Talk to Our Expert
+                                </button>
+                                <span className="promo-microcopy">Expert advice in under 24 hrs</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
