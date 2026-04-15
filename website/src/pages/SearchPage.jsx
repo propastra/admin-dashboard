@@ -106,8 +106,9 @@ const SearchPage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const loadProperties = async () => {
-        const params = { page, limit: 24 };
+    const loadProperties = async (overridePage) => {
+        const currentPage = overridePage ?? page;
+        const params = { page: currentPage, limit: 24 };
         if (filters.search) params.search = filters.search;
         if (filters.city) params.city = filters.city;
         if (filters.categories.length > 0) params.category = filters.categories.join(',');
@@ -272,6 +273,11 @@ const SearchPage = () => {
         return `Up to ${formatPriceLabel(filters.maxPrice)}`;
     };
 
+    const handleSearchSubmit = () => {
+        setPage(1);
+        loadProperties(1);
+    };
+
     return (
         <div className="search-page">
             <div className="search-top-bar">
@@ -280,63 +286,91 @@ const SearchPage = () => {
                 </button>
 
                 <div className="filter-bar-container" ref={dropdownRef}>
-                    {/* Property Type Filter */}
-                    <div className={`filter-item ${showTypeDropdown ? 'active' : ''}`} onClick={() => {
-                        setShowTypeDropdown(!showTypeDropdown);
-                        setShowBudgetDropdown(false);
-                        setShowMoreFilters(false);
-                    }}>
-                        <HomeIcon size={20} className="filter-icon-blue" />
-                        <span className="filter-item-label">{getPropertyTypeLabel()}</span>
-                        <ChevronDown size={14} className="chevron-icon" />
-                    </div>
-
-                    <div className="filter-divider" />
-
-                    {/* Budget Filter */}
-                    <div className={`filter-item ${showBudgetDropdown ? 'active' : ''}`} onClick={() => {
-                        setShowBudgetDropdown(!showBudgetDropdown);
-                        setShowTypeDropdown(false);
-                        setShowMoreFilters(false);
-                        setBudgetMode('min');
-                    }}>
-                        <div className="rupee-icon">₹</div>
-                        <span className="filter-item-label">{getBudgetLabel()}</span>
-                        <ChevronDown size={14} className="chevron-icon" />
-                    </div>
-
-                    <div className="filter-divider" />
-
-                    {/* Sorting */}
-                    <div className="filter-item">
-                        <select
-                            value={`${sortBy}-${sortOrder}`}
-                            onChange={(e) => {
-                                const [by, ord] = e.target.value.split('-');
-                                setSortBy(by);
-                                setSortOrder(ord);
-                                setPage(1);
+                    <div className="search-input-wrapper">
+                        <input
+                            type="text"
+                            className="search-input"
+                            value={filters.search}
+                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSearchSubmit();
                             }}
-                            style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--gray-700)', fontWeight: 500, paddingLeft: '8px', cursor: 'pointer' }}
-                        >
-                            <option value="createdAt-DESC">Newest First</option>
-                            <option value="price-ASC">Price: Low to High</option>
-                            <option value="price-DESC">Price: High to Low</option>
-                            <option value="relevance-DESC">Relevance</option>
-                        </select>
+                            placeholder="Search properties, location or developer"
+                        />
                     </div>
 
-                    <div className="filter-divider" />
+                    <button
+                        type="button"
+                        className="mobile-filter-summary"
+                        onClick={() => {
+                            setShowMoreFilters(!showMoreFilters);
+                            setShowTypeDropdown(false);
+                            setShowBudgetDropdown(false);
+                        }}
+                    >
+                        <SlidersHorizontal size={16} className="filter-icon-blue" />
+                        <span>Filters</span>
+                    </button>
 
-                    {/* More Filters */}
-                    <div className={`filter-item ${showMoreFilters ? 'active' : ''}`} onClick={() => {
-                        setShowMoreFilters(!showMoreFilters);
-                        setShowTypeDropdown(false);
-                        setShowBudgetDropdown(false);
-                    }}>
-                        <SlidersHorizontal size={18} className="filter-icon-blue" style={{ marginRight: '8px' }} />
-                        <span className="filter-item-label">More Filters</span>
-                        <ChevronDown size={14} className="chevron-icon" />
+                    <div className="filter-items">
+                        {/* Property Type Filter */}
+                        <div className={`filter-item ${showTypeDropdown ? 'active' : ''}`} onClick={() => {
+                            setShowTypeDropdown(!showTypeDropdown);
+                            setShowBudgetDropdown(false);
+                            setShowMoreFilters(false);
+                        }}>
+                            <HomeIcon size={20} className="filter-icon-blue" />
+                            <span className="filter-item-label">{getPropertyTypeLabel()}</span>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
+
+                        <div className="filter-divider" />
+
+                        {/* Budget Filter */}
+                        <div className={`filter-item ${showBudgetDropdown ? 'active' : ''}`} onClick={() => {
+                            setShowBudgetDropdown(!showBudgetDropdown);
+                            setShowTypeDropdown(false);
+                            setShowMoreFilters(false);
+                            setBudgetMode('min');
+                        }}>
+                            <div className="rupee-icon">₹</div>
+                            <span className="filter-item-label">{getBudgetLabel()}</span>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
+
+                        <div className="filter-divider" />
+
+                        {/* Sorting */}
+                        <div className="filter-item">
+                            <select
+                                value={`${sortBy}-${sortOrder}`}
+                                onChange={(e) => {
+                                    const [by, ord] = e.target.value.split('-');
+                                    setSortBy(by);
+                                    setSortOrder(ord);
+                                    setPage(1);
+                                }}
+                                style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--gray-700)', fontWeight: 500, paddingLeft: '8px', cursor: 'pointer' }}
+                            >
+                                <option value="createdAt-DESC">Newest First</option>
+                                <option value="price-ASC">Price: Low to High</option>
+                                <option value="price-DESC">Price: High to Low</option>
+                                <option value="relevance-DESC">Relevance</option>
+                            </select>
+                        </div>
+
+                        <div className="filter-divider" />
+
+                        {/* More Filters */}
+                        <div className={`filter-item ${showMoreFilters ? 'active' : ''}`} onClick={() => {
+                            setShowMoreFilters(!showMoreFilters);
+                            setShowTypeDropdown(false);
+                            setShowBudgetDropdown(false);
+                        }}>
+                            <SlidersHorizontal size={18} className="filter-icon-blue" style={{ marginRight: '8px' }} />
+                            <span className="filter-item-label">More Filters</span>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
                     </div>
 
                     {/* Property Type Dropdown */}
@@ -469,10 +503,6 @@ const SearchPage = () => {
                         </div>
                     )}
                 </div>
-
-                <button className="search-action-btn" onClick={loadProperties}>
-                    <SearchIcon size={20} />
-                </button>
             </div>
 
             {/* Backdrop */}
