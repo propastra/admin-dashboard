@@ -40,14 +40,15 @@ const MapController = ({ selectedPos }) => {
     return null;
 };
 
-const LocationMarker = ({ properties, selectedCity }) => {
+const LocationMarker = ({ properties, selectedCity, selectedCountry }) => {
     const map = useMap();
     const navigate = useNavigate();
     const prevCity = React.useRef();
+    const prevCountry = React.useRef();
 
     useEffect(() => {
-        // Only fit bounds if city changed OR it's the first time
-        if (properties.length > 0 && (prevCity.current !== selectedCity)) {
+        // Fit bounds if city OR country changed OR it's the first time
+        if (properties.length > 0 && (prevCity.current !== selectedCity || prevCountry.current !== selectedCountry)) {
             const validPoints = properties.filter(p => p.lat != null && p.lng != null).map(p => [p.lat, p.lng]);
 
             if (validPoints.length > 0) {
@@ -55,15 +56,23 @@ const LocationMarker = ({ properties, selectedCity }) => {
                 if (bounds.isValid()) {
                     setTimeout(() => {
                         map.invalidateSize();
-                        // For a specific city, we zoom in closer. For "All Cities", we fit all.
-                        const padding = selectedCity ? [100, 100] : [50, 50];
-                        map.fitBounds(bounds, { padding, maxZoom: selectedCity ? 14 : 12 });
+                        // Dynamic zoom level: Closer for city, wider for country, widest for all
+                        let zoomOptions = { padding: [50, 50], maxZoom: 12 };
+                        
+                        if (selectedCity) {
+                            zoomOptions = { padding: [100, 100], maxZoom: 14 };
+                        } else if (selectedCountry) {
+                            zoomOptions = { padding: [80, 80], maxZoom: 11 };
+                        }
+                        
+                        map.fitBounds(bounds, zoomOptions);
                     }, 400);
                 }
             }
             prevCity.current = selectedCity;
+            prevCountry.current = selectedCountry;
         }
-    }, [properties, map, selectedCity]);
+    }, [properties, map, selectedCity, selectedCountry]);
 
     return (
         <MarkerClusterGroup chunkedLoading maxClusterRadius={50} spiderfyOnMaxZoom={true}>
@@ -123,55 +132,160 @@ const MapExplorer = () => {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedCity, setSelectedCity] = useState(
         globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area' ? globalCity : ''
     );
+    const [countries, setCountries] = useState([]);
     const [cities, setCities] = useState([]);
     const [showResults, setShowResults] = useState(false);
     const [selectedPos, setSelectedPos] = useState(null);
 
+    // Frontend Helper for Dynamic Location Detection
+    const getLocationMeta = (prop) => {
+        // Priority 1: Explicit fields
+        let city = prop.city;
+        let country = prop.country;
+
+        // Total fallback: Detect from location string
+        const loc = (prop.location || "").toLowerCase();
+        
+        // Comprehensive Keywords
+        const indiaKeywords = ['india', 'bangalore', 'bengaluru', 'goa', 'mumbai', 'pune', 'delhi', 'hyderabad', 'chennai', 'kolkata', 'gurgaon', 'noida', 'ahmedabad', 'karnataka', 'maharashtra', 'sarjapur', 'whitefield', 'yelahanka', 'devanahalli', 'bicholim', 'doddaballapur', 'rajanukunte', 'rayasandra', 'jigani', 'electronic city', 'anekal'];
+        const uaeKeywords = ['uae', 'dubai', 'emirates', 'abu dhabi', 'abudhabi', 'sharjah', 'ajman', 'rak', 'fujairah', 'quran', 'marina', 'jumeirah', 'downtown', 'business bay', 'palm', 'creek', 'ghadeer'];
+
+        const isIndia = loc.includes('india') || indiaKeywords.some(k => loc.includes(k));
+        const isUAE = loc.includes('uae') || uaeKeywords.some(k => loc.includes(k));
+
+        // 1. Detect Country
+        if (!country) {
+            if (isUAE) country = 'UAE';
+            else if (isIndia) country = 'India';
+            else {
+                // Coordinate-based fallback for properties with no/inconsistent location string
+                const lat = parseFloat(prop.lat || prop.latitude);
+                const lng = parseFloat(prop.lng || prop.longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    // India Bounding Box approx
+                    if (lat > 8 && lat < 38 && lng > 68 && lng < 98) country = 'India';
+                    // UAE Bounding Box approx
+                    else if (lat > 22 && lat < 26 && lng > 51 && lng < 57) country = 'UAE';
+                    else country = 'Other';
+                } else {
+                    country = 'Other';
+                }
+            }
+        }
+
+        // 2. Detect City based on Keywords if missing
+        if (!city || city === 'Other') {
+            if (country === 'India') {
+                if (loc.includes('goa') || loc.includes('bicholim')) city = 'Goa';
+                else if (loc.includes('mumbai')) city = 'Mumbai';
+                else if (loc.includes('pune')) city = 'Pune';
+                else if (loc.includes('delhi') || loc.includes('noida') || loc.includes('gurgaon')) city = 'Delhi/NCR';
+                else if (loc.includes('hyderabad')) city = 'Hyderabad';
+                else if (loc.includes('chennai')) city = 'Chennai';
+                else if (loc.includes('kolkata')) city = 'Kolkata';
+                else if (loc.includes('ahmedabad')) city = 'Ahmedabad';
+                else if (['bangalore', 'bengaluru', 'sarjapur', 'whitefield', 'yelahanka', 'devanahalli', 'jigani', 'doddaballapur', 'rajanukunte', 'rayasandra', 'electronic city', 'anekal', 'rr nagar', 'kengeri', 'hosakote', 'hebbal', 'kannamangala', 'varthur', 'bannerghatta', 'yadavanahalli', 'attibele', 'bellary road', 'gangasandra', 'kanakapura', 'bagalur'].some(k => loc.includes(k))) city = 'Bangalore';
+                else city = 'Other';
+            } else if (country === 'UAE') {
+                if (loc.includes('abu dhabi') || loc.includes('abudhabi') || loc.includes('ghadeer')) city = 'Abu Dhabi';
+                else if (loc.includes('sharjah')) city = 'Sharjah';
+                else if (loc.includes('ajman')) city = 'Ajman';
+                else if (uaeKeywords.some(k => loc.includes(k))) city = 'Dubai'; // Default for most UAE properties in this DB
+                else city = 'Other';
+            } else {
+                city = 'Other';
+            }
+        }
+
+        // Normalization
+        if (city === 'Bengaluru') city = 'Bangalore';
+        if (city === 'Abudhabi') city = 'Abu Dhabi';
+        
+        return { 
+            country: country || 'Other', 
+            city: city || 'Other' 
+        };
+    };
+
     useEffect(() => {
         loadProperties();
     }, []);
-
-    // Generate unique city list from properties
+    // Generate unique hierarchy list from properties
     useEffect(() => {
         if (properties.length > 0) {
-            const cityCounts = {};
-            properties.forEach(p => {
-                const city = p.city || "Other";
-                cityCounts[city] = (cityCounts[city] || 0) + 1;
-            });
-            const sortedCities = Object.keys(cityCounts).sort().map(name => ({
-                name,
-                count: cityCounts[name]
-            }));
-            setCities(sortedCities);
+            const countryMap = {}; // { countryName: { count: N, cities: { cityName: count } } }
 
-            // Sync the selectedCity state with the actual data variants if there is a mismatch
-            if (globalCity && globalCity !== 'Current Location' && globalCity !== 'Your Area') {
-                const normalize = (c) => (c || '').toLowerCase().trim().replace('bengaluru', 'bangalore');
-                const exactMatch = sortedCities.find(c => c.name === selectedCity);
-                if (!exactMatch) {
-                    const aliasFound = sortedCities.find(c => normalize(c.name) === normalize(selectedCity || globalCity));
-                    if (aliasFound) {
-                        setSelectedCity(aliasFound.name);
-                    } else {
-                        setSelectedCity(''); // fallback if genuinely no properties
-                    }
+            properties.forEach(p => {
+                const { country, city } = getLocationMeta(p);
+                
+                if (!countryMap[country]) {
+                    countryMap[country] = { count: 0, cities: {} };
+                }
+                countryMap[country].count++;
+                
+                if (!countryMap[country].cities[city]) {
+                    countryMap[country].cities[city] = 0;
+                }
+                countryMap[country].cities[city]++;
+            });
+
+            const sortedCountries = Object.entries(countryMap)
+                .map(([name, data]) => ({
+                    name,
+                    count: data.count,
+                    cities: Object.entries(data.cities)
+                        .map(([cityName, cityCount]) => ({ name: cityName, count: cityCount }))
+                        .sort((a, b) => b.count - a.count)
+                }))
+                .sort((a, b) => b.count - a.count);
+
+            setCountries(sortedCountries);
+
+            // Sync global city to country if needed
+            if (globalCity && !selectedCountry && globalCity !== 'Current Location') {
+                const match = sortedCountries.find(c => c.cities.some(ct => ct.name.toLowerCase() === globalCity.toLowerCase() || (ct.name === 'Bangalore' && globalCity.toLowerCase() === 'bengaluru')));
+                if (match) {
+                    setSelectedCountry(match.name);
+                    // Ensure the selected city string matches exactly what's in our data
+                    const cityMatch = match.cities.find(ct => ct.name.toLowerCase() === globalCity.toLowerCase() || (ct.name === 'Bangalore' && globalCity.toLowerCase() === 'bengaluru'));
+                    if (cityMatch) setSelectedCity(cityMatch.name);
                 }
             }
         }
     }, [properties, globalCity]);
 
+    // Derive cities list for the selected country
+    useEffect(() => {
+        if (selectedCountry) {
+            const countryData = countries.find(c => c.name === selectedCountry);
+            setCities(countryData ? countryData.cities : []);
+            
+            // If current city doesn't belong to this country, reset it
+            if (selectedCity && countryData && !countryData.cities.some(c => c.name === selectedCity)) {
+                setSelectedCity('');
+            }
+        } else {
+            setCities([]);
+            setSelectedCity('');
+        }
+    }, [selectedCountry, countries]);
+
+
     const filteredProperties = properties.filter(p => {
+        const { country, city } = getLocationMeta(p);
+        
         const matchesSearch = searchQuery === '' || 
             p.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) || 
             (p.location && p.location.toLowerCase().includes(searchQuery.toLowerCase()));
         
-        const matchesCity = selectedCity === '' || p.city === selectedCity;
+        const matchesCountry = selectedCountry === '' || country === selectedCountry;
+        const matchesCity = selectedCity === '' || city === selectedCity;
         
-        return matchesSearch && matchesCity;
+        return matchesSearch && matchesCountry && matchesCity;
     });
 
     const loadProperties = async () => {
@@ -273,26 +387,49 @@ const MapExplorer = () => {
                     const queries = [`${loc}`, `${loc}, India`];
                     for (const query of queries) {
                         try {
-                            const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
-                            const response = await fetch(geoUrl, { headers: { 'Accept-Language': 'en' } });
+                            const geoUrl = `/nominatim/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`;
+                            const response = await fetch(geoUrl);
+                            
+                            if (response.status === 429) {
+                                console.warn("Geocoding rate limit hit. Aborted background resolution.");
+                                return { error: 'rate-limit' };
+                            }
+
                             const data = await response.json();
                             if (data && data.length > 0) {
+                                // Important: We still wait after success to respect OSM's policy for the NEXT location
+                                await new Promise(r => setTimeout(r, 1200)); 
                                 return {
                                     lat: parseFloat(data[0].lat),
                                     lng: parseFloat(data[0].lon)
                                 };
                             }
-                        } catch (e) {}
-                        await new Promise(r => setTimeout(r, 800)); // Respect OSM limits
+                        } catch (e) {
+                            console.error("Geocoding fetch failed:", e);
+                        }
+                        await new Promise(r => setTimeout(r, 1000)); // Respect OSM limits
                     }
                     return null;
                 };
 
                 const DEFAULT_LAT = 12.9716;
                 const DEFAULT_LON = 77.5946;
+                let rateLimitHit = false;
 
                 for (const loc of uniqueLocs) {
+                    if (rateLimitHit) {
+                        // If we hit a rate limit, use local fallback center for the rest
+                        updateRemainingWithFallback(loc);
+                        continue;
+                    }
+
                     let coords = await geocode(loc);
+
+                    if (coords?.error === 'rate-limit') {
+                        rateLimitHit = true;
+                        updateRemainingWithFallback(loc);
+                        continue;
+                    }
 
                     let locCityCenter = { lat: 12.9716, lng: 77.5946 };
                     if (loc) {
@@ -316,6 +453,25 @@ const MapExplorer = () => {
                     }));
 
                     validProps = [...validProps, ...newlyResolved];
+                    setProperties([...validProps]);
+                }
+
+                function updateRemainingWithFallback(loc) {
+                    let locCityCenter = { lat: 12.9716, lng: 77.5946 };
+                    if (loc) {
+                        for (const [key, val] of Object.entries(CITY_CENTERS)) {
+                            if (loc.toLowerCase().includes(key)) {
+                                locCityCenter = val;
+                                break;
+                            }
+                        }
+                    }
+                    const fallenBack = needsGeocoding.filter(p => p.location === loc).map(p => ({
+                        ...p,
+                        lat: locCityCenter.lat + (Math.random() - 0.5) * 0.05,
+                        lng: locCityCenter.lng + (Math.random() - 0.5) * 0.05
+                    }));
+                    validProps = [...validProps, ...fallenBack];
                     setProperties([...validProps]);
                 }
 
@@ -363,11 +519,25 @@ return (
                 </div>
 
                 <select 
+                    className="country-select"
+                    value={selectedCountry}
+                    onChange={(e) => setSelectedCountry(e.target.value)}
+                >
+                    <option value="">All Countries</option>
+                    {countries.map(country => (
+                        <option key={country.name} value={country.name}>
+                            {country.name} ({country.count})
+                        </option>
+                    ))}
+                </select>
+
+                <select 
                     className="city-select"
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
+                    disabled={!selectedCountry && countries.length > 0}
                 >
-                    <option value="">All Cities</option>
+                    <option value="">{selectedCountry ? 'All Cities' : 'Select Country First'}</option>
                     {cities.map(city => (
                         <option key={city.name} value={city.name}>
                             {city.name} ({city.count})
@@ -427,7 +597,7 @@ return (
             />
             <ZoomControl position="bottomright" />
             <MapController selectedPos={selectedPos} />
-            {!loading && <LocationMarker properties={filteredProperties} selectedCity={selectedCity} />}
+            {!loading && <LocationMarker properties={filteredProperties} selectedCity={selectedCity} selectedCountry={selectedCountry} />}
         </MapContainer>
 
         {loading && (

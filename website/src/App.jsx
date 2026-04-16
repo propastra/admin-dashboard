@@ -12,6 +12,7 @@ const MapExplorer = React.lazy(() => import('./pages/MapExplorer'));
 const Favorites = React.lazy(() => import('./pages/Favorites'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const AgentDashboard = React.lazy(() => import('./pages/AgentDashboard'));
+const HelpSupport = React.lazy(() => import('./pages/HelpSupport'));
 const Header = React.lazy(() => import('./components/Header'));
 const Footer = React.lazy(() => import('./components/Footer'));
 const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
@@ -79,6 +80,7 @@ function App() {
         <Route path="/map" element={<MapExplorer />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/help" element={<HelpSupport />} />
         <Route path="/agent-dashboard" element={<AgentDashboard />} />
       </Routes>
 

@@ -154,7 +154,7 @@ const Profile = () => {
                         </div>
                         <ChevronRight size={18} />
                     </button>
-                    <button className="profile-menu-item" onClick={() => { }}>
+                    <button className="profile-menu-item" onClick={() => navigate('/help')}>
                         <div className="menu-item-left">
                             <HelpCircle size={20} />
                             <span>Help & Support</span>
