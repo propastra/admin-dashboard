@@ -5,19 +5,25 @@
 
 /* ====== HERO SECTION ====== */
 .home-hero {
-    background: var(--gradient-hero);
-    padding: var(--space-lg) var(--space-lg) var(--space-3xl);
+    padding: 0;
     position: relative;
     overflow: hidden;
-    border-radius: 0 0 40px 40px;
-    min-height: 480px;
+    border-bottom-left-radius: 40px;
+    border-bottom-right-radius: 40px;
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f236b; /* Fallback color */
 }
 
 .home-hero-content {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
+    padding: 100px var(--space-lg) 60px;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 .hero-decor {
@@ -428,90 +434,131 @@
     border-color: var(--brand);
     box-shadow: 0 4px 12px rgba(59, 63, 140, 0.2);
 }
-/* Promotional Banner */
+/* Updated Promotional Banner - Modern & Enlarged */
 .promo-banner-section {
-    width: 88%;
-    max-width: 780px;
-    margin: 12px auto 20px;
-    border-radius: 16px;
+    width: 92%;
+    max-width: 1140px; /* Matched to main container for professional look */
+    margin: 40px auto;
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
     position: relative;
+    height: 320px; /* Increased height */
+    background: #111827;
 }
 
 .promo-banner-section:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+}
+
+.promo-banner-bg-wrapper {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
 }
 
 .promo-banner-img {
-    display: block;
     width: 100%;
-    height: 210px;
+    height: 100%;
     object-fit: cover;
     object-position: center;
+    transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+    filter: brightness(1.2) contrast(1.05); /* Increased brightness further as requested */
 }
 
-/* Banner CTA Overlay */
-.promo-banner-cta {
+.promo-banner-section:hover .promo-banner-img {
+    transform: scale(1.08); /* Subtle zoom on hover */
+}
+
+.promo-banner-overlay {
     position: absolute;
-    right: 22%;
-    top: 72%;
-    transform: translateY(-50%);
+    inset: 0;
+    background: linear-gradient(90deg, 
+        rgba(17, 24, 39, 0.1) 0%, 
+        rgba(17, 24, 39, 0.5) 25%,
+        rgba(17, 24, 39, 0.85) 50%,
+        rgba(17, 24, 39, 0.95) 100%);
+    /* Removed backdrop-filter to keep the advisor sharp */
+}
+
+.promo-banner-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    padding: 0 60px;
 }
 
-.promo-cta-content {
+.promo-text-group {
+    max-width: 580px;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.promo-title {
+    font-size: 34px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 14px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.6); /* Enhanced shadow for visibility on lighter background */
+}
+
+.highlight-white {
+    color: #ffd700; /* Gold highlight for importance */
+}
+
+.promo-description {
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    max-width: 500px;
+    font-weight: 500;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5); /* Added shadow for readability */
+}
+
+/* Banner CTA Styling */
+.promo-action-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
-.promo-cta-subtitle {
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.92);
-    margin: 0;
-    text-align: center;
-    letter-spacing: 0.2px;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
-}
-
-/* Orange CTA button matching screenshot */
 .promo-cta-btn {
-    background: linear-gradient(180deg, #f5910a 0%, #e07200 100%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: #ffffff;
-    border: 2px solid #c96000;
-    padding: 14px 32px;
-    border-radius: 8px;
-    font-size: 16px;
+    border: none;
+    padding: 16px 40px;
+    border-radius: 12px;
+    font-size: 17px;
     font-weight: 800;
     cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(224, 114, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-    letter-spacing: 0.3px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 25px rgba(217, 119, 6, 0.4);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    letter-spacing: 0.2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .promo-cta-btn:hover {
-    background: linear-gradient(180deg, #ff9d1a 0%, #e87c00 100%);
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 24px rgba(224, 114, 0, 0.6);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 15px 35px rgba(217, 119, 6, 0.5);
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
 }
 
-.promo-cta-btn:active {
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 2px 8px rgba(224, 114, 0, 0.4);
+.promo-microcopy {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* Success state */
-.promo-cta-success {
-    background: rgba(255, 255, 255, 0.95);
     color: #065f46;
     font-size: 15px;
     font-weight: 700;
@@ -663,7 +710,6 @@
 .listing-type-btn {
     padding: 16px 36px;
     border-radius: var(--radius-lg);
-    border: 2px solid rgba(255, 255, 255, 0.4);
     background: #2D3070;
     font-size: var(--font-size-sm);
     font-weight: 800;
