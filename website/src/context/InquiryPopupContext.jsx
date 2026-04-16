@@ -8,14 +8,16 @@ const FIRST_VISIT_KEY = 'inquiry_first_visit_shown';
 export const InquiryPopupProvider = ({ children }) => {
     const [showPopup, setShowPopup] = useState(false);
     const [contextMessage, setContextMessage] = useState(''); // e.g. "About: Property Name"
+    const [defaultMessage, setDefaultMessage] = useState('');
     const [propertyId, setPropertyId] = useState(null);
     const pendingActionRef = useRef(null);
 
     const openPopup = useCallback((options = {}) => {
-        const { afterSubmit, message = '', propertyId: pid = null } = options;
+        const { afterSubmit, message = '', propertyId: pid = null, defaultMessage = '' } = options;
         pendingActionRef.current = afterSubmit || null;
         setPropertyId(pid || null);
         setContextMessage(message);
+        setDefaultMessage(defaultMessage || '');
         setShowPopup(true);
     }, []);
 
@@ -23,6 +25,7 @@ export const InquiryPopupProvider = ({ children }) => {
         pendingActionRef.current = null;
         setPropertyId(null);
         setContextMessage('');
+        setDefaultMessage('');
         setShowPopup(false);
     }, []);
 
@@ -74,6 +77,8 @@ export const InquiryPopupProvider = ({ children }) => {
                 closePopup,
                 runPendingAndClose,
                 contextMessage,
+                defaultMessage,
+                setDefaultMessage,
                 propertyId,
                 showFirstVisitPopup,
                 ensureIdentified,

@@ -52,7 +52,7 @@ const Home = () => {
     }, []);
     const { selectedCity, setSelectedCity } = useCity();
     const { user, login } = useAuth();
-    const { ensureIdentified, showFirstVisitPopup } = useInquiryPopup();
+    const { ensureIdentified, showFirstVisitPopup, openPopup } = useInquiryPopup();
     const [properties, setProperties] = useState([]);
     const [nearbyProperties, setNearbyProperties] = useState([]);
     const [nearbyCategory, setNearbyCategory] = useState('All');
@@ -72,6 +72,9 @@ const Home = () => {
     });
     const [bannerCtaSubmitted, setBannerCtaSubmitted] = useState(() => {
         return localStorage.getItem('banner_cta_submitted') === 'true';
+    });
+    const [bannerExpertSubmitted, setBannerExpertSubmitted] = useState(() => {
+        return localStorage.getItem('banner_expert_submitted') === 'true';
     });
     const [buyListingType, setBuyListingType] = useState(() => {
         return localStorage.getItem('buy_listing_type') || null;
@@ -355,25 +358,14 @@ const Home = () => {
         }
     };
 
-    const handleBannerExpertClick = () => {
-        // Submit inquiry and auto-login the user using the returned token
-        submitInquiry({
-            name: user?.name || 'Investment Lead',
-            phone: user?.phone || '0000000000',
-            email: user?.email || null,
-            message: 'Investment inquiry'
-        })
-        .then((res) => {
-            if (res?.data?.token && res?.data?.user) {
-                login(res.data.token, res.data.user);
-            }
-            localStorage.setItem('banner_cta_submitted', 'true');
-            setBannerCtaSubmitted(true);
-        })
-        .catch(() => {
-            localStorage.setItem('banner_cta_submitted', 'true');
-            setBannerCtaSubmitted(true);
-        });
+    const handleExpertCtaSuccess = () => {
+        localStorage.setItem('banner_cta_submitted', 'true');
+        setBannerCtaSubmitted(true);
+    };
+
+    const handleBannerExpertSuccess = () => {
+        localStorage.setItem('banner_expert_submitted', 'true');
+        setBannerExpertSubmitted(true);
     };
 
     const handleResidentialClick = () => {
@@ -464,16 +456,17 @@ const Home = () => {
                     <div className="promo-banner-cta">
                         {bannerCtaSubmitted ? (
                             <div className="promo-cta-success">
-                                ✅ We will reach out soon...
+                                We will reach out soon
                             </div>
                         ) : (
                             <div className="promo-action-group">
                                 <button
                                     className="promo-cta-btn"
-                                    onClick={() => ensureIdentified(
-                                        handleBannerExpertClick,
-                                        'To talk to our expert, please verify your details'
-                                    )}
+                                    onClick={() => openPopup({
+                                        message: 'To talk to our expert, please verify your details',
+                                        defaultMessage: 'Expert Inquiry: Investment Plan',
+                                        afterSubmit: handleExpertCtaSuccess
+                                    })}
                                 >
                                     Talk to Our Expert
                                 </button>
@@ -591,16 +584,25 @@ const Home = () => {
                         <p>Our experts are ready to help you find your dream home</p>
                     </div>
                     <div className="cta-banner-action" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <button
-                            className="cta-banner-btn"
-                            onClick={() => {
-                                if (user) window.location.href = 'tel:8147069579';
-                                else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
-                            }}
-                        >
-                            Get Free Consultation
-                        </button>
-                        <span className="cta-microcopy" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', textAlign: 'center' }}>Takes less than 30 seconds</span>
+                        {bannerExpertSubmitted ? (
+                            <div className="promo-cta-success" style={{ background: 'white', color: 'var(--accent)', padding: '12px 24px', borderRadius: '30px', fontWeight: '600' }}>
+                                We will reach out soon
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    className="cta-banner-btn"
+                                    onClick={() => openPopup({
+                                        message: 'Contact our experts',
+                                        defaultMessage: 'Expert Inquiry: Property Consultation',
+                                        afterSubmit: handleBannerExpertSuccess
+                                    })}
+                                >
+                                    Get Free Consultation
+                                </button>
+                                <span className="cta-microcopy" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', textAlign: 'center' }}>Takes less than 30 seconds</span>
+                            </>
+                        )}
                     </div>
                 </div>
 
