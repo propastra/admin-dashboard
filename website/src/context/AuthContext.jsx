@@ -34,6 +34,8 @@ export const AuthProvider = ({ children }) => {
             console.error('Auth error:', err);
             if (err.response && (err.response.status === 401 || err.response.status === 403)) {
                 localStorage.removeItem('website_token');
+                localStorage.removeItem('invest_submitted');
+                localStorage.removeItem('banner_expert_submitted');
                 setToken(null);
                 setUser(null);
             }
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('buy_listing_type');
         localStorage.removeItem('invest_submitted');
         localStorage.removeItem('banner_cta_submitted');
+        localStorage.removeItem('banner_expert_submitted');
         localStorage.removeItem('inquiry_first_visit_shown');
         setToken(null);
         setUser(null);

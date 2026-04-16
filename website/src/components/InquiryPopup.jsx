@@ -6,12 +6,23 @@ import { useAuth } from '../context/AuthContext';
 import './InquiryPopup.css';
 
 const InquiryPopup = () => {
-    const { login } = useAuth();
-    const { showPopup, closePopup, runPendingAndClose, contextMessage, propertyId } = useInquiryPopup();
+    const { user, login } = useAuth();
+    const { showPopup, closePopup, runPendingAndClose, contextMessage, defaultMessage, propertyId } = useInquiryPopup();
     const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
     const [error, setError] = useState('');
+
+    React.useEffect(() => {
+        if (showPopup && user) {
+            setForm(prev => ({
+                ...prev,
+                name: prev.name || user.name || '',
+                phone: prev.phone || user.phone || '',
+                email: prev.email || user.email || '',
+            }));
+        }
+    }, [showPopup, user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -30,7 +41,7 @@ const InquiryPopup = () => {
                 name: form.name.trim(),
                 phone: form.phone.trim(),
                 email: form.email.trim() || undefined,
-                message: form.message.trim() || undefined,
+                message: form.message.trim() || defaultMessage || undefined,
                 propertyId: propertyId || undefined,
             });
             

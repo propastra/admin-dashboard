@@ -174,7 +174,15 @@ const SearchPage = () => {
                 });
             });
 
-            const deduped = [...grouped, ...noProject];
+            let deduped = [...grouped, ...noProject];
+            
+            // Post-deduplication sorting (important for Alphabetical order)
+            if (sortBy === 'propertyName') {
+                deduped = deduped.sort((a, b) => 
+                    (a.propertyName || '').localeCompare(b.propertyName || '', undefined, { sensitivity: 'base' })
+                );
+            }
+
             setProperties(deduped);
             setTotal(res.data.total || 0);
             setTotalPages(res.data.totalPages || 1);
@@ -322,6 +330,7 @@ const SearchPage = () => {
                             <option value="createdAt-DESC">Newest First</option>
                             <option value="price-ASC">Price: Low to High</option>
                             <option value="price-DESC">Price: High to Low</option>
+                            <option value="propertyName-ASC">Name: A to Z</option>
                             <option value="relevance-DESC">Relevance</option>
                         </select>
                     </div>

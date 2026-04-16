@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, KeyRound, Coins, ArrowRight } from 'lucide-react';
 import { submitInquiry } from '../services/api';
+import { useInquiryPopup } from '../context/InquiryPopupContext';
 import './ServiceCards.css';
 
 const ServiceCards = ({ setActiveCategory, setBuyListingType, investSubmitted, handleInvestSubmit, user, ensureIdentified, onCompareClick }) => {
   const navigate = useNavigate();
+  const { openPopup } = useInquiryPopup();
   const [expandedCard, setExpandedCard] = useState(null); // 'buy' | 'rental' | 'invest' | null
   const [investLoading, setInvestLoading] = useState(false);
   const [investSuccess, setInvestSuccess] = useState(investSubmitted || false);
@@ -47,25 +49,16 @@ const ServiceCards = ({ setActiveCategory, setBuyListingType, investSubmitted, h
     setExpandedCard('buy-resale-soon');
   };
 
-  const handleInvestSubmitLocal = async () => {
-    setInvestLoading(true);
-    try {
-      await submitInquiry({
-        name: user?.name || 'Investment Lead',
-        phone: user?.phone || '0000000000',
-        email: user?.email || null,
-        message: 'Investment inquiry'
-      });
-      setInvestSuccess(true);
-      localStorage.setItem('invest_submitted', 'true');
-      if (typeof handleInvestSubmit === 'function') handleInvestSubmit();
-    } catch (err) {
-      console.error('Failed to submit investment inquiry', err);
-      setInvestSuccess(true);
-      localStorage.setItem('invest_submitted', 'true');
-    } finally {
-      setInvestLoading(false);
-    }
+  const handleInvestCtaClick = () => {
+    openPopup({
+      message: 'To talk to our expert, please verify your details',
+      defaultMessage: 'Expert Inquiry: Smart Investments',
+      afterSubmit: () => {
+        setInvestSuccess(true);
+        localStorage.setItem('invest_submitted', 'true');
+        if (typeof handleInvestSubmit === 'function') handleInvestSubmit();
+      }
+    });
   };
 
   const handleCardBtnClick = (service) => {
@@ -171,10 +164,9 @@ const ServiceCards = ({ setActiveCategory, setBuyListingType, investSubmitted, h
                         </div>
                         <button
                           className="sub-listing-btn invest-submit-btn"
-                          onClick={handleInvestSubmitLocal}
-                          disabled={investLoading}
+                          onClick={handleInvestCtaClick}
                         >
-                          {investLoading ? 'Submitting...' : 'SUBMIT'}
+                          CONNECT NOW
                         </button>
                       </>
                     )}

@@ -13,7 +13,7 @@ const PropertyDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, login } = useAuth();
-    const { ensureIdentified } = useInquiryPopup();
+    const { ensureIdentified, openPopup } = useInquiryPopup();
     const [property, setProperty] = useState(null);
     const [projectProperties, setProjectProperties] = useState([]);
     const [activeConfig, setActiveConfig] = useState(null);
@@ -28,6 +28,7 @@ const PropertyDetail = () => {
         message: '',
         visitDate: ''
     });
+    const [callSuccess, setCallSuccess] = useState(false);
     const [inquirySent, setInquirySent] = useState(false);
     const [showComparisonModal, setShowComparisonModal] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -518,14 +519,22 @@ const PropertyDetail = () => {
                             <MessageCircle size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
                             Message
                         </button>
-                        <button className="btn btn-outline btn-wide" onClick={() => {
-                            const callUs = () => window.location.href = 'tel:8147069579';
-                            if (user) callUs();
-                            else ensureIdentified(callUs, 'To contact our experts, we\'d love to know you better');
-                        }}>
-                            <Phone size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-                            Call us
-                        </button>
+                        {callSuccess ? (
+                            <div className="promo-cta-success" style={{ background: '#f0fdf4', color: '#166534', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', flex: 1, textAlign: 'center', border: '1px solid #bbf7d0' }}>
+                                We will reach out soon
+                            </div>
+                        ) : (
+                            <button className="btn btn-outline btn-wide" onClick={() => {
+                                openPopup({
+                                    message: 'To contact our experts, please verify your details',
+                                    defaultMessage: `Expert Inquiry for Property ID: ${id}`,
+                                    afterSubmit: () => setCallSuccess(true)
+                                });
+                            }}>
+                                <Phone size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
+                                Call us
+                            </button>
+                        )}
                         <span className="last-contact">Last contact made 1 day ago</span>
                     </div>
                 </div>
