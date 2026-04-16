@@ -559,14 +559,6 @@
     letter-spacing: 1px;
 }
 
-    color: #065f46;
-    font-size: 15px;
-    font-weight: 700;
-    padding: 14px 24px;
-    border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-
 @media (max-width: 480px) {
     .promo-banner-cta {
         right: 5%;
