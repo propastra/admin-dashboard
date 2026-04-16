@@ -421,7 +421,7 @@ const PropertyForm = () => {
                             <button type="button" onClick={handleClearCoverPhoto} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New File</button>
                         )}
                     </div>
-                    <input type="file" id="coverPhotoInput" accept="image/*" onChange={handleCoverPhotoChange} className="form-input" />
+                    <input type="file" id="coverPhotoInput" accept="image/*,.webp" onChange={handleCoverPhotoChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {existingCoverPhoto && !previewCoverPhoto && (
                             <div style={{ position: 'relative' }}>
@@ -442,7 +442,7 @@ const PropertyForm = () => {
                             <button type="button" onClick={handleClearNewPhotos} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
                         )}
                     </div>
-                    <input type="file" multiple accept="image/*,video/*" onChange={handleFileChange} className="form-input" />
+                    <input type="file" multiple accept="image/*,video/*,.webp" onChange={handleFileChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {Array.isArray(existingPhotos) && existingPhotos.map((photo, index) => {
                             if (typeof photo !== 'string') return null;
@@ -475,7 +475,7 @@ const PropertyForm = () => {
                             <button type="button" onClick={handleClearNewFloorPlan} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
                         )}
                     </div>
-                    <input type="file" multiple accept="image/*,application/pdf" onChange={handleFloorPlanChange} className="form-input" />
+                    <input type="file" multiple accept="image/*,application/pdf,.webp" onChange={handleFloorPlanChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {Array.isArray(existingFloorPlan) && existingFloorPlan.map((file, index) => {
                             if (typeof file !== 'string') return null;
@@ -514,7 +514,7 @@ const PropertyForm = () => {
                             <button type="button" onClick={handleClearNewMasterPlan} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
                         )}
                     </div>
-                    <input type="file" multiple accept="image/*,application/pdf" onChange={handleMasterPlanChange} className="form-input" />
+                    <input type="file" multiple accept="image/*,application/pdf,.webp" onChange={handleMasterPlanChange} className="form-input" />
                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {Array.isArray(existingMasterPlan) && existingMasterPlan.map((file, index) => {
                             if (typeof file !== 'string') return null;

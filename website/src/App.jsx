@@ -16,6 +16,9 @@ const HelpSupport = React.lazy(() => import('./pages/HelpSupport'));
 const Header = React.lazy(() => import('./components/Header'));
 const Footer = React.lazy(() => import('./components/Footer'));
 const InquiryPopup = React.lazy(() => import('./components/InquiryPopup'));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
+const TermsConditions = React.lazy(() => import('./pages/TermsConditions'));
+const Disclaimer = React.lazy(() => import('./pages/Disclaimer'));
 import { useHeartbeat } from './hooks/useHeartbeat';
 import { useAuth } from './context/AuthContext';
 import { useInquiryPopup } from './context/InquiryPopupContext';
@@ -82,6 +85,9 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/help" element={<HelpSupport />} />
         <Route path="/agent-dashboard" element={<AgentDashboard />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions" element={<TermsConditions />} />
+        <Route path="/disclaimer" element={<Disclaimer />} />
       </Routes>
 
       {isMainSite && <Footer />}

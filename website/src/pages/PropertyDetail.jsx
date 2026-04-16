@@ -453,7 +453,7 @@ const PropertyDetail = () => {
                 <div className="detail-main-card">
                     {/* Top strip of key configs */}
                     <div className="card-top-strip">
-                        {property.configuration && (
+                        {property.configuration && !property.category?.toLowerCase().includes('plot') && (
                             <div className="strip-item">
                                 <BiBed size={20} className="strip-icon" />
                                 <span className="strip-text"><strong>{property.configuration}</strong> Bedrooms</span>
@@ -714,7 +714,8 @@ const PropertyDetail = () => {
                                 <div className="units-tabs" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
                                     {units.map((unit, idx) => {
                                         const id = isInternalUnits ? `idx-${idx}` : unit.id;
-                                        const name = isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`);
+                                        const isPlot = property.category?.toLowerCase().includes('plot') || unit.category?.toLowerCase().includes('plot');
+                                        const name = isPlot ? (unit.dimensions || unit.configuration || 'Plot') : (isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
                                         const price = isInternalUnits ? (unit.priceRange || unit.price) : formatPrice(unit.price, unit.priceUnit);
                                         const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
 
@@ -771,15 +772,27 @@ const PropertyDetail = () => {
                                                                 <span style={{ color: '#6b7280' }}>{config.price}</span>
                                                             </div>
                                                             <div className="floor-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-                                                                {[config.image3d, config.image2d].filter(Boolean).map((img, iIdx) => (
-                                                                    <div key={iIdx} className="floor-plan-item" onClick={() => window.open(img, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9' }}>
-                                                                        <img src={img} alt={`Floor Plan ${iIdx}`} style={{ width: '100%', maxHeight: '450px', objectFit: 'contain' }} />
-                                                                        <div className="plan-overlay">
-                                                                            <Maximize size={20} />
-                                                                            <span>View {iIdx === 0 ? '3D' : '2D'} Plan</span>
+                                                                {[config.image3d, config.image2d].filter(Boolean).map((img, iIdx) => {
+                                                                    const url = img.startsWith('http') ? img : `${BACKEND_URL}${img.startsWith('/') ? '' : '/'}${img}`;
+                                                                    const isPdf = url.toLowerCase().endsWith('.pdf');
+                                                                    return (
+                                                                        <div key={iIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9' }}>
+                                                                            {isPdf ? (
+                                                                                <iframe 
+                                                                                    src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                                                                                    title={`Floor Plan PDF ${iIdx === 0 ? '3D' : '2D'}`} 
+                                                                                    style={{ width: '100%', height: '450px', border: 'none', overflow: 'hidden' }} 
+                                                                                />
+                                                                            ) : (
+                                                                                <img src={url} alt={`Floor Plan ${iIdx}`} style={{ width: '100%', maxHeight: '450px', objectFit: 'contain' }} />
+                                                                            )}
+                                                                            <div className="plan-overlay">
+                                                                                <Maximize size={20} />
+                                                                                <span>View {iIdx === 0 ? '3D' : '2D'} Plan</span>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                ))}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     ))}
@@ -804,9 +817,18 @@ const PropertyDetail = () => {
                                                     <div className="floor-plans-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
                                                         {plans.length > 0 ? plans.map((fp, fpIdx) => {
                                                             const url = fp.startsWith('http') ? fp : `${BACKEND_URL}${fp.startsWith('/') ? '' : '/'}${fp}`;
+                                                            const isPdf = url.toLowerCase().endsWith('.pdf');
                                                             return (
                                                                 <div key={fpIdx} className="floor-plan-item" onClick={() => window.open(url, '_blank')} style={{ position: 'relative', cursor: 'zoom-in', background: '#fff', borderRadius: '16px', padding: '16px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', flex: '0 1 600px', maxWidth: '100%' }}>
-                                                                    <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                                                    {isPdf ? (
+                                                                        <iframe 
+                                                                            src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                                                                            title="Floor Plan PDF" 
+                                                                            style={{ width: '100%', height: '500px', border: 'none', overflow: 'hidden' }} 
+                                                                        />
+                                                                    ) : (
+                                                                        <img src={url} alt="Floor Plan" style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                                                    )}
                                                                     <div className="plan-overlay">
                                                                         <Maximize size={20} />
                                                                         <span>View Plan</span>

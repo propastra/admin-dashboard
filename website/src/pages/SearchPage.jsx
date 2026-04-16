@@ -53,6 +53,7 @@ const SearchPage = () => {
     const { user } = useAuth();
 
     const [properties, setProperties] = useState([]);
+    const [allGroupedProperties, setAllGroupedProperties] = useState([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -83,7 +84,14 @@ const SearchPage = () => {
 
     useEffect(() => {
         loadProperties();
-    }, [page, filters.search, filters.city, filters.categories, filters.configurations, filters.minPrice, filters.maxPrice, filters.possessionStatus, filters.furnishingStatus, sortBy, sortOrder]);
+    }, [filters.search, filters.city, filters.categories, filters.configurations, filters.minPrice, filters.maxPrice, filters.possessionStatus, filters.furnishingStatus, sortBy, sortOrder]);
+
+    useEffect(() => {
+        const start = (page - 1) * 20;
+        const end = start + 20;
+        setProperties(allGroupedProperties.slice(start, end));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [page, allGroupedProperties]);
 
     useEffect(() => {
         if (user) loadFavorites();
@@ -107,8 +115,7 @@ const SearchPage = () => {
     }, []);
 
     const loadProperties = async (overridePage) => {
-        const currentPage = overridePage ?? page;
-        const params = { page: currentPage, limit: 24 };
+        const params = { page: 1, limit: 5000 };
         if (filters.search) params.search = filters.search;
         if (filters.city) params.city = filters.city;
         if (filters.categories.length > 0) params.category = filters.categories.join(',');
@@ -130,55 +137,52 @@ const SearchPage = () => {
 
             const raw = res.data.properties || [];
 
-            // --- Deduplicate by projectName ---
-            // Group all records that share the same projectName into one card.
-            // Properties without a projectName are never grouped.
-            const projectMap = new Map();
-            const noProject = [];
-
-            raw.forEach(p => {
-                const key = p.projectName ? p.projectName.trim().toLowerCase() : null;
-                if (!key) {
-                    noProject.push(p);
-                    return;
-                }
-                if (!projectMap.has(key)) {
-                    projectMap.set(key, []);
-                }
-                projectMap.get(key).push(p);
-            });
-
-            // For each group, pick the representative (cheapest) & attach variant metadata
-            const normalizePrice = (p) => {
-                const val = parseFloat(p.price) || 0;
-                if (p.priceUnit === 'Cr') return val * 10000000;
-                if (p.priceUnit === 'Lakhs') return val * 100000;
-                if (p.priceUnit === 'Thousands') return val * 1000;
-                return val;
+            const groupProperties = (apiData) => {
+                if (!apiData || !Array.isArray(apiData)) return [];
+                const grouped = {};
+                apiData.forEach(prop => {
+                    const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
+                    const projName = projNameRaw.split('  ')[0].trim();
+                    if (!grouped[projName]) {
+                        grouped[projName] = { 
+                            ...prop,
+                            variantCount: 1,
+                            allConfigurations: prop.configuration && prop.configuration.trim() !== '' ? [prop.configuration] : [],
+                            minPrice: parseFloat(prop.price),
+                            maxPrice: parseFloat(prop.price),
+                            maxPriceUnit: prop.priceUnit
+                        };
+                    } else {
+                        grouped[projName].variantCount += 1;
+                        if (prop.configuration && prop.configuration.trim() !== '' && !grouped[projName].allConfigurations.includes(prop.configuration)) {
+                            grouped[projName].allConfigurations.push(prop.configuration);
+                        }
+                        const price = parseFloat(prop.price);
+                        if (!isNaN(price)) {
+                            if (isNaN(grouped[projName].maxPrice) || price > grouped[projName].maxPrice) {
+                                grouped[projName].maxPrice = price;
+                                grouped[projName].maxPriceUnit = prop.priceUnit;
+                            }
+                            if (isNaN(grouped[projName].minPrice) || price < grouped[projName].minPrice) {
+                                grouped[projName].minPrice = price;
+                                grouped[projName].price = prop.price;
+                                grouped[projName].priceUnit = prop.priceUnit;
+                            }
+                        }
+                    }
+                });
+                Object.values(grouped).forEach(proj => {
+                    proj.allConfigurations.sort();
+                });
+                return Object.values(grouped);
             };
 
-            const grouped = [];
-            projectMap.forEach((variants) => {
-                const sorted = [...variants].sort((a, b) => normalizePrice(a) - normalizePrice(b));
-                const rep = sorted[0]; // cheapest as representative
-                const maxVariant = sorted[sorted.length - 1];
-                const configs = [...new Set(variants.map(v => v.configuration).filter(Boolean))];
-                grouped.push({
-                    ...rep,
-                    variantCount: variants.length,
-                    allConfigurations: configs,
-                    minPrice: rep.price,
-                    minPriceUnit: rep.priceUnit,
-                    maxPrice: maxVariant.price,
-                    maxPriceUnit: maxVariant.priceUnit,
-                    _allVariants: variants,
-                });
-            });
+            const groupedData = groupProperties(raw);
 
-            const deduped = [...grouped, ...noProject];
-            setProperties(deduped);
-            setTotal(res.data.total || 0);
-            setTotalPages(res.data.totalPages || 1);
+            setAllGroupedProperties(groupedData);
+            setTotal(groupedData.length);
+            setTotalPages(Math.ceil(groupedData.length / 20) || 1);
+            setPage(1);
             // ...
 
             if (filters.search) {
@@ -445,7 +449,24 @@ const SearchPage = () => {
                                 </button>
                             </div>
                             <div className="price-list">
-                                <div className="price-option label">Min</div>
+                                <div className="price-option label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>{budgetMode === 'min' ? 'Min' : 'Max'}</span>
+                                    {(filters.minPrice || filters.maxPrice) && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setFilters({ ...filters, minPrice: '', maxPrice: '' });
+                                                setShowBudgetDropdown(false);
+                                            }}
+                                            style={{ color: 'var(--brand)', background: 'none', border: 'none', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                        >
+                                            Reset All
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="price-option" style={{ fontWeight: '600', color: 'var(--gray-900)' }} onClick={() => selectPrice('')}>
+                                    Any Price
+                                </div>
                                 {pricePoints.filter(p => p.value !== '').map(point => (
                                     <div
                                         key={point.label}
@@ -512,9 +533,7 @@ const SearchPage = () => {
                 setShowMoreFilters(false);
             }} />}
 
-            <div className="search-results-header">
-                {total} properties found in {filters.city || 'all locations'}
-            </div>
+
 
             {loading ? (
                 <div className="loading-screen"><div className="spinner"></div></div>
@@ -539,11 +558,7 @@ const SearchPage = () => {
                 </div>
             )}
 
-            {/* Floating Map Button */}
-            <button className="floating-map-btn" onClick={() => navigate('/map')}>
-                <MapPin size={20} />
-                <span>Map View</span>
-            </button>
+
 
             {totalPages > 1 && (
                 <div className="pagination">

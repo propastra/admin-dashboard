@@ -554,16 +554,16 @@ const PropertyList = () => {
                                                         <input type="text" value={prop.location || ''} onChange={e => handlePreviewChange(idx, 'location', e.target.value)} style={{ width: '150px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }} />
                                                     </td>
                                                     <td style={{ padding: '8px' }}>
-                                                        <input type="file" multiple accept="image/*" onChange={e => handleFilePreviewChange(idx, 'photosFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
+                                                        <input type="file" multiple accept="image/*,.webp" onChange={e => handleFilePreviewChange(idx, 'photosFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
                                                     </td>
                                                     <td style={{ padding: '8px' }}>
                                                         <input type="file" multiple accept=".pdf,.doc,.docx" onChange={e => handleFilePreviewChange(idx, 'brochureFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
                                                     </td>
                                                     <td style={{ padding: '8px' }}>
-                                                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg" onChange={e => handleFilePreviewChange(idx, 'floorPlanFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
+                                                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => handleFilePreviewChange(idx, 'floorPlanFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
                                                     </td>
                                                     <td style={{ padding: '8px' }}>
-                                                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg" onChange={e => handleFilePreviewChange(idx, 'masterPlanFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
+                                                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => handleFilePreviewChange(idx, 'masterPlanFiles', e.target.files)} style={{ width: '180px', fontSize: '0.8rem' }} />
                                                     </td>
                                                     <td style={{ padding: '8px' }}>
                                                         <input type="text" value={prop.dimensions || ''} onChange={e => handlePreviewChange(idx, 'dimensions', e.target.value)} style={{ width: '100px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }} />

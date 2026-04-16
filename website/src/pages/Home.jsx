@@ -332,11 +332,10 @@ const Home = () => {
 
     const handleSearch = (e) => {
         if (e) e.preventDefault();
-        if (searchQuery.trim()) {
-            ensureIdentified(() => {
-                navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-            }, 'To search properties, we\'d love to know you better');
-        }
+        const query = searchQuery.trim();
+        ensureIdentified(() => {
+            navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+        }, 'To search properties, we\'d love to know you better');
     };
 
     const handleInvestSubmit = async () => {
@@ -408,7 +407,7 @@ const Home = () => {
 
                     {/* Search Bar */}
                     <form className="home-search" onSubmit={handleSearch}>
-                        <Search size={20} className="search-icon" />
+                        <Search size={20} className="search-icon" onClick={handleSearch} style={{ cursor: 'pointer' }} />
                         <input
                             type="text"
                             placeholder="Search by location, project or property..."

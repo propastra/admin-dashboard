@@ -575,10 +575,7 @@ return (
                     </div>
                 )}
             </div>
-            <div className="map-header-stats desktop-only">
-                <p><span>{properties.length}</span> total</p>
-                <p><span>{filteredProperties.length}</span> visible</p>
-            </div>
+
         </div>
 
         <MapContainer

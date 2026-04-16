@@ -165,7 +165,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                     {property.dimensions && (
                         <span><Maximize size={14} /> {property.dimensions}</span>
                     )}
-                    {configDisplay && (
+                    {configDisplay && !property.category?.toLowerCase().includes('plot') && (
                         <span><BiBed size={14} /> {configDisplay}</span>
                     )}
                 </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
 import './Footer.css';
 
 const Footer = () => {
@@ -17,10 +17,10 @@ const Footer = () => {
                             Propastra is India's premium real estate platform, helping you discover your dream home with confidence and transparency.
                         </p>
                         <div className="social-links">
-                            <a href="#" aria-label="Facebook"><Facebook size={20} /></a>
-                            <a href="#" aria-label="Twitter"><Twitter size={20} /></a>
-                            <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
-                            <a href="#" aria-label="LinkedIn"><Linkedin size={20} /></a>
+                            <a href="https://www.facebook.com/people/Propastra/61575027837953/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Facebook size={20} /></a>
+                            <a href="https://www.instagram.com/propastra/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
+                            <a href="https://www.linkedin.com/company/propastra" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><Linkedin size={20} /></a>
+                            <a href="https://www.youtube.com/channel/UCRu91cBSx4vwSCYQ0w3pMAg" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><Youtube size={20} /></a>
                         </div>
                     </div>
 
@@ -39,10 +39,9 @@ const Footer = () => {
                     <div className="footer-col">
                         <h3>Legal</h3>
                         <ul className="footer-links">
-                            <li><a href="#">Terms of Service</a></li>
-                            <li><a href="#">Privacy Policy</a></li>
-                            <li><a href="#">Cookie Policy</a></li>
-                            <li><a href="#">Disclaimer</a></li>
+                            <li><Link to="/terms-conditions">Terms of Service</Link></li>
+                            <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+                            <li><Link to="/disclaimer">Disclaimer</Link></li>
                         </ul>
                     </div>
 
