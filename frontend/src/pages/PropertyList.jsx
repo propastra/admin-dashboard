@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { API_BASE_URL } from '../services/api';
-import { FaEdit, FaTrash, FaPlus, FaUpload } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaUpload, FaDownload } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
 const PropertyList = () => {
@@ -250,6 +250,47 @@ const PropertyList = () => {
         }
     };
 
+    const handleExportBackup = () => {
+        if (properties.length === 0) {
+            alert('No properties to export.');
+            return;
+        }
+        const rows = properties.map(p => ({
+            'Property Name':     p.propertyName || '',
+            'Project Name':      p.projectName || '',
+            'Category':          p.category || '',
+            'Location':          p.location || '',
+            'Price':             p.price || '',
+            'Price Unit':        p.priceUnit || '',
+            'Configuration':     p.configuration || '',
+            'Dimensions':        p.dimensions || '',
+            'Status':            p.status || '',
+            'Possession Status': p.possessionStatus || '',
+            'Possession Time':   p.possessionTime || '',
+            'Furnishing Status': p.furnishingStatus || '',
+            'BHK':               p.bhk || '',
+            'Land Parcel':       p.landParcel || '',
+            'Floor':             p.floor || '',
+            'Units':             p.units || '',
+            'Latitude':          p.latitude || '',
+            'Longitude':         p.longitude || '',
+            'Amenities':         p.amenities || '',
+            'Project Highlights':p.projectHighlights || '',
+            'Investment Type':   p.investmentType || '',
+            'RERA Number':       p.reraNumber || '',
+            'Developer Name':    p.developerName || '',
+            'Builder Info':      p.builderInfo || '',
+            'Description':       p.description || '',
+            'Is Verified':       p.isVerified ? 'Yes' : 'No',
+            'ID':                p.id || '',
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Properties');
+        const date = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `propastra_properties_backup_${date}.xlsx`);
+    };
+
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this property?")) {
             try {
@@ -278,6 +319,14 @@ const PropertyList = () => {
                             Undo Last Import ({lastImportedIds.length})
                         </button>
                     )}
+                    <button
+                        onClick={handleExportBackup}
+                        className="btn btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#6366f1', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                        title={`Export all ${properties.length} properties as Excel`}
+                    >
+                        <FaDownload /> Export Backup ({properties.length})
+                    </button>
                     <input 
                         type="file" 
                         accept=".xlsx, .xls, .csv" 
