@@ -7,36 +7,25 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     react(),
-    // Gzip for broad compatibility
+    // Gzip only — brotli adds too much build time on the server
     viteCompression({ algorithm: 'gzip', threshold: 1024 }),
-    // Brotli for modern browsers (smaller than gzip)
-    viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
   ],
   build: {
     target: 'es2020',
     cssCodeSplit: true,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.warn'],
-        passes: 2,
-      },
-      mangle: { safari10: true },
-    },
+    // Use esbuild (default) instead of terser — much faster, still good minification
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-core': ['react', 'react-dom'],
-          'react-router': ['react-router-dom'],
+          // Only split heavy libraries, NOT react/react-dom (causes empty chunk in Vite)
           'map-vendor': ['leaflet', 'react-leaflet'],
+          'router': ['react-router-dom'],
           'icons': ['lucide-react'],
-          'axios': ['axios'],
         },
       },
     },
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 600,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'axios', 'lucide-react'],
