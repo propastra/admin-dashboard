@@ -325,6 +325,15 @@ const PropertyDetail = () => {
         }
     };
 
+    const formatDimensions = (dim) => {
+        if (!dim || dim === 'N/A') return 'N/A';
+        const str = String(dim).trim();
+        if (str.toLowerCase().includes('sq') || str.toLowerCase().includes('acre') || str.toLowerCase().includes('hectare') || str.toLowerCase().includes('ft')) {
+            return str;
+        }
+        return `${str} sq. ft.`;
+    };
+
     const formatPrice = (price, unit) => {
         const p = parseFloat(price);
         if (unit === 'Cr') return `₹${p} Cr`;
@@ -395,7 +404,7 @@ const PropertyDetail = () => {
                                 )}
                             </h1>
                             <div className="header-price-row">
-                                <h2 className="header-price">{formatPrice(property.price, property.priceUnit)}</h2>
+                                <h2 className="header-price">{`${formatPrice(property.price, property.priceUnit)} onwards`}</h2>
                             </div>
                         </div>
                         <div className="header-right-actions" style={{ flexDirection: 'row' }}>
@@ -473,15 +482,15 @@ const PropertyDetail = () => {
                     <div className="card-metrics-grid">
                         <div className="metric-cell">
                             <span className="metric-label">Super Built-Up Area</span>
-                            <span className="metric-value">{property.dimensions || 'N/A'}</span>
+                            <span className="metric-value">{formatDimensions(property.dimensions)}</span>
                         </div>
                         <div className="metric-cell">
                             <span className="metric-label">Project</span>
                             <span className="metric-value">{property.projectName || 'Independent'}</span>
                         </div>
                         <div className="metric-cell">
-                            <span className="metric-label">Transaction Type</span>
-                            <span className="metric-value">New Property</span>
+                            <span className="metric-label">Construction Status</span>
+                            <span className="metric-value">{property.possessionStatus || 'New Property'}</span>
                         </div>
                         <div className="metric-cell">
                             <span className="metric-label">Status</span>
@@ -707,15 +716,17 @@ const PropertyDetail = () => {
 
                         if (units.length === 0) return null;
 
+                        const isPlotCategory = property.category?.toLowerCase().includes('plot') || property.category?.toLowerCase().includes('farm');
+                        
                         return (
                             <div className="info-card floor-plans-card project-units-card" style={{ marginTop: '32px' }}>
-                                <h3>Price & Floor Plan</h3>
+                                <h3>{isPlotCategory ? 'Price & Dimensions' : 'Price & Floor Plan'}</h3>
 
                                 <div className="units-tabs" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
                                     {units.map((unit, idx) => {
                                         const id = isInternalUnits ? `idx-${idx}` : unit.id;
                                         const isPlot = property.category?.toLowerCase().includes('plot') || unit.category?.toLowerCase().includes('plot');
-                                        const name = isPlot ? (unit.dimensions || unit.configuration || 'Plot') : (isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
+                                        const name = isPlot ? (formatDimensions(unit.dimensions) || unit.configuration || 'Plot') : (isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
                                         const price = isInternalUnits ? (unit.priceRange || unit.price) : formatPrice(unit.price, unit.priceUnit);
                                         const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
 
@@ -808,9 +819,10 @@ const PropertyDetail = () => {
                                                             {formatPrice(unit.price, unit.priceUnit)}
                                                         </span>
                                                         {unit.dimensions && (
-                                                            <span className="unit-content-dim" style={{ marginLeft: '16px', color: '#9ca3af', fontSize: '18px' }}>
-                                                                {unit.dimensions}
-                                                            </span>
+                                                            <div style={{ marginLeft: '16px', fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Maximize size={14} />
+                                                                {formatDimensions(unit.dimensions)}
+                                                            </div>
                                                         )}
                                                     </div>
 
@@ -887,6 +899,7 @@ const PropertyDetail = () => {
                                     type="text"
                                     placeholder="e.g. Kempegowda Airport, Manyata Tech Park"
                                     value={calcDestination}
+                                    readOnly
                                     onChange={(e) => setCalcDestination(e.target.value)}
                                     className="calc-input"
                                 />
@@ -1186,9 +1199,9 @@ const PropertyDetail = () => {
                                     </tr>
                                     <tr>
                                         <td className="feature-column">Dimensions</td>
-                                        <td className="property-column current-property text-center">{property.dimensions || 'N/A'}</td>
+                                        <td className="property-column current-property text-center">{formatDimensions(property.dimensions)}</td>
                                         {similarProperties.map(prop => (
-                                            <td key={prop.id} className="property-column text-center">{prop.dimensions || 'N/A'}</td>
+                                            <td key={prop.id} className="property-column text-center">{formatDimensions(prop.dimensions)}</td>
                                         ))}
                                     </tr>
                                     <tr>

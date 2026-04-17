@@ -143,7 +143,7 @@ const Profile = () => {
                     <button className="profile-menu-item" onClick={() => navigate('/favorites')}>
                         <div className="menu-item-left">
                             <User size={20} />
-                            <span>My Favorites</span>
+                            <span>My Shortlisted</span>
                         </div>
                         <ChevronRight size={18} />
                     </button>

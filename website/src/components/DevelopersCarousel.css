@@ -82,60 +82,13 @@
     min-height: 90px;
     border: 1px solid rgba(229, 231, 235, 0.8);
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-    cursor: pointer;
+    cursor: default;
     position: relative;
     overflow: hidden;
+    pointer-events: none;
 }
 
-.developer-card:hover {
-    transform: translateY(-15px) scale(1.02);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.12);
-    border-color: var(--brand);
-    animation-play-state: paused;
-}
-
-/* Shine effect on hover */
-.developer-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(to right,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.3) 50%,
-            rgba(255, 255, 255, 0) 100%);
-    transform: skewX(-25deg);
-    transition: none;
-    z-index: 1;
-}
-
-.developer-card:hover::before {
-    animation: shine 0.8s ease;
-}
-
-@keyframes shine {
-    100% {
-        left: 200%;
-    }
-}
-
-.developer-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--brand), transparent);
-    transition: width 0.4s ease;
-}
-
-.developer-card:hover::after {
-    width: 100%;
-}
+/* No hover effects — cards are display only */
 
 .developer-logo-wrap {
     width: 60px;

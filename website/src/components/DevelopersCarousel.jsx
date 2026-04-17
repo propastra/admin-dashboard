@@ -1,11 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BACKEND_URL } from '../services/api';
 import './DevelopersCarousel.css';
 
 const DevelopersCarousel = ({ developers }) => {
-    const navigate = useNavigate();
-
     if (!developers || developers.length === 0) return null;
 
     // Create a robust set of developers to ensure it fills the longest screens perfectly
@@ -14,8 +11,7 @@ const DevelopersCarousel = ({ developers }) => {
     const renderCard = (dev, index, offset) => (
         <div 
             key={`${dev.id}-${offset}-${index}`} 
-            className="developer-card" 
-            onClick={() => navigate(`/search?q=${encodeURIComponent(dev.name)}`)}
+            className="developer-card"
         >
             <div className="developer-logo-wrap">
                 <img 

@@ -25,6 +25,13 @@ const propertyTypes = {
         { label: 'Farm Land', value: 'Farm Land', type: 'category' },
         { label: 'Resale', value: 'Resale', type: 'category' },
         { label: 'Rental', value: 'Rental', type: 'category' },
+    ],
+    plotDimensions: [
+        { label: '1200 Sqft', value: '1,200', type: 'dimension' },
+        { label: '1500 Sqft', value: '1,500', type: 'dimension' },
+        { label: '1800 Sqft', value: '1,800', type: 'dimension' },
+        { label: '2400 Sqft', value: '2,400', type: 'dimension' },
+        { label: '3000+ Sqft', value: '3,000+', type: 'dimension' },
     ]
 };
 
@@ -75,6 +82,7 @@ const SearchPage = () => {
         maxPrice: '',
         possessionStatus: [],
         furnishingStatus: [],
+        dimension: [],
     });
 
     const [sortBy, setSortBy] = useState('createdAt');
@@ -84,7 +92,7 @@ const SearchPage = () => {
 
     useEffect(() => {
         loadProperties();
-    }, [filters.search, filters.city, filters.categories, filters.configurations, filters.minPrice, filters.maxPrice, filters.possessionStatus, filters.furnishingStatus, sortBy, sortOrder]);
+    }, [filters.search, filters.city, filters.categories, filters.configurations, filters.dimension, filters.minPrice, filters.maxPrice, filters.possessionStatus, filters.furnishingStatus, sortBy, sortOrder]);
 
     useEffect(() => {
         const start = (page - 1) * 20;
@@ -120,6 +128,7 @@ const SearchPage = () => {
         if (filters.city) params.city = filters.city;
         if (filters.categories.length > 0) params.category = filters.categories.join(',');
         if (filters.configurations.length > 0) params.configurations = filters.configurations.join(',');
+        if (filters.dimension && filters.dimension.length > 0) params.dimension = filters.dimension.join(',');
         if (filters.minPrice) params.minPrice = filters.minPrice;
         if (filters.maxPrice) params.maxPrice = filters.maxPrice;
         if (filters.possessionStatus && filters.possessionStatus.length > 0) params.possessionStatus = filters.possessionStatus.join(',');
@@ -140,16 +149,21 @@ const SearchPage = () => {
             const groupProperties = (apiData) => {
                 if (!apiData || !Array.isArray(apiData)) return [];
                 const grouped = {};
+                
+                const getNormalized = (p, u) => parseFloat(p) * (u === 'Cr' ? 100 : 1);
+
                 apiData.forEach(prop => {
                     const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
                     const projName = projNameRaw.split('  ')[0].trim();
+                    
                     if (!grouped[projName]) {
                         grouped[projName] = { 
                             ...prop,
                             variantCount: 1,
                             allConfigurations: prop.configuration && prop.configuration.trim() !== '' ? [prop.configuration] : [],
-                            minPrice: parseFloat(prop.price),
-                            maxPrice: parseFloat(prop.price),
+                            minNormalized: getNormalized(prop.price, prop.priceUnit),
+                            maxNormalized: getNormalized(prop.price, prop.priceUnit),
+                            maxPrice: prop.price,
                             maxPriceUnit: prop.priceUnit
                         };
                     } else {
@@ -157,22 +171,31 @@ const SearchPage = () => {
                         if (prop.configuration && prop.configuration.trim() !== '' && !grouped[projName].allConfigurations.includes(prop.configuration)) {
                             grouped[projName].allConfigurations.push(prop.configuration);
                         }
-                        const price = parseFloat(prop.price);
-                        if (!isNaN(price)) {
-                            if (isNaN(grouped[projName].maxPrice) || price > grouped[projName].maxPrice) {
-                                grouped[projName].maxPrice = price;
+                        
+                        const norm = getNormalized(prop.price, prop.priceUnit);
+                        if (!isNaN(norm)) {
+                            if (isNaN(grouped[projName].maxNormalized) || norm > grouped[projName].maxNormalized) {
+                                grouped[projName].maxNormalized = norm;
+                                grouped[projName].maxPrice = prop.price;
                                 grouped[projName].maxPriceUnit = prop.priceUnit;
                             }
-                            if (isNaN(grouped[projName].minPrice) || price < grouped[projName].minPrice) {
-                                grouped[projName].minPrice = price;
+                            if (isNaN(grouped[projName].minNormalized) || norm < grouped[projName].minNormalized) {
+                                grouped[projName].minNormalized = norm;
                                 grouped[projName].price = prop.price;
                                 grouped[projName].priceUnit = prop.priceUnit;
+                                grouped[projName].id = prop.id;
                             }
                         }
                     }
                 });
                 Object.values(grouped).forEach(proj => {
-                    proj.allConfigurations.sort();
+                    const sortConfigs = (a, b) => {
+                        const numA = parseFloat(a) || 0;
+                        const numB = parseFloat(b) || 0;
+                        if (numA !== numB) return numA - numB;
+                        return a.localeCompare(b);
+                    };
+                    proj.allConfigurations.sort(sortConfigs);
                 });
                 return Object.values(grouped);
             };
@@ -219,7 +242,7 @@ const SearchPage = () => {
     };
 
     const toggleType = (item) => {
-        const field = item.type === 'category' ? 'categories' : 'configurations';
+        const field = item.type === 'category' ? 'categories' : (item.type === 'dimension' ? 'dimension' : 'configurations');
         setFilters(prev => {
             const current = [...prev[field]];
             if (current.includes(item.value)) {
@@ -249,13 +272,14 @@ const SearchPage = () => {
     };
 
     const getPropertyTypeLabel = () => {
-        const totalSelected = filters.categories.length + filters.configurations.length;
+        const totalSelected = filters.categories.length + filters.configurations.length + (filters.dimension ? filters.dimension.length : 0);
         if (totalSelected === 0) return 'Property Type';
         if (totalSelected === 1) {
-            const allItems = [...propertyTypes.residential, ...propertyTypes.bhk, ...propertyTypes.others];
+            const allItems = [...propertyTypes.residential, ...propertyTypes.bhk, ...propertyTypes.others, ...propertyTypes.plotDimensions];
             const found = allItems.find(i =>
                 (i.type === 'category' && filters.categories.includes(i.value)) ||
-                (i.type === 'config' && filters.configurations.includes(i.value))
+                (i.type === 'config' && filters.configurations.includes(i.value)) ||
+                (i.type === 'dimension' && filters.dimension.includes(i.value))
             );
             return found ? found.label : 'Property Type';
         }
@@ -396,17 +420,32 @@ const SearchPage = () => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className="chip-grid" style={{ marginTop: '12px' }}>
-                                    {propertyTypes.bhk.map(item => (
-                                        <button
-                                            key={item.label}
-                                            className={`filter-chip ${filters.configurations.includes(item.value) ? 'active' : ''}`}
-                                            onClick={() => toggleType(item)}
-                                        >
-                                            {item.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                { (filters.categories.length === 0 || filters.categories.includes('Residential') || filters.categories.includes('Villa')) && (
+                                    <div className="chip-grid" style={{ marginTop: '12px' }}>
+                                        {propertyTypes.bhk.map(item => (
+                                            <button
+                                                key={item.label}
+                                                className={`filter-chip ${filters.configurations.includes(item.value) ? 'active' : ''}`}
+                                                onClick={() => toggleType(item)}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                { (filters.categories.includes('Plot') || filters.categories.includes('Farm Land')) && (
+                                    <div className="chip-grid" style={{ marginTop: '12px' }}>
+                                        {propertyTypes.plotDimensions.map(item => (
+                                            <button
+                                                key={item.label}
+                                                className={`filter-chip ${filters.dimension.includes(item.value) ? 'active' : ''}`}
+                                                onClick={() => toggleType(item)}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
 

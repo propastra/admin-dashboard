@@ -101,7 +101,7 @@
     padding: 12px 14px;
     border: 1px solid var(--gray-200);
     border-radius: 12px;
-    font-size: 15px;
+    font-size: 16px; /* Prevents iOS auto-zoom */
     font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;

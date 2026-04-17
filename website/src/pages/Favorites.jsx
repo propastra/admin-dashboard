@@ -57,7 +57,7 @@ const Favorites = () => {
                 <button className="search-back" onClick={() => navigate(-1)}>
                     <ArrowLeft size={20} />
                 </button>
-                <h1>My Favorites</h1>
+                <h1>My Shortlisted Properties</h1>
             </div>
 
             {loading ? (
@@ -78,7 +78,7 @@ const Favorites = () => {
             ) : (
                 <div className="favorites-empty">
                     <Heart size={64} color="var(--gray-300)" />
-                    <h2>No favorites yet</h2>
+                    <h2>No shortlisted properties yet</h2>
                     <p>Start exploring and save properties you love</p>
                     <button className="btn btn-primary" onClick={() => navigate('/search')}>
                         Explore Properties

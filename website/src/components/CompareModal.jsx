@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, ChevronRight, Scale, MapPin, Ruler, Home, IndianRupee } from 'lucide-react';
+import { X, ChevronRight, Scale, MapPin, Ruler, IndianRupee, Star, CheckCircle } from 'lucide-react';
 import { getProperties, BACKEND_URL, trackInteraction } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './CompareModal.css';
@@ -34,10 +34,10 @@ const CompareModal = ({ isOpen, onClose }) => {
     try {
       const params = { limit: 10 };
       if (query.length > 0) {
-        params.q = query;
+        params.search = query;  // fixed: was 'q', backend expects 'search'
       }
       const res = await getProperties(params);
-      setResults(res.data.properties);
+      setResults(res.data.properties || []);
     } catch (err) {
       console.error(err);
     }
@@ -66,46 +66,95 @@ const CompareModal = ({ isOpen, onClose }) => {
   const handleSelect = (prop, setProp, setResults, setTerm, setShow, setSiblings) => {
     setProp(prop);
     setResults([]);
-    setTerm(prop.propertyName);
+    setTerm(getProjectName(prop));
     setShow(false);
     setIsComparing(false);
     loadSiblings(prop, setSiblings);
   };
 
+  // Fixed: backend URL construction — photos are served at BACKEND_URL/uploads/...
   const getPhotoUrl = (property) => {
+    if (!property) return 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+
     if (property.coverPhoto) {
       if (property.coverPhoto.startsWith('http')) return property.coverPhoto;
-      const baseUrl = BACKEND_URL.replace('/api', '');
-      return `${baseUrl}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`;
+      return `${BACKEND_URL}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`;
     }
     if (property.photos && property.photos.length > 0) {
       const photo = property.photos[0];
       if (photo.startsWith('http')) return photo;
-      const baseUrl = BACKEND_URL.replace('/api', '');
-      return `${baseUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
+      return `${BACKEND_URL}${photo.startsWith('/') ? '' : '/'}${photo}`;
     }
-    return 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop';
+    return 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
   };
 
   const formatPrice = (price, unit) => {
     if (!price) return 'N/A';
     const p = parseFloat(price);
     if (isNaN(p)) return `${price} ${unit || ''}`;
-    
-    // Better verbalizing for "mention on words"
-    const unitMap = {
-      'Cr': 'Crores',
-      'Lakhs': 'Lakhs'
-    };
-    const unitLabel = unitMap[unit] || unit || '';
-    
-    return `Starting at ₹${p} ${unitLabel}`;
+    if (unit === 'Cr') return `₹${p} Cr`;
+    if (unit === 'Lakhs') return `₹${p} Lakhs`;
+    return `₹${p.toLocaleString()}`;
+  };
+
+  const formatAmenities = (amenities) => {
+    if (!amenities) return 'Standard';
+    if (Array.isArray(amenities)) return amenities.slice(0, 5).join(', ') + (amenities.length > 5 ? ` +${amenities.length - 5} more` : '');
+    if (typeof amenities === 'string') {
+      try {
+        const parsed = JSON.parse(amenities);
+        if (Array.isArray(parsed)) return parsed.slice(0, 5).join(', ') + (parsed.length > 5 ? ` +${parsed.length - 5} more` : '');
+      } catch {
+        return amenities;
+      }
+    }
+    return String(amenities);
+  };
+
+  const formatDimensions = (dim) => {
+    if (!dim) return null;
+    const str = String(dim).trim();
+    if (str.toLowerCase().includes('sq') || str.toLowerCase().includes('acre') || str.toLowerCase().includes('ft')) return str;
+    return `${str} sq. ft.`;
+  };
+
+  // Sort sibling configurations numerically
+  const sortedSiblings = (siblings) => {
+    return [...siblings].sort((a, b) => {
+      const numA = parseFloat(a.configuration) || 0;
+      const numB = parseFloat(b.configuration) || 0;
+      if (numA !== numB) return numA - numB;
+      return (a.configuration || '').localeCompare(b.configuration || '');
+    });
   };
 
   if (!isOpen) return null;
 
+  const renderPropCard = (prop) => {
+    if (!prop) return null;
+    return (
+      <div className="selected-prop-card">
+        <div className="selected-prop-img-wrap">
+          <img
+            src={getPhotoUrl(prop)}
+            alt={prop.propertyName}
+            onError={(e) => {
+              e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+            }}
+          />
+          <div className="selected-prop-badge">{prop.category}</div>
+        </div>
+        <div className="card-info">
+          <h4>{getProjectName(prop)}</h4>
+          <p><MapPin size={12} style={{ display: 'inline', marginRight: 4 }} />{prop.location || 'N/A'}</p>
+          <p style={{ fontWeight: 700, color: '#3B3F8C', marginTop: 4 }}>{formatPrice(prop.price, prop.priceUnit)} onwards</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="compare-overlay">
+    <div className="compare-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="compare-modal">
         <div className="compare-header">
           <h2>Compare Properties</h2>
@@ -123,31 +172,33 @@ const CompareModal = ({ isOpen, onClose }) => {
                     type="text"
                     placeholder="Search Property 1..."
                     value={searchTerm1}
-                    onChange={(e) => {
-                      setSearchTerm1(e.target.value);
-                      setShowDropdown1(true);
-                    }}
+                    onChange={(e) => { setSearchTerm1(e.target.value); setShowDropdown1(true); }}
                     onFocus={() => setShowDropdown1(true)}
                   />
-                  <ChevronRight 
-                    className={`arrow-icon ${showDropdown1 ? 'rotate' : ''}`} 
+                  <ChevronRight
+                    className={`arrow-icon ${showDropdown1 ? 'rotate' : ''}`}
                     onClick={() => setShowDropdown1(!showDropdown1)}
                   />
                 </div>
-                {showDropdown1 && (results1.length > 0 || searchTerm1.length > 2) && (
+                {showDropdown1 && (results1.length > 0 || searchTerm1.length > 1) && (
                   <div className="search-dropdown">
                     {results1.map(p => (
-                      <div 
-                        key={p.id} 
+                      <div
+                        key={p.id}
                         className="dropdown-item"
                         onClick={() => handleSelect(p, setProp1, setResults1, setSearchTerm1, setShowDropdown1, setSiblings1)}
                       >
                         <div className="item-img">
-                          <img src={getPhotoUrl(p)} alt="" />
+                          <img
+                            src={getPhotoUrl(p)}
+                            alt=""
+                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200'; }}
+                          />
                         </div>
                         <div className="item-info">
                           <div className="item-name">{p.propertyName}</div>
-                          <div className="item-loc">{p.address}</div>
+                          <div className="item-loc"><MapPin size={11} style={{ display: 'inline', marginRight: 3 }} />{p.location || 'N/A'}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#3B3F8C', marginTop: 2 }}>{formatPrice(p.price, p.priceUnit)}</div>
                         </div>
                       </div>
                     ))}
@@ -155,26 +206,16 @@ const CompareModal = ({ isOpen, onClose }) => {
                   </div>
                 )}
               </div>
-              
-              {prop1 && (
-                <div className="selected-prop-card">
-                  <img src={getPhotoUrl(prop1)} alt="" />
-                  <div className="card-info">
-                    <h4>{prop1.propertyName}</h4>
-                    <p>{prop1.address}</p>
-                  </div>
-                </div>
-              )}
+              {renderPropCard(prop1)}
             </div>
 
-            {/* Middle Button */}
+            {/* Middle VS Button */}
             <div className="compare-btn-wrap">
-              <button 
+              <button
                 className={`compare-action-btn ${prop1 && prop2 ? 'active' : ''}`}
                 disabled={!prop1 || !prop2}
                 onClick={() => {
                   setIsComparing(true);
-                  // Track comparison
                   trackInteraction({
                     interactionType: 'Comparison',
                     websiteUserId: user?.id,
@@ -182,7 +223,7 @@ const CompareModal = ({ isOpen, onClose }) => {
                       propertyIds: [prop1.id, prop2.id],
                       propertyNames: [prop1.propertyName, prop2.propertyName]
                     }
-                  }).catch(err => console.error("Tracking error", err));
+                  }).catch(err => console.error('Tracking error', err));
                 }}
               >
                 <Scale size={24} />
@@ -199,31 +240,33 @@ const CompareModal = ({ isOpen, onClose }) => {
                     type="text"
                     placeholder="Search Property 2..."
                     value={searchTerm2}
-                    onChange={(e) => {
-                      setSearchTerm2(e.target.value);
-                      setShowDropdown2(true);
-                    }}
+                    onChange={(e) => { setSearchTerm2(e.target.value); setShowDropdown2(true); }}
                     onFocus={() => setShowDropdown2(true)}
                   />
-                  <ChevronRight 
-                    className={`arrow-icon ${showDropdown2 ? 'rotate' : ''}`} 
+                  <ChevronRight
+                    className={`arrow-icon ${showDropdown2 ? 'rotate' : ''}`}
                     onClick={() => setShowDropdown2(!showDropdown2)}
                   />
                 </div>
-                {showDropdown2 && (results2.length > 0 || searchTerm2.length > 2) && (
+                {showDropdown2 && (results2.length > 0 || searchTerm2.length > 1) && (
                   <div className="search-dropdown">
                     {results2.map(p => (
-                      <div 
-                        key={p.id} 
+                      <div
+                        key={p.id}
                         className="dropdown-item"
                         onClick={() => handleSelect(p, setProp2, setResults2, setSearchTerm2, setShowDropdown2, setSiblings2)}
                       >
                         <div className="item-img">
-                          <img src={getPhotoUrl(p)} alt="" />
+                          <img
+                            src={getPhotoUrl(p)}
+                            alt=""
+                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200'; }}
+                          />
                         </div>
                         <div className="item-info">
                           <div className="item-name">{p.propertyName}</div>
-                          <div className="item-loc">{p.address}</div>
+                          <div className="item-loc"><MapPin size={11} style={{ display: 'inline', marginRight: 3 }} />{p.location || 'N/A'}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#3B3F8C', marginTop: 2 }}>{formatPrice(p.price, p.priceUnit)}</div>
                         </div>
                       </div>
                     ))}
@@ -231,89 +274,116 @@ const CompareModal = ({ isOpen, onClose }) => {
                   </div>
                 )}
               </div>
-
-              {prop2 && (
-                <div className="selected-prop-card">
-                  <img src={getPhotoUrl(prop2)} alt="" />
-                  <div className="card-info">
-                    <h4>{prop2.propertyName}</h4>
-                    <p>{prop2.address}</p>
-                  </div>
-                </div>
-              )}
+              {renderPropCard(prop2)}
             </div>
           </div>
 
+          {/* Comparison Table */}
           {isComparing && prop1 && prop2 && (
             <div className="comparison-results anim-fade-in">
               <div className="comparison-table">
+
+                {/* Header Row with photos */}
                 <div className="table-row header">
                   <div className="feature-cell">Feature</div>
-                  <div className="prop-cell">{prop1.propertyName}</div>
-                  <div className="prop-cell">{prop2.propertyName}</div>
+                  <div className="prop-cell prop-header">
+                    <img src={getPhotoUrl(prop1)} alt="" className="compare-thumb"
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200'; }} />
+                    <span>{getProjectName(prop1)}</span>
+                  </div>
+                  <div className="prop-cell prop-header">
+                    <img src={getPhotoUrl(prop2)} alt="" className="compare-thumb"
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200'; }} />
+                    <span>{getProjectName(prop2)}</span>
+                  </div>
                 </div>
-                
+
+                {/* Price */}
                 <div className="table-row">
                   <div className="feature-cell"><IndianRupee size={16} /> Starting Price</div>
-                  <div className="prop-cell">{formatPrice(prop1.price, prop1.priceUnit)}</div>
-                  <div className="prop-cell">{formatPrice(prop2.price, prop2.priceUnit)}</div>
+                  <div className="prop-cell highlight">{formatPrice(prop1.price, prop1.priceUnit)}</div>
+                  <div className="prop-cell highlight">{formatPrice(prop2.price, prop2.priceUnit)}</div>
                 </div>
 
+                {/* Category */}
+                <div className="table-row">
+                  <div className="feature-cell">🏠 Type</div>
+                  <div className="prop-cell">{prop1.category || 'N/A'}</div>
+                  <div className="prop-cell">{prop2.category || 'N/A'}</div>
+                </div>
+
+                {/* Location */}
                 <div className="table-row">
                   <div className="feature-cell"><MapPin size={16} /> Location</div>
-                  <div className="prop-cell">{prop1.address || prop1.location}</div>
-                  <div className="prop-cell">{prop2.address || prop2.location}</div>
+                  <div className="prop-cell">{prop1.location || 'N/A'}</div>
+                  <div className="prop-cell">{prop2.location || 'N/A'}</div>
                 </div>
 
+                {/* Configurations / Dimensions */}
                 <div className="table-row">
-                  <div className="feature-cell"><Ruler size={16} /> Area & Dimensions</div>
+                  <div className="feature-cell"><Ruler size={16} /> Configurations</div>
                   <div className="prop-cell">
-                    <div style={{ fontWeight: '700', color: '#10b981', fontSize: '12px', marginBottom: '8px' }}>
-                      {siblings1.length > 0 ? `${siblings1.length} Units available` : '1 Unit available'}
-                    </div>
-                    {siblings1.length > 0 ? (
+                    <div className="units-count">{siblings1.length > 1 ? `${siblings1.length} variants` : '1 variant'}</div>
+                    {sortedSiblings(siblings1).length > 0 ? (
                       <div className="units-list">
-                        {siblings1.map((s, i) => (
-                          <div key={i} style={{ fontSize: '11px', marginBottom: '6px', paddingBottom: '4px', borderBottom: i < siblings1.length - 1 ? '1px dashed #eee' : 'none' }}>
-                            <div style={{ fontWeight: '600' }}>{s.configuration || 'Unit'}</div>
-                            <div style={{ color: '#64748b' }}>{s.sqft} sqft {s.dimensions ? `| ${s.dimensions}` : ''}</div>
+                        {sortedSiblings(siblings1).map((s, i) => (
+                          <div key={i} className="unit-row">
+                            <span className="unit-config">{s.configuration || 'Unit'}</span>
+                            {s.dimensions && <span className="unit-dim">{formatDimensions(s.dimensions)}</span>}
+                            <span className="unit-price">{formatPrice(s.price, s.priceUnit)}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <>
-                        <div>{prop1.sqft ? `${prop1.sqft} sqft` : 'N/A'}</div>
-                        {prop1.dimensions && <div style={{ fontSize: '11px', color: '#64748b' }}>({prop1.dimensions})</div>}
-                      </>
+                      <div>{formatDimensions(prop1.dimensions) || 'N/A'}</div>
                     )}
                   </div>
                   <div className="prop-cell">
-                    <div style={{ fontWeight: '700', color: '#10b981', fontSize: '12px', marginBottom: '8px' }}>
-                      {siblings2.length > 0 ? `${siblings2.length} Units available` : '1 Unit available'}
-                    </div>
-                    {siblings2.length > 0 ? (
+                    <div className="units-count">{siblings2.length > 1 ? `${siblings2.length} variants` : '1 variant'}</div>
+                    {sortedSiblings(siblings2).length > 0 ? (
                       <div className="units-list">
-                        {siblings2.map((s, i) => (
-                          <div key={i} style={{ fontSize: '11px', marginBottom: '6px', paddingBottom: '4px', borderBottom: i < siblings2.length - 1 ? '1px dashed #eee' : 'none' }}>
-                            <div style={{ fontWeight: '600' }}>{s.configuration || 'Unit'}</div>
-                            <div style={{ color: '#64748b' }}>{s.sqft} sqft {s.dimensions ? `| ${s.dimensions}` : ''}</div>
+                        {sortedSiblings(siblings2).map((s, i) => (
+                          <div key={i} className="unit-row">
+                            <span className="unit-config">{s.configuration || 'Unit'}</span>
+                            {s.dimensions && <span className="unit-dim">{formatDimensions(s.dimensions)}</span>}
+                            <span className="unit-price">{formatPrice(s.price, s.priceUnit)}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <>
-                        <div>{prop2.sqft ? `${prop2.sqft} sqft` : 'N/A'}</div>
-                        {prop2.dimensions && <div style={{ fontSize: '11px', color: '#64748b' }}>({prop2.dimensions})</div>}
-                      </>
+                      <div>{formatDimensions(prop2.dimensions) || 'N/A'}</div>
                     )}
                   </div>
                 </div>
 
+                {/* Construction status */}
+                <div className="table-row">
+                  <div className="feature-cell">🏗️ Construction</div>
+                  <div className="prop-cell">{prop1.possessionStatus || 'N/A'}</div>
+                  <div className="prop-cell">{prop2.possessionStatus || 'N/A'}</div>
+                </div>
+
+                {/* Possession Time */}
+                <div className="table-row">
+                  <div className="feature-cell">📅 Possession</div>
+                  <div className="prop-cell">{prop1.possessionTime || 'N/A'}</div>
+                  <div className="prop-cell">{prop2.possessionTime || 'N/A'}</div>
+                </div>
+
+                {/* RERA */}
+                <div className="table-row">
+                  <div className="feature-cell"><CheckCircle size={16} /> RERA No.</div>
+                  <div className="prop-cell" style={{ fontSize: '12px', wordBreak: 'break-all' }}>{prop1.reraNumber || 'N/A'}</div>
+                  <div className="prop-cell" style={{ fontSize: '12px', wordBreak: 'break-all' }}>{prop2.reraNumber || 'N/A'}</div>
+                </div>
+
+                {/* Amenities */}
                 <div className="table-row">
                   <div className="feature-cell">✨ Amenities</div>
-                  <div className="prop-cell">{prop1.amenities || 'Standard'}</div>
-                  <div className="prop-cell">{prop2.amenities || 'Standard'}</div>
+                  <div className="prop-cell">{formatAmenities(prop1.amenities)}</div>
+                  <div className="prop-cell">{formatAmenities(prop2.amenities)}</div>
                 </div>
+
               </div>
             </div>
           )}

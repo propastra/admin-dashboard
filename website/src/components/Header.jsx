@@ -46,8 +46,8 @@ const Header = () => {
                     <li><button onClick={() => ensureIdentified(() => navigate('/map'), "To use the map")} className={`nav-link ${location.pathname.startsWith('/map') ? 'active' : ''}`}>Map</button></li>
                     <li><button onClick={() => {
                         if (user) navigate('/favorites');
-                        else ensureIdentified(() => navigate('/favorites'), 'Sign in to see favorites');
-                    }} className={`nav-link ${location.pathname.startsWith('/favorites') ? 'active' : ''}`}>Favorites</button></li>
+                        else ensureIdentified(() => navigate('/favorites'), 'Sign in to see your shortlisted properties');
+                    }} className={`nav-link ${location.pathname.startsWith('/favorites') ? 'active' : ''}`}>Shortlisted</button></li>
                 </ul>
 
                 <div className="header-right">
@@ -100,8 +100,8 @@ const Header = () => {
                         <li><button onClick={() => {
                             setIsMobileMenuOpen(false);
                             if (user) navigate('/favorites');
-                            else ensureIdentified(() => navigate('/favorites'), 'Sign in to see favorites');
-                        }}>Favorites</button></li>
+                            else ensureIdentified(() => navigate('/favorites'), 'Sign in to see your shortlisted properties');
+                        }}>Shortlisted</button></li>
                         
                         <li className="mobile-menu-divider"></li>
                         

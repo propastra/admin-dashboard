@@ -51,8 +51,26 @@ const HelpSupport = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.name || !formData.phone || !formData.message) {
-            setStatus({ type: 'error', message: 'Name, phone and message are required.' });
+
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!formData.name || formData.name.trim().length < 2 || !nameRegex.test(formData.name.trim())) {
+            setStatus({ type: 'error', message: 'Please enter a valid name (alphabets only).' });
+            return;
+        }
+        const phoneRegex = /^\d{10}$/;
+        if (!formData.phone || !phoneRegex.test(formData.phone.replace(/[\s-]/g, ''))) {
+            setStatus({ type: 'error', message: 'Please enter a valid 10-digit mobile number.' });
+            return;
+        }
+        if (formData.email && formData.email.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                setStatus({ type: 'error', message: 'Please enter a valid email address.' });
+                return;
+            }
+        }
+        if (!formData.message || formData.message.trim().length < 5) {
+            setStatus({ type: 'error', message: 'Please enter a valid message.' });
             return;
         }
         setSubmitting(true);
@@ -173,17 +191,15 @@ const HelpSupport = () => {
                             />
                         </label>
                     </div>
-                    <div className="input-row">
-                        <label>
-                            Email
-                            <input
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="Email address"
-                            />
-                        </label>
-                    </div>
+                    <label>
+                        Email
+                        <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            placeholder="Email address"
+                        />
+                    </label>
                     <label>
                         Message<span>*</span>
                         <textarea

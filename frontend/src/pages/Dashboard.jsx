@@ -36,6 +36,7 @@ const Dashboard = () => {
         topProperties: []
     });
     const [activity, setActivity] = useState([]);
+    const [recentInquiries, setRecentInquiries] = useState([]);
     const [filteredActivity, setFilteredActivity] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [activityFilter, setActivityFilter] = useState('all');
@@ -43,15 +44,17 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [dashRes, actRes, chartRes] = await Promise.all([
+                const [dashRes, actRes, chartRes, inqRes] = await Promise.all([
                     api.get('/analytics/dashboard'),
                     api.get('/analytics/activity'),
-                    api.get('/analytics/chart-data')
+                    api.get('/analytics/chart-data'),
+                    api.get('/inquiries').catch(() => ({ data: [] }))
                 ]);
 
                 setStats(dashRes.data);
                 setActivity(actRes.data);
                 setChartData(chartRes.data);
+                setRecentInquiries(Array.isArray(inqRes.data) ? inqRes.data.slice(0, 5) : []);
             } catch (err) {
                 console.error("Error fetching stats", err);
             }
@@ -168,7 +171,7 @@ const Dashboard = () => {
                         <option value="30d">Last 30 Days</option>
                     </select>
                 </div>
-                <div>
+                <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
                         <thead>
                             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
@@ -212,6 +215,54 @@ const Dashboard = () => {
                                 </tr>
                             )) : (
                                 <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>No activity found for this period.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="card table-container" style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h3>Recent Inquiries & Messages</h3>
+                    <button onClick={() => navigate('/inquiries')} style={{ padding: '6px 12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>View All</button>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                        <thead>
+                            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
+                                <th style={{ padding: '8px' }}>Date</th>
+                                <th style={{ padding: '8px' }}>Name</th>
+                                <th style={{ padding: '8px' }}>Contact</th>
+                                <th style={{ padding: '8px' }}>Property</th>
+                                <th style={{ padding: '8px' }}>Message</th>
+                                <th style={{ padding: '8px' }}>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {recentInquiries.length > 0 ? recentInquiries.map(inq => (
+                                <tr key={inq.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                    <td style={{ padding: '8px' }}>{new Date(inq.createdAt).toLocaleDateString()}</td>
+                                    <td style={{ padding: '8px', fontWeight: '600' }}>{inq.name || '-'}</td>
+                                    <td style={{ padding: '8px' }}>
+                                        <div style={{ fontSize: '0.85rem' }}>{inq.email || '-'}</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{inq.phone || '-'}</div>
+                                    </td>
+                                    <td style={{ padding: '8px' }}>{inq.Property ? inq.Property.propertyName : <span style={{color: '#9ca3af'}}>General Inquiry</span>}</td>
+                                    <td style={{ padding: '8px', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={inq.message || ''}>
+                                        {inq.message || '-'}
+                                    </td>
+                                    <td style={{ padding: '8px' }}>
+                                        <span style={{ 
+                                            padding: '4px 8px', borderRadius: '4px', fontSize: '0.85em',
+                                            backgroundColor: inq.status === 'New' ? '#dbeafe' : '#f3f4f6',
+                                            color: inq.status === 'New' ? '#1e40af' : '#4b5563'
+                                        }}>
+                                            {inq.status || 'New'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>No recent messages found.</td></tr>
                             )}
                         </tbody>
                     </table>

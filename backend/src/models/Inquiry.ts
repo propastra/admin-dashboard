@@ -57,6 +57,11 @@ const Inquiry = sequelize.define('Inquiry', {
             model: 'WebsiteUsers',
             key: 'id'
         }
+    },
+    source: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'website'
     }
 }, {
     timestamps: true,

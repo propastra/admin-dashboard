@@ -116,6 +116,17 @@ router.get('/', async (req, res) => {
             where.configuration = { [Op.in]: configList };
         }
 
+        if (req.query.dimension) {
+            const dimList = req.query.dimension.split(',');
+            if (dimList.length > 0) {
+                if (!where[Op.and]) where[Op.and] = [];
+                const dimOrs = dimList.map(d => ({
+                    dimensions: { [Op.like]: `%${d}%` }
+                }));
+                where[Op.and].push({ [Op.or]: dimOrs });
+            }
+        }
+
         if (bhk) {
             const bhkList = bhk.split(',').map(Number);
             where.bhk = { [Op.in]: bhkList };

@@ -86,6 +86,9 @@ app.use('/api/website/properties', require('./routes/websiteProperties'));
 app.use('/api/website/favorites', require('./routes/websiteFavorites'));
 app.use('/api/website/developers', require('./routes/developers'));
 
+// Relogen Agency Website Routes
+app.use('/api/relogen', require('./routes/relogenContacts'));
+
 // Sync Database and Start Server
 app.get('/', (req, res) => {
     res.send('Real Estate Admin Dashboard API is running');
@@ -132,6 +135,13 @@ sequelize.sync()
         try {
             await sequelize.query('ALTER TABLE Properties ADD COLUMN masterPlan TEXT;');
             logger.info('Added masterPlan to Properties');
+        } catch (e) {
+            // Column already exists
+        }
+
+        try {
+            await sequelize.query("ALTER TABLE Inquiries ADD COLUMN source VARCHAR(255) DEFAULT 'website';");
+            logger.info('Added source to Inquiries');
         } catch (e) {
             // Column already exists
         }

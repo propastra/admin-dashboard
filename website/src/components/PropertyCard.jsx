@@ -35,7 +35,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
         ? (property.coverPhoto.startsWith('http') ? property.coverPhoto : `${BACKEND_URL}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`)
         : (property.photos && property.photos.length > 0
             ? (property.photos[0].startsWith('http') ? property.photos[0] : `${BACKEND_URL}${property.photos[0].startsWith('/') ? '' : '/'}${property.photos[0]}`)
-            : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop');
+            : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=60&w=600');
 
     const handleFavorite = async (e) => {
         e.stopPropagation();
@@ -107,32 +107,47 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     const formatPrice = (price, unit) => {
         const p = parseFloat(price);
         if (unit === 'Cr') return `₹${p} Cr`;
-        if (unit === 'Lakhs') return `₹${p} L`;
+        if (unit === 'Lakhs') return `₹${p} Lakhs`;
         return `₹${p.toLocaleString()}`;
     };
 
-    const priceDisplay = (variantCount > 1 && maxPrice && maxPrice !== property.price)
-        ? `${formatPrice(property.price, property.priceUnit)} – ${formatPrice(maxPrice, maxPriceUnit)}`
-        : formatPrice(property.price, property.priceUnit);
+    const priceDisplay = `${formatPrice(property.price, property.priceUnit)} onwards`;
 
-    const configDisplay = (variantCount > 1 && allConfigurations && allConfigurations.length > 0)
-        ? allConfigurations.join(', ')
+    const formatDimensions = (dim) => {
+        if (!dim || dim === 'N/A') return 'N/A';
+        const str = String(dim).trim();
+        if (str.toLowerCase().includes('sq') || str.toLowerCase().includes('acre') || str.toLowerCase().includes('hectare') || str.toLowerCase().includes('ft')) {
+            return str;
+        }
+        return `${str} sq. ft.`;
+    };
+
+    const configsList = (allConfigurations && allConfigurations.length > 0)
+        ? allConfigurations
+        : (property.configurations && property.configurations.length > 0)
+            ? property.configurations
+            : [];
+
+    const configDisplay = configsList.length > 0
+        ? configsList.join(', ')
         : property.configuration;
+
+    const effectiveVariantCount = variantCount || configsList.length;
 
     const rating = (4 + Math.random()).toFixed(1);
 
     return (
         <div className="property-card" onClick={openPropertyWithInquiry}>
             <div className="property-card-image">
-                <img src={photoUrl} alt={displayTitle} loading="lazy" decoding="async" />
+                <img src={photoUrl} alt={displayTitle} loading="lazy" decoding="async" width="400" height="240" />
                 <div className="property-card-badges">
                     <span className="badge-category">{property.category}</span>
                     {property.distance && (
                         <span className="badge-distance">{property.distance} km away</span>
                     )}
                 </div>
-                {variantCount > 1 && (
-                    <div className="badge-variants">{variantCount} configs</div>
+                {effectiveVariantCount > 1 && (
+                    <div className="badge-variants">{effectiveVariantCount} configs</div>
                 )}
                 <div className="property-card-actions">
                     <button
@@ -163,7 +178,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
 
                 <div className="property-card-meta">
                     {property.dimensions && (
-                        <span><Maximize size={14} /> {property.dimensions}</span>
+                        <span><Maximize size={14} /> {formatDimensions(property.dimensions)}</span>
                     )}
                     {configDisplay && !property.category?.toLowerCase().includes('plot') && (
                         <span><BiBed size={14} /> {configDisplay}</span>
@@ -178,7 +193,10 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                         }}>
                             <Phone size={14} /> Call us
                         </button>
-                        <button className="cta-message" onClick={openPropertyWithInquiry}>
+                        <button className="cta-message" onClick={(e) => {
+                            e.stopPropagation();
+                            window.open('https://wa.me/919731530103', '_blank', 'noopener,noreferrer');
+                        }}>
                             <MessageCircle size={14} /> Message
                         </button>
                     </div>

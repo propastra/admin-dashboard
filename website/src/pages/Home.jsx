@@ -25,6 +25,9 @@ const Home = () => {
     const groupProperties = React.useCallback((apiData) => {
         if (!apiData || !Array.isArray(apiData)) return [];
         const grouped = {};
+        
+        const getNormalized = (p, u) => parseFloat(p) * (u === 'Cr' ? 100 : 1);
+
         apiData.forEach(prop => {
             const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
             const projName = projNameRaw.split('  ')[0].trim();
@@ -33,26 +36,48 @@ const Home = () => {
                 grouped[projName].isProject = true;
                 grouped[projName].displayTitle = projName;
                 grouped[projName].configurations = [];
-                grouped[projName].minPrice = parseFloat(prop.price);
-                grouped[projName].maxPrice = parseFloat(prop.price);
-                grouped[projName].priceUnit = prop.priceUnit;
+                grouped[projName].minNormalized = getNormalized(prop.price, prop.priceUnit);
+                grouped[projName].maxNormalized = getNormalized(prop.price, prop.priceUnit);
+                grouped[projName].minPriceRaw = prop.price;
+                grouped[projName].minPriceUnit = prop.priceUnit;
+                grouped[projName].maxPriceRaw = prop.price;
+                grouped[projName].maxPriceUnit = prop.priceUnit;
             }
             if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
                 grouped[projName].configurations.push(prop.configuration);
             }
-            const price = parseFloat(prop.price);
-            if (price < grouped[projName].minPrice) grouped[projName].minPrice = price;
-            if (price > grouped[projName].maxPrice) grouped[projName].maxPrice = price;
+            const norm = getNormalized(prop.price, prop.priceUnit);
+            if (!isNaN(norm)) {
+                if (norm < grouped[projName].minNormalized) {
+                    grouped[projName].minNormalized = norm;
+                    grouped[projName].minPriceRaw = prop.price;
+                    grouped[projName].minPriceUnit = prop.priceUnit;
+                    grouped[projName].price = prop.price;
+                    grouped[projName].priceUnit = prop.priceUnit;
+                    grouped[projName].id = prop.id;
+                }
+                if (norm > grouped[projName].maxNormalized) {
+                    grouped[projName].maxNormalized = norm;
+                    grouped[projName].maxPriceRaw = prop.price;
+                    grouped[projName].maxPriceUnit = prop.priceUnit;
+                }
+            }
         });
+        const sortConfigs = (a, b) => {
+            const numA = parseFloat(a) || 0;
+            const numB = parseFloat(b) || 0;
+            if (numA !== numB) return numA - numB;
+            return a.localeCompare(b);
+        };
         Object.values(grouped).forEach(proj => {
-            proj.configurations.sort();
-            proj.priceRange = { min: proj.minPrice, max: proj.maxPrice, unit: proj.priceUnit };
+            proj.configurations.sort(sortConfigs);
+            proj.priceRange = { min: proj.minPriceRaw, max: proj.maxPriceRaw, unit: proj.minPriceUnit };
         });
         return Object.values(grouped);
     }, []);
     const { selectedCity, setSelectedCity } = useCity();
     const { user, login } = useAuth();
-    const { ensureIdentified, showFirstVisitPopup } = useInquiryPopup();
+    const { ensureIdentified, showFirstVisitPopup, openPopup } = useInquiryPopup();
     const [properties, setProperties] = useState([]);
     const [nearbyProperties, setNearbyProperties] = useState([]);
     const [nearbyCategory, setNearbyCategory] = useState('All');
@@ -255,7 +280,10 @@ const Home = () => {
                 if (buyListingType === 'Developer') {
                     props = props.filter(p => p.category !== 'Resale' && p.category !== 'Rental');
                 } else if (buyListingType === 'Owner') {
-                    props = props.filter(p => p.category === 'Resale');
+                    // Ensure we don't zero out valid categories if they were explicitly requested
+                    if (!category || category === 'Resale') {
+                        props = props.filter(p => p.category === 'Resale');
+                    }
                 }
             }
 
@@ -441,47 +469,43 @@ const Home = () => {
                 />
             </React.Suspense>
 
-            {/* Modern Promotional Banner with HTML Text Overlay */}
+            {/* Modern Promotional Banner */}
             <div className="promo-banner-section">
                 <div className="promo-banner-bg-wrapper">
                     <img
-                        src="/images/promo-banner-clean.png"
-                        alt="Background"
+                        src="/images/promo-banner-bg.png"
+                        alt="Get your personalized investment plan"
                         className="promo-banner-img"
                     />
-                    <div className="promo-banner-overlay"></div>
                 </div>
-                
-                <div className="promo-banner-content">
-                    <div className="promo-text-group">
-                        <h2 className="promo-title">Get your personalized <br /><span className="highlight-white">investment plan</span></h2>
-                        <p className="promo-description">
-                            Discover smart real estate investment opportunities tailored to your goals with expert guidance and trusted market insights
-                        </p>
-                    </div>
 
-                    <div className="promo-banner-cta">
-                        {bannerCtaSubmitted ? (
-                            <div className="promo-cta-success">
-                                ✅ We will reach out soon...
+                {/* Only the CTA — no text overlay, image already has it */}
+                <div className="promo-banner-cta-wrap">
+                    {bannerCtaSubmitted ? (
+                        <div className="promo-cta-success">
+                            <div className="promo-success-icon">✅</div>
+                            <div className="promo-success-text">
+                                <strong>We'll reach out soon!</strong>
+                                <span>Our expert will contact you within 24 hrs.</span>
                             </div>
-                        ) : (
-                            <div className="promo-action-group">
-                                <button
-                                    className="promo-cta-btn"
-                                    onClick={() => ensureIdentified(
-                                        handleBannerExpertClick,
-                                        'To talk to our expert, please verify your details'
-                                    )}
-                                >
-                                    Talk to Our Expert
-                                </button>
-                                <span className="promo-microcopy">Expert advice in under 24 hrs</span>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="promo-action-group">
+                            <button
+                                className="promo-cta-btn"
+                                onClick={() => ensureIdentified(
+                                    handleBannerExpertClick,
+                                    'To talk to our expert, please verify your details'
+                                )}
+                            >
+                                Talk to Our Expert
+                            </button>
+                            <span className="promo-microcopy">Expert advice in under 24 hrs</span>
+                        </div>
+                    )}
                 </div>
             </div>
+
 
             <ServiceCards 
                 setActiveCategory={setActiveCategory} 
@@ -492,6 +516,7 @@ const Home = () => {
                 ensureIdentified={ensureIdentified}
                 onCompareClick={() => setIsCompareModalOpen(true)}
             />
+
 
             {/* Category Tabs */}
             <div className="home-body">
@@ -537,17 +562,25 @@ const Home = () => {
 
                                 {/* Sub-category Filter for Nearby */}
                                 <div className="nearby-filters">
-                                    {['All', 'Villa', 'Plot', 'Farm Land', 'Residential', 'Resale', 'Rental'].map(cat => (
+                                    {[
+                                        { label: 'All', value: 'All' },
+                                        { label: 'Flat', value: 'Residential' },
+                                        { label: 'Villa', value: 'Villa' },
+                                        { label: 'Plot', value: 'Plot' },
+                                        { label: 'Farm Land', value: 'Farm Land' },
+                                        { label: 'Resale', value: 'Resale' },
+                                        { label: 'Rental', value: 'Rental' },
+                                    ].map(({ label, value }) => (
                                         <button
-                                            key={cat}
-                                            className={`nearby-filter-chip ${nearbyCategory === cat ? 'active' : ''}`}
+                                            key={label}
+                                            className={`nearby-filter-chip ${nearbyCategory === value ? 'active' : ''}`}
                                             onClick={() => {
                                                 const updateFilter = () => {
-                                                    setNearbyCategory(cat);
+                                                    setNearbyCategory(value);
                                                     if (userCoords) {
-                                                        loadNearbyProperties(null, userCoords.lat, userCoords.lng, cat === 'All' ? null : cat);
+                                                        loadNearbyProperties(null, userCoords.lat, userCoords.lng, value === 'All' ? null : value);
                                                     } else {
-                                                        loadNearbyProperties(selectedCity, null, null, cat === 'All' ? null : cat);
+                                                        loadNearbyProperties(selectedCity, null, null, value === 'All' ? null : value);
                                                     }
                                                 };
 
@@ -555,7 +588,7 @@ const Home = () => {
                                                 else ensureIdentified(updateFilter, 'Filter properties by type');
                                             }}
                                         >
-                                            {cat}
+                                            {label}
                                         </button>
                                     ))}
                                 </div>
@@ -593,8 +626,7 @@ const Home = () => {
                         <button
                             className="cta-banner-btn"
                             onClick={() => {
-                                if (user) window.location.href = 'tel:8147069579';
-                                else ensureIdentified(() => window.location.href = 'tel:8147069579', 'Contact our experts');
+                                openPopup({ message: 'Request a Free Consultation' });
                             }}
                         >
                             Get Free Consultation
@@ -610,6 +642,42 @@ const Home = () => {
                         <WhyTrustUs />
                     </React.Suspense>
                 )}
+
+                {/* ── Stats Section ── */}
+                <div className="stats-section">
+                    <div className="stats-section-inner">
+                        <div className="stats-header">
+                            <span className="stats-eyebrow">Our Track Record</span>
+                            <h2 className="stats-title">Numbers That <span className="stats-highlight">Speak</span></h2>
+                        </div>
+                        <div className="stats-grid">
+                            <div className="stat-card">
+                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #eef2ff, #c7d2fe)' }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B3F8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+                                </div>
+                                <div className="stat-card-value">₹150<span className="stat-unit">Cr+</span></div>
+                                <div className="stat-card-label">Inventory Sold</div>
+                                <div className="stat-card-bar" style={{ '--bar-color': '#3B3F8C' }} />
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)' }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                </div>
+                                <div className="stat-card-value">120<span className="stat-unit">+</span></div>
+                                <div className="stat-card-label">Units Sold</div>
+                                <div className="stat-card-bar" style={{ '--bar-color': '#d97706' }} />
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)' }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                </div>
+                                <div className="stat-card-value">3.72<span className="stat-unit"> Cr</span></div>
+                                <div className="stat-card-label">Revenue Generated</div>
+                                <div className="stat-card-bar" style={{ '--bar-color': '#16a34a' }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Top Locations */}
                 <section className="home-section animate-section">

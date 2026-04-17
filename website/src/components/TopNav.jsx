@@ -29,7 +29,7 @@ const TopNav = () => {
         { to: '/', label: 'Home' },
         { to: '/search', label: 'Properties' },
         { to: '/map', label: 'Map' },
-        { to: '/favorites', label: 'Favorites' }
+        { to: '/favorites', label: 'Shortlisted' }
     ];
 
     const handleNavClick = (to, label) => {

@@ -15,14 +15,25 @@ const InquiryPopup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.name.trim()) {
-            setError('Name is required');
+        
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!form.name.trim() || form.name.trim().length < 2 || !nameRegex.test(form.name.trim())) {
+            setError('Please enter a valid name (alphabets only).');
             return;
         }
-        if (!form.phone.trim()) {
-            setError('Mobile number is required');
+        const phoneRegex = /^\d{10}$/;
+        if (!form.phone.trim() || !phoneRegex.test(form.phone.replace(/[\s-]/g, ''))) {
+            setError('Please enter a valid 10-digit mobile number.');
             return;
         }
+        if (form.email && form.email.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(form.email.trim())) {
+                setError('Please enter a valid email address.');
+                return;
+            }
+        }
+        
         setError('');
         setSending(true);
         try {

@@ -15,7 +15,7 @@ const BottomNav = () => {
         { to: '/', icon: Home, label: 'Home' },
         { to: '/search', icon: Search, label: 'Search' },
         { to: '/map', icon: MapPin, label: 'Map' },
-        { to: '/favorites', icon: Heart, label: 'Favorites' },
+        { to: '/favorites', icon: Heart, label: 'Shortlisted' },
         { to: '/profile', icon: User, label: 'Profile' },
     ];
 

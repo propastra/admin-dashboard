@@ -26,6 +26,7 @@ const CitySelect = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [apiCities, setApiCities] = useState([]);
     const [detecting, setDetecting] = useState(false);
+    const [locationError, setLocationError] = useState('');
 
     useEffect(() => {
         const loadCities = async () => {
@@ -56,28 +57,72 @@ const CitySelect = () => {
         navigate(returnTab ? `/?tab=${returnTab}` : '/');
     };
 
+    const reverseGeocode = async (lat, lng) => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            const addr = data.address || {};
+            return addr.city || addr.town || addr.county || addr.state_district || addr.state || null;
+        } catch {
+            return null;
+        }
+    };
+
+    const matchCity = (detectedName) => {
+        if (!detectedName) return null;
+        const lower = detectedName.toLowerCase();
+        const match = allCities.find(c =>
+            lower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(lower)
+        );
+        return match ? match.name : null;
+    };
+
     const handleDetectLocation = () => {
-        if (!("geolocation" in navigator)) {
-            alert("Geolocation is not supported by your browser");
+        if (!('geolocation' in navigator)) {
+            setLocationError('Geolocation is not supported by your browser. Please select a city below.');
             return;
         }
 
         setDetecting(true);
-        navigator.geolocation.getCurrentPosition(
-            () => {
-                // Once permission is granted and coords retrieved, just set generic context and let Home handle the map load
-                setSelectedCity("Current Location");
+        setLocationError('');
+
+        const finish = (cityName) => {
+            setSelectedCity(cityName);
+            setDetecting(false);
+            const returnTab = new URLSearchParams(window.location.search).get('returnTab');
+            navigate(returnTab ? `/?tab=${returnTab}` : '/');
+        };
+
+        const onSuccess = async (position) => {
+            const { latitude, longitude } = position.coords;
+            const rawCity = await reverseGeocode(latitude, longitude);
+            const matched = matchCity(rawCity);
+            finish(matched || 'Current Location');
+        };
+
+        const onErrorFinal = () => {
+            setDetecting(false);
+            setLocationError('Location detection timed out. Please select a city manually.');
+        };
+
+        const onError = (error) => {
+            if (error.code === 1) {
                 setDetecting(false);
-                const returnTab = new URLSearchParams(window.location.search).get('returnTab');
-                navigate(returnTab ? `/?tab=${returnTab}` : '/');
-            },
-            (error) => {
-                console.warn('Geolocation error:', error.message);
-                alert("Failed to get location. Please select a city manually.");
-                setDetecting(false);
-            },
-            { timeout: 10000, enableHighAccuracy: true }
-        );
+                setLocationError('Location permission denied. Please allow access in your browser settings, or select a city below.');
+            } else {
+                // Timeout or unavailable — retry with low accuracy
+                navigator.geolocation.getCurrentPosition(onSuccess, onErrorFinal, {
+                    timeout: 15000, enableHighAccuracy: false, maximumAge: 60000,
+                });
+            }
+        };
+
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+            timeout: 10000, enableHighAccuracy: false, maximumAge: 30000,
+        });
     };
 
     return (
@@ -109,6 +154,11 @@ const CitySelect = () => {
                             <><Navigation size={18} /> Detect My Location</>
                         )}
                     </button>
+                    {locationError && (
+                        <p style={{ marginTop: '10px', fontSize: '13px', color: '#ef4444', textAlign: 'center', lineHeight: '1.5' }}>
+                            ⚠️ {locationError}
+                        </p>
+                    )}
                 </div>
 
                 <div className="city-grid">

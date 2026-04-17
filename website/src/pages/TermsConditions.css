@@ -116,12 +116,14 @@
 }
 
 .terms-section ul li::before {
-    content: '•';
-    color: var(--accent, #F5A623);
-    font-size: 1.5em;
+    content: '';
     position: absolute;
-    left: 0;
-    top: -4px;
+    left: 0.25rem;
+    top: 0.65em;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent, #F5A623);
+    border-radius: 50%;
 }
 
 .contact-details {

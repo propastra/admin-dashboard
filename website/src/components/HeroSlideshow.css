@@ -8,56 +8,42 @@
     overflow: hidden;
 }
 
-.hero-swiper {
-    width: 100%;
-    height: 100%;
+/* Each slide stacks absolutely, crossfade via opacity */
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    will-change: opacity;
 }
 
-.hero-slide-bg {
+.hero-slide--active {
+    opacity: 1;
+}
+
+.hero-slide-img {
     width: 100%;
     height: 100%;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    /* Ken Burns Effect Animation */
-    animation: zoomInOut 20s ease-in-out infinite;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    /* No Ken Burns — saves GPU */
 }
 
 .hero-slide-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Darker overlay for better text readability */
+    inset: 0;
     background: linear-gradient(
         to bottom,
         rgba(31, 35, 107, 0.45) 0%,
         rgba(31, 35, 107, 0.35) 50%,
         rgba(31, 35, 107, 0.6) 100%
     );
+    pointer-events: none;
 }
 
-@keyframes zoomInOut {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.12);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* Ensure Swiper uses the full space */
-.swiper-slide {
-    overflow: hidden;
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
     .hero-slide-overlay {
-        background: rgba(31, 35, 107, 0.55); /* Darker on mobile */
+        background: rgba(31, 35, 107, 0.55);
     }
 }
