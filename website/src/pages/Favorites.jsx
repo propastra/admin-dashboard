@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, ArrowLeft } from 'lucide-react';
-import { getFavorites } from '../services/api';
+import { getFavorites, getProperties } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import PropertyCard from '../components/PropertyCard';
 import './Favorites.css';
@@ -22,8 +22,45 @@ const Favorites = () => {
 
     const loadFavorites = async () => {
         try {
-            const res = await getFavorites();
-            setFavorites(res.data);
+            const [favsRes, propsRes] = await Promise.all([
+                getFavorites(),
+                getProperties({ limit: 1000 })
+            ]);
+
+            const rawFavs = favsRes.data || [];
+            const rawProps = propsRes.data?.properties || [];
+
+            // Build a set of project names that have at least one active configuration
+            const activeProjects = new Set();
+            rawProps.forEach(p => {
+                if (p.status !== 'Sold') {
+                    const projNameRaw = p.projectName || p.propertyName.split(' - ')[0].trim();
+                    const projName = projNameRaw.split('  ')[0].trim().toLowerCase();
+                    activeProjects.add(projName);
+                }
+            });
+
+            // Map favorite items to reflect aggregated project status
+            const mappedFavs = rawFavs.map(fav => {
+                if (fav.Property) {
+                    const projNameRaw = fav.Property.projectName || fav.Property.propertyName.split(' - ')[0].trim();
+                    const projName = projNameRaw.split('  ')[0].trim().toLowerCase();
+
+                    // If the overall project has active configurations, it is not Sold Out
+                    if (activeProjects.has(projName)) {
+                        return {
+                            ...fav,
+                            Property: {
+                                ...fav.Property,
+                                status: 'Available'
+                            }
+                        };
+                    }
+                }
+                return fav;
+            });
+
+            setFavorites(mappedFavs);
         } catch (err) {
             console.error('Failed to load favorites:', err);
         } finally {

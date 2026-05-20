@@ -87,7 +87,7 @@ app.use('/api/website/favorites', require('./routes/websiteFavorites'));
 app.use('/api/website/developers', require('./routes/developers'));
 
 // Relogen Agency Website Routes
-app.use('/api/relogen', require('./routes/relogenContacts'));
+// app.use('/api/relogen', require('./routes/relogenContacts'));
 
 // Sync Database and Start Server
 app.get('/', (req, res) => {
@@ -100,16 +100,16 @@ app.use((err, req, res, next) => {
     if (err instanceof require('multer').MulterError) {
         return res.status(400).json({ message: 'File upload error: ' + err.message, error: err.code });
     }
-    res.status(err.status || 500).json({ 
+    res.status(err.status || 500).json({
         message: err.message || 'Internal Server Error',
-        error: process.env.NODE_ENV !== 'production' ? err.stack : undefined 
+        error: process.env.NODE_ENV !== 'production' ? err.stack : undefined
     });
 });
 
 sequelize.sync()
     .then(async () => {
         logger.info('Database synced');
-        
+
         // Safely add missing columns to production DB since { alter: true } is disabled
         try {
             await sequelize.query('ALTER TABLE Inquiries ADD COLUMN propertyId CHAR(36);');
@@ -117,14 +117,14 @@ sequelize.sync()
         } catch (e) {
             // Column already exists
         }
-        
+
         try {
             await sequelize.query('ALTER TABLE Inquiries ADD COLUMN websiteUserId CHAR(36);');
             logger.info('Added websiteUserId to Inquiries');
         } catch (e) {
             // Column already exists
         }
-        
+
         try {
             await sequelize.query('ALTER TABLE Inquiries ADD COLUMN email VARCHAR(255);');
             logger.info('Added email to Inquiries');

@@ -344,4 +344,40 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
+// @route   PATCH api/properties/:id/toggle-verified
+// @desc    Toggle isVerified status of a property
+// @access  Private
+router.patch('/:id/toggle-verified', auth, async (req, res) => {
+    try {
+        const property = await Property.findByPk(req.params.id);
+        if (!property) return res.status(404).json({ message: 'Property not found' });
+
+        property.isVerified = !property.isVerified;
+        await property.save();
+
+        res.json(property);
+    } catch (err) {
+        console.error('Error toggling property verification:', err);
+        res.status(500).json({ message: 'Server error toggling verification status', error: err.message });
+    }
+});
+
+// @route   PATCH api/properties/:id/toggle-sold
+// @desc    Toggle sold status of a property
+// @access  Private
+router.patch('/:id/toggle-sold', auth, async (req, res) => {
+    try {
+        const property = await Property.findByPk(req.params.id);
+        if (!property) return res.status(404).json({ message: 'Property not found' });
+
+        property.status = property.status === 'Sold' ? 'Available' : 'Sold';
+        await property.save();
+
+        res.json(property);
+    } catch (err) {
+        console.error('Error toggling property sold status:', err);
+        res.status(500).json({ message: 'Server error toggling sold status', error: err.message });
+    }
+});
+
 module.exports = router;

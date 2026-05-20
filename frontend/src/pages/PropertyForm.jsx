@@ -341,9 +341,29 @@ const PropertyForm = () => {
                     <input name="builderInfo" value={formData.builderInfo} onChange={handleChange} className="form-input" placeholder="e.g. Grade A Builder" />
                 </div>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input name="isVerified" type="checkbox" checked={formData.isVerified} onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })} id="isVerified" />
-                    <label htmlFor="isVerified" className="form-label" style={{ marginBottom: 0 }}>Is Verified</label>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                            name="isVerified" 
+                            type="checkbox" 
+                            checked={formData.isVerified} 
+                            onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })} 
+                            id="isVerified" 
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="isVerified" className="form-label" style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '500' }}>Is Verified</label>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                            name="isSoldOut" 
+                            type="checkbox" 
+                            checked={formData.status === 'Sold'} 
+                            onChange={(e) => setFormData({ ...formData, status: e.target.checked ? 'Sold' : 'Available' })} 
+                            id="isSoldOut" 
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="isSoldOut" className="form-label" style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '500' }}>Soldout Property</label>
+                    </div>
                 </div>
 
                 <div className="form-group">

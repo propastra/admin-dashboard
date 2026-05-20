@@ -164,7 +164,8 @@ const SearchPage = () => {
                             minNormalized: getNormalized(prop.price, prop.priceUnit),
                             maxNormalized: getNormalized(prop.price, prop.priceUnit),
                             maxPrice: prop.price,
-                            maxPriceUnit: prop.priceUnit
+                            maxPriceUnit: prop.priceUnit,
+                            allSold: prop.status === 'Sold'
                         };
                     } else {
                         grouped[projName].variantCount += 1;
@@ -186,6 +187,12 @@ const SearchPage = () => {
                                 grouped[projName].id = prop.id;
                             }
                         }
+                        if (prop.status !== 'Sold') {
+                            grouped[projName].allSold = false;
+                        }
+                    }
+                    if (prop.isVerified) {
+                        grouped[projName].isVerified = true;
                     }
                 });
                 Object.values(grouped).forEach(proj => {
@@ -196,6 +203,7 @@ const SearchPage = () => {
                         return a.localeCompare(b);
                     };
                     proj.allConfigurations.sort(sortConfigs);
+                    proj.status = proj.allSold ? 'Sold' : 'Available';
                 });
                 return Object.values(grouped);
             };
