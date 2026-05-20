@@ -42,6 +42,14 @@ const Home = () => {
                 grouped[projName].minPriceUnit = prop.priceUnit;
                 grouped[projName].maxPriceRaw = prop.price;
                 grouped[projName].maxPriceUnit = prop.priceUnit;
+                grouped[projName].allSold = prop.status === 'Sold';
+            } else {
+                if (prop.status !== 'Sold') {
+                    grouped[projName].allSold = false;
+                }
+            }
+            if (prop.isVerified) {
+                grouped[projName].isVerified = true;
             }
             if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
                 grouped[projName].configurations.push(prop.configuration);
@@ -72,6 +80,7 @@ const Home = () => {
         Object.values(grouped).forEach(proj => {
             proj.configurations.sort(sortConfigs);
             proj.priceRange = { min: proj.minPriceRaw, max: proj.maxPriceRaw, unit: proj.minPriceUnit };
+            proj.status = proj.allSold ? 'Sold' : 'Available';
         });
         return Object.values(grouped);
     }, []);

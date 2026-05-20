@@ -139,7 +139,7 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     return (
         <div className="property-card" onClick={openPropertyWithInquiry}>
             <div className="property-card-image">
-                <img src={photoUrl} alt={displayTitle} loading="lazy" decoding="async" width="400" height="240" />
+                <img src={photoUrl} alt={displayTitle} className="property-card-cover" loading="lazy" decoding="async" width="400" height="240" />
                 <div className="property-card-badges">
                     <span className="badge-category">{property.category}</span>
                     {property.distance && (
@@ -151,23 +151,31 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
                 )}
                 <div className="property-card-actions">
                     <button
-                        className={`action-icon ${isFavorited ? 'favorited' : ''}`}
-                        onClick={handleFavorite}
-                    >
-                        <Heart size={18} fill={isFavorited ? '#EF476F' : 'none'} color={isFavorited ? '#EF476F' : 'currentColor'} />
-                    </button>
-                    <button className="action-icon" onClick={handleShare}>
-                        <Share2 size={18} />
-                    </button>
-                </div>
-            </div>
-
-            <div className="property-card-body">
-                <div className="property-card-header">
-                    <h3 className="property-card-title">{displayTitle}</h3>
+                         className={`action-icon ${isFavorited ? 'favorited' : ''}`}
+                         onClick={handleFavorite}
+                     >
+                         <Heart size={18} fill={isFavorited ? '#EF476F' : 'none'} color={isFavorited ? '#EF476F' : 'currentColor'} />
+                     </button>
+                     <button className="action-icon" onClick={handleShare}>
+                         <Share2 size={18} />
+                     </button>
+                 </div>
+             </div>
+ 
+             <div className="property-card-body">
+                 <div className="property-card-header">
+                     <h3 className="property-card-title">
+                         {displayTitle}
+                     </h3>
                     <div className="property-card-rating">
                         <Star size={14} fill="#FFB703" color="#FFB703" />
                         <span>{rating}</span>
+                        {property.isVerified && (
+                            <img src="/Verified.png" alt="Verified By PropAstra" className="badge-verified-inline" title="Verified By PropAstra" />
+                        )}
+                        {property.status === 'Sold' && (
+                            <img src="/Soldout.png" alt="Sold Out" className="badge-soldout-inline" title="Sold Out" />
+                        )}
                     </div>
                 </div>
 

@@ -267,25 +267,73 @@ const PropertyDetail = () => {
 
             setProjectProperties(allProjProps);
 
-            // Default active config to current property's ID
-            setActiveConfig(property.id);
+            // Default active config
+            const isInternalUnits = property.floorPlan &&
+                property.floorPlan.length > 0 &&
+                typeof property.floorPlan[0] === 'object' &&
+                (property.floorPlan[0].configurations || property.floorPlan[0].type);
+
+            if (isInternalUnits) {
+                const firstAvailableIdx = property.floorPlan.findIndex(unit => !(unit.status === 'Sold' || unit.isSold));
+                if (firstAvailableIdx !== -1) {
+                    setActiveConfig(`idx-${firstAvailableIdx}`);
+                } else {
+                    setActiveConfig('idx-0');
+                }
+            } else {
+                const firstAvailable = allProjProps.find(p => p.status !== 'Sold');
+                if (firstAvailable) {
+                    setActiveConfig(firstAvailable.id);
+                } else {
+                    setActiveConfig(property.id);
+                }
+            }
 
             // 2. Load SIMILAR properties for the diversity section at the bottom
             const cityPart = property.location ? property.location.split(',').pop().trim().replace(/\.$/, '') : undefined;
             const similarRes = await getProperties({
                 category: property.category,
                 city: cityPart,
-                limit: 30 // Increase limit to have more to choose from after filtering
+                limit: 100 // Fetch a larger set to group properly
             });
 
-            const filtered = (similarRes.data.properties || []).filter(p => p.id !== property.id);
+            // Group fetched similar properties by project to ensure correct project-level sold out calculations
+            const grouped = {};
+            (similarRes.data.properties || []).forEach(p => {
+                const projNameRaw = p.projectName || p.propertyName.split(' - ')[0].trim();
+                const projName = projNameRaw.split('  ')[0].trim();
+                if (!grouped[projName]) {
+                    grouped[projName] = { 
+                        ...p,
+                        variantCount: 1,
+                        allConfigurations: p.configuration && p.configuration.trim() !== '' ? [p.configuration] : [],
+                        allSold: p.status === 'Sold'
+                    };
+                } else {
+                    grouped[projName].variantCount += 1;
+                    if (p.configuration && p.configuration.trim() !== '' && !grouped[projName].allConfigurations.includes(p.configuration)) {
+                        grouped[projName].allConfigurations.push(p.configuration);
+                    }
+                    if (p.status !== 'Sold') {
+                        grouped[projName].allSold = false;
+                    }
+                }
+            });
+
+            Object.values(grouped).forEach(proj => {
+                proj.status = proj.allSold ? 'Sold' : 'Available';
+            });
+
+            const groupedList = Object.values(grouped);
+            const filtered = groupedList.filter(p => p.id !== property.id);
             const currentProjLower = currentProject.toLowerCase();
             const seenProjects = new Set([currentProjLower]);
             const diverseProperties = [];
             const otherProjectsProperties = [];
 
             for (const p of filtered) {
-                const proj = getDisplayTitle(p).toLowerCase();
+                const projNameRaw = p.projectName || p.propertyName.split(' - ')[0].trim();
+                const proj = projNameRaw.split('  ')[0].trim().toLowerCase();
 
                 // STRICT EXCLUSION: Never show anything from the same project
                 if (proj === currentProjLower) continue;
@@ -354,6 +402,26 @@ const PropertyDetail = () => {
         );
     }
 
+    const isProjectAllSold = () => {
+        const isInternalUnits = property.floorPlan &&
+            property.floorPlan.length > 0 &&
+            typeof property.floorPlan[0] === 'object' &&
+            (property.floorPlan[0].configurations || property.floorPlan[0].type);
+
+        const units = isInternalUnits ? property.floorPlan : projectProperties;
+        
+        if (units.length === 0) {
+            return property.status === 'Sold';
+        }
+        
+        return units.every(unit => {
+            if (isInternalUnits) {
+                return unit.status === 'Sold' || unit.isSold;
+            }
+            return unit.status === 'Sold';
+        });
+    };
+
     let photos = [];
     if (property.coverPhoto) {
         photos.push(property.coverPhoto.startsWith('http') ? property.coverPhoto : `${BACKEND_URL}${property.coverPhoto.startsWith('/') ? '' : '/'}${property.coverPhoto}`);
@@ -398,9 +466,40 @@ const PropertyDetail = () => {
                             <h1 className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 {getDisplayTitle(property)}
                                 {property.isVerified && (
-                                    <span style={{ backgroundColor: '#10b981', color: 'white', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Check size={12} /> Verified
-                                    </span>
+                                    <img 
+                                        src="/Verified.png" 
+                                        alt="Verified By PropAstra" 
+                                        style={{ 
+                                            height: '22px', 
+                                            width: '22px', 
+                                            objectFit: 'contain', 
+                                            filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.12))',
+                                            transition: 'transform 0.25s ease',
+                                            cursor: 'pointer',
+                                            marginLeft: '6px'
+                                        }} 
+                                        title="Verified By PropAstra"
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15) rotate(3deg)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0deg)'}
+                                    />
+                                )}
+                                {isProjectAllSold() && (
+                                    <img 
+                                        src="/Soldout.png" 
+                                        alt="Sold Out" 
+                                        style={{ 
+                                            height: '22px', 
+                                            width: '22px', 
+                                            objectFit: 'contain', 
+                                            filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.12))',
+                                            transition: 'transform 0.25s ease',
+                                            cursor: 'pointer',
+                                            marginLeft: '6px'
+                                        }} 
+                                        title="Sold Out"
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15) rotate(3deg)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0deg)'}
+                                    />
                                 )}
                             </h1>
                             <div className="header-price-row">
@@ -423,12 +522,17 @@ const PropertyDetail = () => {
                 {/* 2. Masonry Gallery */}
                 <div className="detail-masonry-gallery">
                     {/* Main large image */}
-                    <div className="col-main image-wrap" onClick={() => {
+                    <div className="col-main image-wrap" style={{ position: 'relative' }} onClick={() => {
                         const open = () => { setActivePhoto(0); setIsGalleryOpen(true); };
                         if (user) open();
                         else ensureIdentified(open, 'To view individual photos, we\'d love to know you better');
                     }}>
                         <img src={photos[0]} alt="Main view" className="masonry-img main-img" />
+                        {isProjectAllSold() && (
+                            <div className="sold-out-overlay" style={{ borderRadius: '12px' }}>
+                                <img src="/Soldout.png" alt="Sold Out" className="sold-out-stamp-img detail-stamp" />
+                            </div>
+                        )}
                     </div>
 
                     {/* 2x2 Grid of smaller images */}
@@ -729,30 +833,37 @@ const PropertyDetail = () => {
                                         const name = isPlot ? (formatDimensions(unit.dimensions) || unit.configuration || 'Plot') : (isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
                                         const price = isInternalUnits ? (unit.priceRange || unit.price) : formatPrice(unit.price, unit.priceUnit);
                                         const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
+                                        const sold = isInternalUnits ? (unit.status === 'Sold' || unit.isSold) : (unit.status === 'Sold');
 
                                         return (
                                             <button
                                                 key={id}
                                                 className={`unit-tab ${isActive ? 'active' : ''}`}
-                                                onClick={() => setActiveConfig(id)}
+                                                onClick={() => !sold && setActiveConfig(id)}
+                                                disabled={sold}
                                                 style={{
                                                     padding: '12px 24px',
-                                                    border: isActive ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-                                                    backgroundColor: isActive ? '#eff6ff' : '#fff',
+                                                    border: isActive ? '2px solid #3b82f6' : (sold ? '1px dashed #d1d5db' : '1px solid #e5e7eb'),
+                                                    backgroundColor: isActive ? '#eff6ff' : (sold ? '#f9fafb' : '#fff'),
                                                     borderRadius: '12px',
-                                                    cursor: 'pointer',
+                                                    cursor: sold ? 'not-allowed' : 'pointer',
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     alignItems: 'flex-start',
                                                     minWidth: '160px',
                                                     transition: 'all 0.2s',
-                                                    textAlign: 'left'
+                                                    textAlign: 'left',
+                                                    opacity: sold ? 0.55 : 1,
+                                                    position: 'relative'
                                                 }}
                                             >
-                                                <div className="unit-tab-title" style={{ fontSize: '14px', fontWeight: '700', color: isActive ? '#1e40af' : '#4b5563', marginBottom: '4px' }}>
-                                                    {name}
+                                                <div className="unit-tab-title" style={{ fontSize: '14px', fontWeight: '700', color: isActive ? '#1e40af' : (sold ? '#9ca3af' : '#4b5563'), marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'space-between' }}>
+                                                    <span>{name}</span>
+                                                    {sold && (
+                                                        <span style={{ fontSize: '10px', color: '#ef4444', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>Sold</span>
+                                                    )}
                                                 </div>
-                                                <div className="unit-tab-price" style={{ fontSize: '13px', color: '#6b7280' }}>
+                                                <div className="unit-tab-price" style={{ fontSize: '13px', color: sold ? '#9ca3af' : '#6b7280', textDecoration: sold ? 'line-through' : 'none' }}>
                                                     {price}
                                                 </div>
                                             </button>

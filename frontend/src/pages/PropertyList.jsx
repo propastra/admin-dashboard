@@ -8,6 +8,8 @@ const PropertyList = () => {
     const [properties, setProperties] = useState([]);
     const [filter, setFilter] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
+    const [verifiedFilter, setVerifiedFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('All');
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(false);
     
@@ -303,6 +305,26 @@ const PropertyList = () => {
         }
     };
 
+    const toggleVerified = async (id) => {
+        try {
+            const res = await api.patch(`/properties/${id}/toggle-verified`);
+            setProperties(properties.map(p => p.id === id ? { ...p, isVerified: res.data.isVerified } : p));
+        } catch (err) {
+            console.error("Failed to toggle verification status", err);
+            alert("Failed to toggle verification status");
+        }
+    };
+
+    const toggleSold = async (id) => {
+        try {
+            const res = await api.patch(`/properties/${id}/toggle-sold`);
+            setProperties(properties.map(p => p.id === id ? { ...p, status: res.data.status } : p));
+        } catch (err) {
+            console.error("Failed to toggle sold status", err);
+            alert("Failed to toggle sold status");
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -380,6 +402,27 @@ const PropertyList = () => {
                 </div>
                 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select 
+                        value={verifiedFilter} 
+                        onChange={(e) => setVerifiedFilter(e.target.value)} 
+                        style={{ padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'white', color: '#374151', cursor: 'pointer' }}
+                    >
+                        <option value="All">All Verification</option>
+                        <option value="Verified">Verified Only</option>
+                        <option value="Unverified">Unverified Only</option>
+                    </select>
+                    <select 
+                        value={statusFilter} 
+                        onChange={(e) => setStatusFilter(e.target.value)} 
+                        style={{ padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'white', color: '#374151', cursor: 'pointer' }}
+                    >
+                        <option value="All">All Status</option>
+                        <option value="Available">Available</option>
+                        <option value="Sold">Sold Out</option>
+                        <option value="Pending">Pending</option>
+                        <option value="EOI">EOI</option>
+                        <option value="RTMI">RTMI</option>
+                    </select>
                     <input 
                         type="text" 
                         placeholder="Search by property, project, or price..." 
@@ -408,6 +451,15 @@ const PropertyList = () => {
                         {properties
                             .filter(p => filter === 'All' || p.category === filter)
                             .filter(p => {
+                                if (verifiedFilter === 'Verified') return p.isVerified;
+                                if (verifiedFilter === 'Unverified') return !p.isVerified;
+                                return true;
+                            })
+                            .filter(p => {
+                                if (statusFilter === 'All') return true;
+                                return p.status === statusFilter;
+                            })
+                            .filter(p => {
                                 if (!searchTerm) return true;
                                 const term = searchTerm.toLowerCase();
                                 const propName = (p.propertyName || '').toLowerCase();
@@ -425,7 +477,99 @@ const PropertyList = () => {
                                         <div style={{ width: '50px', height: '50px', backgroundColor: '#e5e7eb', borderRadius: '4px' }}></div>
                                     )}
                                 </td>
-                                <td style={{ padding: '12px' }}>{property.propertyName}</td>
+                                <td style={{ padding: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontWeight: '500' }}>{property.propertyName}</span>
+                                        {property.isVerified ? (
+                                            <span 
+                                                onClick={() => toggleVerified(property.id)}
+                                                style={{
+                                                    backgroundColor: '#d1fae5',
+                                                    color: '#065f46',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '2px',
+                                                    border: '1px solid #a7f3d0',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }} 
+                                                title="Click to unverify property"
+                                            >
+                                                ✓ Verified
+                                            </span>
+                                        ) : (
+                                            <span 
+                                                onClick={() => toggleVerified(property.id)}
+                                                style={{
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: '#9ca3af',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'normal',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '2px',
+                                                    border: '1px dashed #d1d5db',
+                                                    cursor: 'pointer',
+                                                    opacity: 0.6,
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                title="Click to verify property"
+                                            >
+                                                + Verify
+                                            </span>
+                                        )}
+                                        {property.status === 'Sold' ? (
+                                            <span 
+                                                onClick={() => toggleSold(property.id)}
+                                                style={{
+                                                    backgroundColor: '#fee2e2',
+                                                    color: '#991b1b',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '2px',
+                                                    border: '1px solid #fca5a5',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }} 
+                                                title="Click to mark as Available"
+                                            >
+                                                ● Sold Out
+                                            </span>
+                                        ) : (
+                                            <span 
+                                                onClick={() => toggleSold(property.id)}
+                                                style={{
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: '#9ca3af',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'normal',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '2px',
+                                                    border: '1px dashed #d1d5db',
+                                                    cursor: 'pointer',
+                                                    opacity: 0.6,
+                                                    transition: 'all 0.2s'
+                                                }} 
+                                                title="Click to mark as Sold Out"
+                                            >
+                                                + Soldout
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td style={{ padding: '12px' }}>{property.category}</td>
                                 <td style={{ padding: '12px' }}>{property.location}</td>
                                 <td style={{ padding: '12px' }}>{property.price} {property.priceUnit}</td>
@@ -439,24 +583,34 @@ const PropertyList = () => {
                                     )}
                                 </td>
                                 <td style={{ padding: '12px' }}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        backgroundColor:
-                                            property.status === 'Available' ? '#d1fae5' :
-                                                property.status === 'Pending' ? '#fee2e2' :
-                                                    property.status === 'EOI' ? '#dbeafe' : // Blue for EOI
-                                                        property.status === 'RTMI' ? '#fef3c7' : // Yellow for RTMI
-                                                            '#f3f4f6', // Gray for Sold or others
-                                        color:
-                                            property.status === 'Available' ? '#065f46' :
-                                                property.status === 'Pending' ? '#991b1b' :
-                                                    property.status === 'EOI' ? '#1e40af' :
-                                                        property.status === 'RTMI' ? '#92400e' :
-                                                            '#374151'
-                                    }}>
-                                        {property.status}
+                                    <span 
+                                        onClick={() => toggleSold(property.id)}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            backgroundColor:
+                                                property.status === 'Available' ? '#d1fae5' :
+                                                    property.status === 'Pending' ? '#fee2e2' :
+                                                        property.status === 'EOI' ? '#dbeafe' : // Blue for EOI
+                                                            property.status === 'RTMI' ? '#fef3c7' : // Yellow for RTMI
+                                                                property.status === 'Sold' ? '#fef2f2' : // Light red for Sold Out
+                                                                    '#f3f4f6', // Gray for others
+                                            color:
+                                                property.status === 'Available' ? '#065f46' :
+                                                    property.status === 'Pending' ? '#991b1b' :
+                                                        property.status === 'EOI' ? '#1e40af' :
+                                                            property.status === 'RTMI' ? '#92400e' :
+                                                                property.status === 'Sold' ? '#ef4444' : // Red for Sold Out
+                                                                    '#374151',
+                                            border:
+                                                property.status === 'Sold' ? '1px solid #fca5a5' : 'none'
+                                        }}
+                                        title="Click to toggle Sold Out status"
+                                    >
+                                        {property.status === 'Sold' ? 'Sold Out' : property.status}
                                     </span>
                                 </td>
                                 <td style={{ padding: '12px' }}>
