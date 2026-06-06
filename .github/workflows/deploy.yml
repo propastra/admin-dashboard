@@ -50,9 +50,23 @@ jobs:
             6gq5BD0woQDHHDTazTSTvdh4d7sLqEoJACtlneqyRdhBwnCyMVamDW1S+tTJ9HkD
             zUuE/sdT+RfLMe2y7UfNZlTQfsmOiUGV7jLDnqQv2WhEPVwoh2IcsQ==
             -----END RSA PRIVATE KEY-----
-          command_timeout: 12m
+          command_timeout: 20m
           script: |
             set -e
+
+            # ============================================================
+            # STEP 0: SETUP SWAP (Prevent OOM on t3.micro)
+            # ============================================================
+            echo "=== [0/6] Setting up Swap ==="
+            if [ ! -f /swapfile ]; then
+                sudo fallocate -l 1.5G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1536
+                sudo chmod 600 /swapfile
+                sudo mkswap /swapfile
+                sudo swapon /swapfile || true
+                echo "Swap created!"
+            else
+                echo "Swap already exists."
+            fi
 
             BACKEND_DIR="/home/ubuntu/Admin_dashboard/backend"
             SAFE_UPLOADS="/home/ubuntu/persistent_data/uploads"
@@ -159,6 +173,7 @@ jobs:
             rm -rf dist
 
             npm install --prefer-offline 2>/dev/null || npm install
+            export NODE_OPTIONS="--max-old-space-size=1024"
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Frontend deployed!"
@@ -173,6 +188,7 @@ jobs:
             rm -rf dist
 
             npm install --prefer-offline 2>/dev/null || npm install
+            export NODE_OPTIONS="--max-old-space-size=1024"
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Website deployed!"
