@@ -325,9 +325,42 @@ const PropertyDetail = () => {
         }
     };
 
+    const parseConfigs = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        try {
+            const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+                return parsed.map(c => c.configuration);
+            }
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    const formatConfiguration = (config) => {
+        if (!config || config === 'N/A') return 'N/A';
+        const parsed = parseConfigs(config);
+        if (parsed && parsed.length > 0) return parsed.join(', ');
+        return String(config);
+    };
+
     const formatDimensions = (dim) => {
         if (!dim || dim === 'N/A') return 'N/A';
-        const str = String(dim).trim();
+        let str = String(dim).trim();
+        
+        try {
+            if (str.startsWith('[') && str.endsWith(']')) {
+                const parsed = JSON.parse(str);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    str = parsed.join(', ');
+                }
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+        
         if (str.toLowerCase().includes('sq') || str.toLowerCase().includes('acre') || str.toLowerCase().includes('hectare') || str.toLowerCase().includes('ft')) {
             return str;
         }
@@ -336,8 +369,18 @@ const PropertyDetail = () => {
 
     const formatPrice = (price, unit) => {
         const p = parseFloat(price);
-        if (unit === 'Cr') return `₹${p} Cr`;
-        if (unit === 'Lakhs') return `₹${p} Lakhs`;
+        if (isNaN(p)) return '—';
+        
+        const u = (unit || '').toLowerCase().trim();
+        if (u === 'cr' || u === 'crore' || u === 'crores') return `₹${p} Cr`;
+        if (u === 'lakhs' || u === 'lakh' || u === 'lac' || u === 'lacs') return `₹${p} Lakhs`;
+        if (u === 'thousands' || u === 'thousand' || u === 'k') return `₹${p} Thousand`;
+        
+        // Fallback for cases where it's a raw large number (e.g. 500000)
+        if (p >= 10000000) return `₹${(p / 10000000).toFixed(2).replace(/\.00$/, '')} Cr`;
+        if (p >= 100000) return `₹${(p / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs`;
+        if (p >= 1000) return `₹${(p / 1000).toFixed(2).replace(/\.00$/, '')} Thousand`; // Note: wait, if p is 85000, 85000 / 1000 = 85.
+        
         return `₹${p.toLocaleString()}`;
     };
 
@@ -398,8 +441,30 @@ const PropertyDetail = () => {
                             <h1 className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 {getDisplayTitle(property)}
                                 {property.isVerified && (
-                                    <span style={{ backgroundColor: '#10b981', color: 'white', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Check size={12} /> Verified
+                                    <svg width="24" height="24" viewBox="0 0 40 40" fill="none" title="Verified Property" style={{ flexShrink: 0 }}>
+                                        <circle cx="20" cy="20" r="19" fill="#10B981" />
+                                        <path d="M12 20.5l5.5 5.5 11-12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                        {[0,45,90,135,180,225,270,315].map((angle, i) => (
+                                            <rect key={i} x="18.5" y="0" width="3" height="6" rx="1.5" fill="#10B981"
+                                                transform={`rotate(${angle} 20 20)`} />
+                                        ))}
+                                    </svg>
+                                )}
+                                {property.isSoldOut && (
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                        background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+                                        color: 'white', fontSize: '11px', fontWeight: '800',
+                                        padding: '3px 10px', borderRadius: '5px', letterSpacing: '0.6px',
+                                        textTransform: 'uppercase', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.35)',
+                                        flexShrink: 0
+                                    }}>
+                                        <svg width="10" height="10" viewBox="0 0 20 20" fill="none">
+                                            <rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="white" strokeWidth="2"/>
+                                            <line x1="5" y1="5" x2="15" y2="15" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                                            <line x1="15" y1="5" x2="5" y2="15" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                                        </svg>
+                                        Sold Out
                                     </span>
                                 )}
                             </h1>
@@ -465,12 +530,12 @@ const PropertyDetail = () => {
                         {property.configuration && !property.category?.toLowerCase().includes('plot') && (
                             <div className="strip-item">
                                 <BiBed size={20} className="strip-icon" />
-                                <span className="strip-text"><strong>{property.configuration}</strong> Bedrooms</span>
+                                <span className="strip-text"><strong>{formatConfiguration(property.configuration)}</strong> Bedrooms</span>
                             </div>
                         )}
                         <div className="strip-item">
                             <Check size={18} className="strip-icon" />
-                            <span className="strip-text"><strong>{property.status}</strong></span>
+                            <span className="strip-text"><strong>{property.status === 'Sold' ? 'Sold Out' : property.status}</strong></span>
                         </div>
                         <div className="strip-item">
                             <Check size={18} className="strip-icon" />
@@ -494,7 +559,7 @@ const PropertyDetail = () => {
                         </div>
                         <div className="metric-cell">
                             <span className="metric-label">Status</span>
-                            <span className="metric-value">{property.status}</span>
+                            <span className="metric-value">{property.status === 'Sold' ? 'Sold Out' : property.status}</span>
                         </div>
                         <div className="metric-cell">
                             <span className="metric-label">Furnishing</span>
@@ -705,14 +770,39 @@ const PropertyDetail = () => {
                     )}
 
                     {(() => {
-                        // Detect data structure
-                        const isInternalUnits = property.floorPlan &&
+                        // Safe parsing helper
+                        const parseArray = (val) => {
+                            if (!val) return [];
+                            if (Array.isArray(val)) return val;
+                            try {
+                                const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+                                return Array.isArray(parsed) ? parsed : [];
+                            } catch (e) {
+                                return [];
+                            }
+                        };
+
+                        const configs = parseArray(property.configuration);
+                        const isNewMultiConfig = configs.length > 0 && typeof configs[0] === 'object';
+
+                        const isInternalUnits = !isNewMultiConfig && property.floorPlan &&
                             property.floorPlan.length > 0 &&
                             typeof property.floorPlan[0] === 'object' &&
                             (property.floorPlan[0].configurations || property.floorPlan[0].type);
 
-                        // If not internal units, we use the projectProperties (Brigade style)
-                        const units = isInternalUnits ? property.floorPlan : projectProperties;
+                        let units = [];
+                        if (isNewMultiConfig) {
+                            units = configs.map((c, idx) => ({
+                                id: `idx-${idx}`,
+                                configuration: c.configuration,
+                                dimensions: c.dimensions,
+                                price: c.price,
+                                priceUnit: c.priceUnit || 'Lakhs',
+                                floorPlan: c.floorPlan ? [c.floorPlan] : (property.floorPlan && property.floorPlan[idx] ? [property.floorPlan[idx]] : [])
+                            }));
+                        } else {
+                            units = isInternalUnits ? property.floorPlan : projectProperties;
+                        }
 
                         if (units.length === 0) return null;
 
@@ -724,11 +814,11 @@ const PropertyDetail = () => {
 
                                 <div className="units-tabs" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
                                     {units.map((unit, idx) => {
-                                        const id = isInternalUnits ? `idx-${idx}` : unit.id;
+                                        const id = (isInternalUnits || isNewMultiConfig) ? `idx-${idx}` : unit.id;
                                         const isPlot = property.category?.toLowerCase().includes('plot') || unit.category?.toLowerCase().includes('plot');
-                                        const name = isPlot ? (formatDimensions(unit.dimensions) || unit.configuration || 'Plot') : (isInternalUnits ? (unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
-                                        const price = isInternalUnits ? (unit.priceRange || unit.price) : formatPrice(unit.price, unit.priceUnit);
-                                        const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
+                                        const name = isPlot ? (formatDimensions(unit.dimensions) || unit.configuration || 'Plot') : ((isInternalUnits || isNewMultiConfig) ? (unit.configuration || unit.type || `Unit ${idx + 1}`) : (unit.configuration || `${unit.bhk || 1} BHK`));
+                                        const price = formatPrice(unit.price, unit.priceUnit);
+                                        const isActive = (isInternalUnits || isNewMultiConfig) ? (activeConfig === id || (!String(activeConfig).startsWith('idx-') && idx === 0)) : activeConfig === id;
 
                                         return (
                                             <button
@@ -762,8 +852,8 @@ const PropertyDetail = () => {
 
                                 <div className="unit-tab-content">
                                     {units.map((unit, idx) => {
-                                        const id = isInternalUnits ? `idx-${idx}` : unit.id;
-                                        const isActive = isInternalUnits ? (activeConfig === id || (!activeConfig.startsWith('idx-') && idx === 0)) : activeConfig === id;
+                                        const id = (isInternalUnits || isNewMultiConfig) ? `idx-${idx}` : unit.id;
+                                        const isActive = (isInternalUnits || isNewMultiConfig) ? (activeConfig === id || (!String(activeConfig).startsWith('idx-') && idx === 0)) : activeConfig === id;
                                         if (!isActive) return null;
 
                                         if (isInternalUnits) {
@@ -811,7 +901,7 @@ const PropertyDetail = () => {
                                             );
                                         } else {
                                             // Brigade style rendering
-                                            const plans = unit.floorPlan && unit.floorPlan.length > 0 ? unit.floorPlan : [unit.photos[0]].filter(Boolean);
+                                            const plans = unit.floorPlan && unit.floorPlan.length > 0 ? unit.floorPlan : (unit.photos && unit.photos.length > 0 ? [unit.photos[0]] : []).filter(Boolean);
                                             return (
                                                 <div key={id} className="unit-content-inner">
                                                     <div className="unit-content-header" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center' }}>

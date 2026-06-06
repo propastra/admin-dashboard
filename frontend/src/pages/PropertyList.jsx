@@ -97,7 +97,16 @@ const PropertyList = () => {
                     location: row['LOCATION'] || row['Location'] || row.location || '',
                     price: row['PER SQFT PRICE'] || row['Price'] || row.price || null,
                     priceUnit: row['Price Unit'] || row.priceUnit || 'Lakhs',
-                    dimensions: row['DIMENTION'] || row['Dimensions'] || row.dimensions || '',
+                    dimensions: (() => {
+                        const dimVal = row['DIMENTION'] || row['Dimensions'] || row.dimensions || '';
+                        if (!dimVal) return '';
+                        const dimStr = String(dimVal).trim();
+                        const lower = dimStr.toLowerCase();
+                        if (dimStr && !lower.includes('sq') && !lower.includes('ft') && !lower.includes('acre') && !lower.includes('hectare')) {
+                            return `${dimStr} Sqft`;
+                        }
+                        return dimStr;
+                    })(),
                     configuration: row['Configuration'] || row.configuration || '',
                     status: row['Status'] || row.status || 'Available',
                     amenities: row['amenities'] || row['Amenities'] || row.amenities || '',
@@ -303,6 +312,44 @@ const PropertyList = () => {
         }
     };
 
+    const handleQuickUpdate = async (propertyId, updatedFields) => {
+        const property = properties.find(p => p.id === propertyId);
+        if (!property) return;
+        
+        const target = { ...property, ...updatedFields };
+        
+        const data = new FormData();
+        Object.keys(target).forEach(key => {
+            if (['photos', 'brochure', 'floorPlan', 'masterPlan'].includes(key)) {
+                if (target[key]) {
+                    data.append(`existing${key.charAt(0).toUpperCase() + key.slice(1)}`, Array.isArray(target[key]) ? JSON.stringify(target[key]) : target[key]);
+                }
+                return;
+            }
+            if (key === 'coverPhoto') {
+                if (target.coverPhoto) {
+                    data.append('existingCoverPhoto', target.coverPhoto);
+                }
+                return;
+            }
+            if (key === 'amenities' || key === 'projectHighlights') {
+                const val = target[key];
+                const array = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',').map(item => item.trim()).filter(i => i) : []);
+                data.append(key, JSON.stringify(array));
+            } else if (target[key] !== null && target[key] !== undefined) {
+                data.append(key, target[key]);
+            }
+        });
+
+        try {
+            const res = await api.put(`/properties/${propertyId}`, data);
+            setProperties(prev => prev.map(p => p.id === propertyId ? res.data : p));
+        } catch (err) {
+            console.error("Failed to quick update property:", err);
+            alert("Failed to quick update property. Please try again.");
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -425,7 +472,50 @@ const PropertyList = () => {
                                         <div style={{ width: '50px', height: '50px', backgroundColor: '#e5e7eb', borderRadius: '4px' }}></div>
                                     )}
                                 </td>
-                                <td style={{ padding: '12px' }}>{property.propertyName}</td>
+                                <td style={{ padding: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontWeight: '500', color: '#111827' }}>{property.propertyName}</span>
+                                        {/* Verified Quick-Toggle */}
+                                        <button
+                                            onClick={() => handleQuickUpdate(property.id, { isVerified: !property.isVerified })}
+                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                            title={property.isVerified ? "Click to Un-Verify" : "Click to Verify"}
+                                        >
+                                            <svg width="22" height="22" viewBox="0 0 40 40" fill="none" style={{ transition: 'transform 0.15s ease', flexShrink: 0 }}>
+                                                <circle cx="20" cy="20" r="19" fill={property.isVerified ? '#10B981' : '#e5e7eb'} />
+                                                <path d="M12 20.5l5.5 5.5 11-12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                        {/* Sold Out Quick-Toggle */}
+                                        <button
+                                            onClick={() => handleQuickUpdate(property.id, { isSoldOut: !property.isSoldOut })}
+                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                            title={property.isSoldOut ? "Click to Mark Available" : "Click to Mark Sold Out"}
+                                        >
+                                            <svg width="22" height="22" viewBox="0 0 40 40" fill="none" style={{ transition: 'transform 0.15s ease', flexShrink: 0 }}>
+                                                <rect x="1" y="1" width="38" height="38" rx="7" fill={property.isSoldOut ? '#dc2626' : '#e5e7eb'} />
+                                                <line x1="13" y1="13" x2="27" y2="27" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+                                                <line x1="27" y1="13" x2="13" y2="27" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+                                            </svg>
+                                        </button>
+                                        {property.isVerified && (
+                                            <span style={{
+                                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                                color: 'white', fontSize: '9px', fontWeight: '800',
+                                                padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.6px',
+                                                textTransform: 'uppercase', boxShadow: '0 1px 4px rgba(16,185,129,0.3)'
+                                            }}>✓ Verified</span>
+                                        )}
+                                        {property.isSoldOut && (
+                                            <span style={{
+                                                background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                                                color: 'white', fontSize: '9px', fontWeight: '800',
+                                                padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.6px',
+                                                textTransform: 'uppercase', boxShadow: '0 1px 4px rgba(220,38,38,0.3)'
+                                            }}>✕ Sold Out</span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td style={{ padding: '12px' }}>{property.category}</td>
                                 <td style={{ padding: '12px' }}>{property.location}</td>
                                 <td style={{ padding: '12px' }}>{property.price} {property.priceUnit}</td>
@@ -439,25 +529,38 @@ const PropertyList = () => {
                                     )}
                                 </td>
                                 <td style={{ padding: '12px' }}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        backgroundColor:
-                                            property.status === 'Available' ? '#d1fae5' :
-                                                property.status === 'Pending' ? '#fee2e2' :
-                                                    property.status === 'EOI' ? '#dbeafe' : // Blue for EOI
-                                                        property.status === 'RTMI' ? '#fef3c7' : // Yellow for RTMI
-                                                            '#f3f4f6', // Gray for Sold or others
-                                        color:
-                                            property.status === 'Available' ? '#065f46' :
-                                                property.status === 'Pending' ? '#991b1b' :
-                                                    property.status === 'EOI' ? '#1e40af' :
-                                                        property.status === 'RTMI' ? '#92400e' :
-                                                            '#374151'
-                                    }}>
-                                        {property.status}
-                                    </span>
+                                    <select
+                                        value={property.status}
+                                        onChange={(e) => handleQuickUpdate(property.id, { status: e.target.value })}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            border: '1px solid #e5e7eb',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            backgroundColor:
+                                                property.status === 'Available' ? '#d1fae5' :
+                                                    property.status === 'Pending' ? '#fee2e2' :
+                                                        property.status === 'EOI' ? '#dbeafe' :
+                                                            property.status === 'RTMI' ? '#fef3c7' :
+                                                                property.status === 'Sold' ? '#fef2f2' :
+                                                                    '#f3f4f6',
+                                            color:
+                                                property.status === 'Available' ? '#065f46' :
+                                                    property.status === 'Pending' ? '#991b1b' :
+                                                        property.status === 'EOI' ? '#1e40af' :
+                                                            property.status === 'RTMI' ? '#92400e' :
+                                                                property.status === 'Sold' ? '#ef4444' :
+                                                                    '#374151'
+                                        }}
+                                    >
+                                        <option value="Available">Available</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Sold">Sold Out</option>
+                                        <option value="EOI">EOI</option>
+                                        <option value="RTMI">RTMI</option>
+                                    </select>
                                 </td>
                                 <td style={{ padding: '12px' }}>
                                     <Link to={`/properties/edit/${property.id}`} style={{ marginRight: '10px', color: '#2563eb' }}>

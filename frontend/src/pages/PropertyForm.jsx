@@ -23,11 +23,17 @@ const PropertyForm = () => {
         projectName: '',
         builderInfo: '',
         isVerified: false,
+        isSoldOut: false,
         projectHighlights: '',
         bhk: '',
         possessionTime: '',
         possessionStatus: 'Ready to Move',
-        furnishingStatus: 'Unfurnished'
+        furnishingStatus: 'Unfurnished',
+        reraNumber: '',
+        landParcel: '',
+        floor: '',
+        units: '',
+        investmentType: 'Self Use'
     });
     const [coverPhoto, setCoverPhoto] = useState(null);
     const [existingCoverPhoto, setExistingCoverPhoto] = useState(null);
@@ -52,6 +58,10 @@ const PropertyForm = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [modalImage, setModalImage] = useState(null);
+
+    const [configs, setConfigs] = useState([
+        { configuration: '', dimensions: '', price: '', priceUnit: 'Lakhs' }
+    ]);
 
     useEffect(() => {
     }, []);
@@ -81,9 +91,42 @@ const PropertyForm = () => {
                         projectName: data.projectName || '',
                         builderInfo: data.builderInfo || '',
                         isVerified: data.isVerified || false,
+                        isSoldOut: data.isSoldOut || false,
                         bhk: data.bhk || '',
-                        projectHighlights: data.projectHighlights ? (Array.isArray(data.projectHighlights) ? data.projectHighlights.join(', ') : data.projectHighlights) : ''
+                        projectHighlights: data.projectHighlights ? (Array.isArray(data.projectHighlights) ? data.projectHighlights.join(', ') : data.projectHighlights) : '',
+                        reraNumber: data.reraNumber || '',
+                        landParcel: data.landParcel || '',
+                        floor: data.floor || '',
+                        units: data.units || '',
+                        investmentType: data.investmentType || 'Self Use'
                     });
+
+                    let parsedConfigs = [];
+                    try {
+                        if (data.configuration) {
+                            const parsed = typeof data.configuration === 'string' ? JSON.parse(data.configuration) : data.configuration;
+                            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+                                parsedConfigs = parsed;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing configuration on fetch:', e);
+                    }
+
+                    if (parsedConfigs.length > 0) {
+                        setConfigs(parsedConfigs);
+                    } else {
+                        // Fallback for legacy format
+                        setConfigs([
+                            {
+                                configuration: data.configuration || '',
+                                dimensions: data.dimensions || '',
+                                price: data.price || '',
+                                priceUnit: data.priceUnit || 'Lakhs'
+                            }
+                        ]);
+                    }
+
                     const parseArray = (val) => {
                         if (!val) return [];
                         if (Array.isArray(val)) return val;
@@ -206,6 +249,9 @@ const PropertyForm = () => {
 
         const data = new FormData();
         Object.keys(formData).forEach(key => {
+            if (key === 'dimensions' || key === 'configuration') {
+                return; // Append manually below
+            }
             if (key === 'amenities' || key === 'projectHighlights') {
                 const array = formData[key].split(',').map(item => item.trim()).filter(i => i);
                 data.append(key, JSON.stringify(array));
@@ -214,10 +260,41 @@ const PropertyForm = () => {
             }
         });
 
+        // Ensure Project Name is always equal to Property Name behind the scenes
+        data.set('projectName', formData.propertyName);
+
+        // Collect new config floor plan files
+        const configFiles = [];
+        const processedConfigs = configs.map(c => {
+            const configCopy = { ...c };
+            
+            // Format dimensions by default to include 'Sqft' if no unit is present
+            if (configCopy.dimensions) {
+                const dimStr = String(configCopy.dimensions).trim();
+                const lower = dimStr.toLowerCase();
+                if (dimStr && !lower.includes('sq') && !lower.includes('ft') && !lower.includes('acre') && !lower.includes('hectare')) {
+                    configCopy.dimensions = `${dimStr} Sqft`;
+                }
+            }
+
+            if (configCopy.newFile) {
+                configCopy.floorPlanFileIndex = floorPlan.length + configFiles.length;
+                configFiles.push(configCopy.newFile);
+                delete configCopy.newFile;
+                delete configCopy.previewUrl;
+            }
+            return configCopy;
+        });
+
+        // Append dynamic configs as JSON
+        data.append('configuration', JSON.stringify(processedConfigs));
+        data.append('dimensions', JSON.stringify(processedConfigs.map(c => c.dimensions).filter(Boolean)));
+
         if (coverPhoto) data.append('coverPhoto', coverPhoto);
         photos.forEach(file => data.append('photos', file));
         brochure.forEach(file => data.append('brochure', file));
         floorPlan.forEach(file => data.append('floorPlan', file));
+        configFiles.forEach(file => data.append('floorPlan', file)); // Append configuration specific files
         masterPlan.forEach(file => data.append('masterPlan', file));
 
         if (isEdit) {
@@ -261,10 +338,7 @@ const PropertyForm = () => {
                     <input name="propertyName" value={formData.propertyName} onChange={handleChange} className="form-input" />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label">Project Name</label>
-                    <input name="projectName" value={formData.projectName} onChange={handleChange} className="form-input" />
-                </div>
+                {/* Project Name is hidden and automatically set to Property Name on save */}
 
                 <div className="form-group">
                     <label className="form-label">Category</label>
@@ -276,18 +350,6 @@ const PropertyForm = () => {
                         <option value="Resale">Resale</option>
                         <option value="Rental">Rental</option>
                     </select>
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">Price</label>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} className="form-input" style={{ flex: '1 1 60%' }} />
-                        <select name="priceUnit" value={formData.priceUnit} onChange={handleChange} className="form-select" style={{ flex: '1 1 30%' }}>
-                            <option value="Lakhs">Lakhs</option>
-                            <option value="Cr">Cr</option>
-                            <option value="Thousands">Thousands</option>
-                        </select>
-                    </div>
                 </div>
 
                 <div className="form-group">
@@ -322,18 +384,13 @@ const PropertyForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Floor</label>
-                    <input name="floor" value={formData.floor} onChange={handleChange} className="form-input" placeholder="e.g. 5th Floor" />
+                    <label className="form-label">Total Number of Floors</label>
+                    <input name="floor" value={formData.floor} onChange={handleChange} className="form-input" placeholder="e.g. 10" />
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Units</label>
+                    <label className="form-label">Total Number of Units</label>
                     <input name="units" value={formData.units} onChange={handleChange} className="form-input" placeholder="e.g. 100" />
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">BHK (Number)</label>
-                    <input name="bhk" type="number" value={formData.bhk} onChange={handleChange} className="form-input" placeholder="e.g. 3" />
                 </div>
 
                 <div className="form-group">
@@ -341,9 +398,56 @@ const PropertyForm = () => {
                     <input name="builderInfo" value={formData.builderInfo} onChange={handleChange} className="form-input" placeholder="e.g. Grade A Builder" />
                 </div>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input name="isVerified" type="checkbox" checked={formData.isVerified} onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })} id="isVerified" />
-                    <label htmlFor="isVerified" className="form-label" style={{ marginBottom: 0 }}>Is Verified</label>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    {/* Verified Toggle */}
+                    <div
+                        onClick={() => setFormData({ ...formData, isVerified: !formData.isVerified })}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            padding: '10px 16px', borderRadius: '10px', border: '2px solid',
+                            borderColor: formData.isVerified ? '#10B981' : '#e5e7eb',
+                            background: formData.isVerified ? '#f0fdf4' : '#f9fafb',
+                            transition: 'all 0.2s ease', userSelect: 'none',
+                            minWidth: '180px'
+                        }}
+                    >
+                        <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+                            <circle cx="20" cy="20" r="19" fill={formData.isVerified ? '#10B981' : '#d1d5db'} />
+                            <path d="M12 20.5l5.5 5.5 11-12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                            {[0,45,90,135,180,225,270,315].map((angle, i) => (
+                                <rect key={i} x="18.5" y="0" width="3" height="6" rx="1.5" fill={formData.isVerified ? '#10B981' : '#d1d5db'}
+                                    transform={`rotate(${angle} 20 20)`} />
+                            ))}
+                        </svg>
+                        <div>
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: formData.isVerified ? '#065f46' : '#6b7280' }}>VERIFIED</div>
+                            <div style={{ fontSize: '11px', color: formData.isVerified ? '#10B981' : '#9ca3af' }}>{formData.isVerified ? 'Active' : 'Not Verified'}</div>
+                        </div>
+                    </div>
+
+                    {/* Sold Out Toggle */}
+                    <div
+                        onClick={() => setFormData({ ...formData, isSoldOut: !formData.isSoldOut })}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            padding: '10px 16px', borderRadius: '10px', border: '2px solid',
+                            borderColor: formData.isSoldOut ? '#dc2626' : '#e5e7eb',
+                            background: formData.isSoldOut ? '#fff1f2' : '#f9fafb',
+                            transition: 'all 0.2s ease', userSelect: 'none',
+                            minWidth: '180px'
+                        }}
+                    >
+                        <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+                            <rect x="1" y="1" width="38" height="38" rx="6" fill={formData.isSoldOut ? '#dc2626' : '#d1d5db'} />
+                            <path d="M10 20h20M20 10v20" stroke="white" strokeWidth="3.5" strokeLinecap="round"
+                                transform="rotate(45 20 20)" />
+                            <text x="20" y="24" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="system-ui">SOLD</text>
+                        </svg>
+                        <div>
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: formData.isSoldOut ? '#991b1b' : '#6b7280' }}>SOLD OUT</div>
+                            <div style={{ fontSize: '11px', color: formData.isSoldOut ? '#dc2626' : '#9ca3af' }}>{formData.isSoldOut ? 'Active' : 'Available'}</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="form-group">
@@ -351,6 +455,7 @@ const PropertyForm = () => {
                     <select name="investmentType" value={formData.investmentType} onChange={handleChange} className="form-select">
                         <option value="Self Use">Self Use</option>
                         <option value="Investment">Investment</option>
+                        <option value="Both">Both</option>
                     </select>
                 </div>
 
@@ -372,20 +477,151 @@ const PropertyForm = () => {
                     </select>
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Dimensions</label>
-                    <input name="dimensions" value={formData.dimensions} onChange={handleChange} className="form-input" placeholder="e.g. 1200 sqft" />
-                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', backgroundColor: '#f9fafb', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <label className="form-label" style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: 0 }}>Configurations & Dimensions Builder</label>
+                        <button type="button" onClick={() => setConfigs([...configs, { configuration: '', dimensions: '', price: '', priceUnit: 'Lakhs' }])} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px', background: '#2563eb', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}>
+                            + Add Variant
+                        </button>
+                    </div>
 
-                <div className="form-group">
-                    <label className="form-label">Configuration</label>
-                    <input name="configuration" list="config-options" value={formData.configuration} onChange={handleChange} className="form-input" placeholder="e.g. 3BHK" />
-                    <datalist id="config-options">
-                        <option value="1BHK" />
-                        <option value="2BHK" />
-                        <option value="3BHK" />
-                        <option value="4BHK" />
-                    </datalist>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {configs.map((item, index) => (
+                            <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                                <div style={{ flex: '1 1 20%', minWidth: '150px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', color: '#4b5563', marginBottom: '4px' }}>Configuration</label>
+                                    <input 
+                                        value={item.configuration} 
+                                        onChange={(e) => {
+                                            const newConfigs = [...configs];
+                                            newConfigs[index].configuration = e.target.value;
+                                            setConfigs(newConfigs);
+                                        }} 
+                                        className="form-input" 
+                                        placeholder="e.g. 2 BHK + 2T" 
+                                        style={{ fontSize: '14px', padding: '8px' }}
+                                    />
+                                </div>
+                                <div style={{ flex: '1 1 20%', minWidth: '150px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', color: '#4b5563', marginBottom: '4px' }}>Dimensions</label>
+                                    <input 
+                                        value={item.dimensions} 
+                                        onChange={(e) => {
+                                            const newConfigs = [...configs];
+                                            newConfigs[index].dimensions = e.target.value;
+                                            setConfigs(newConfigs);
+                                        }} 
+                                        className="form-input" 
+                                        placeholder="e.g. 1340 - 1350 sqft" 
+                                        style={{ fontSize: '14px', padding: '8px' }}
+                                    />
+                                </div>
+                                <div style={{ flex: '1 1 15%', minWidth: '100px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', color: '#4b5563', marginBottom: '4px' }}>Price</label>
+                                    <input 
+                                        type="number" 
+                                        step="any"
+                                        value={item.price} 
+                                        onChange={(e) => {
+                                            const newConfigs = [...configs];
+                                            newConfigs[index].price = e.target.value;
+                                            setConfigs(newConfigs);
+                                        }} 
+                                        className="form-input" 
+                                        placeholder="Price" 
+                                        style={{ fontSize: '14px', padding: '8px' }}
+                                    />
+                                </div>
+                                <div style={{ flex: '1 1 12%', minWidth: '90px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', color: '#4b5563', marginBottom: '4px' }}>Unit</label>
+                                    <select 
+                                        value={item.priceUnit} 
+                                        onChange={(e) => {
+                                            const newConfigs = [...configs];
+                                            newConfigs[index].priceUnit = e.target.value;
+                                            setConfigs(newConfigs);
+                                        }} 
+                                        className="form-select"
+                                        style={{ fontSize: '14px', padding: '8px' }}
+                                    >
+                                        <option value="Lakhs">Lakhs</option>
+                                        <option value="Cr">Cr</option>
+                                        <option value="Thousands">Thousand</option>
+                                    </select>
+                                </div>
+                                {item.configuration && item.configuration.trim() !== '' && (
+                                    <div style={{ flex: '1 1 20%', minWidth: '150px' }}>
+                                        <label className="form-label" style={{ fontSize: '12px', color: '#4b5563', marginBottom: '4px' }}>Floor Plan</label>
+                                        {item.floorPlan ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '38px' }}>
+                                                {String(item.floorPlan).toLowerCase().endsWith('.pdf') ? (
+                                                    <a href={`${API_BASE_URL}${item.floorPlan}`} target="_blank" rel="noreferrer" style={{ fontSize: '20px', textDecoration: 'none', display: 'flex', alignItems: 'center', height: '32px', cursor: 'pointer' }} title="View PDF">📄</a>
+                                                ) : (
+                                                    <img src={`${API_BASE_URL}${item.floorPlan}`} alt="FP" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} />
+                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const newConfigs = [...configs];
+                                                        delete newConfigs[index].floorPlan;
+                                                        setConfigs(newConfigs);
+                                                    }} 
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer', padding: 0, fontWeight: '600' }}
+                                                >
+                                                    Remove Existing
+                                                </button>
+                                            </div>
+                                        ) : item.newFile ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '38px' }}>
+                                                {item.newFile.type === 'application/pdf' ? (
+                                                    <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center', height: '32px' }} title={item.newFile.name}>📄</span>
+                                                ) : (
+                                                    <img src={item.previewUrl} alt="New FP" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} />
+                                                )}
+                                                <span style={{ fontSize: '11px', color: '#059669', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }} title={item.newFile.name}>{item.newFile.name}</span>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const newConfigs = [...configs];
+                                                        delete newConfigs[index].newFile;
+                                                        delete newConfigs[index].previewUrl;
+                                                        setConfigs(newConfigs);
+                                                    }} 
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer', padding: 0, fontWeight: '600' }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <input 
+                                                type="file" 
+                                                accept="image/*,application/pdf,.webp" 
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const newConfigs = [...configs];
+                                                        newConfigs[index].newFile = file;
+                                                        newConfigs[index].previewUrl = URL.createObjectURL(file);
+                                                        setConfigs(newConfigs);
+                                                    }
+                                                }} 
+                                                style={{ fontSize: '11px', width: '100%', height: '38px', display: 'flex', alignItems: 'center' }} 
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {configs.length > 1 && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setConfigs(configs.filter((_, idx) => idx !== index))} 
+                                        style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', height: '36px', padding: '0 12px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        🗑️
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="form-group">
@@ -393,7 +629,7 @@ const PropertyForm = () => {
                     <select name="status" value={formData.status} onChange={handleChange} className="form-select">
                         <option value="Available">Available</option>
                         <option value="Pending">Pending</option>
-                        <option value="Sold">Sold</option>
+                        <option value="Sold">Sold Out</option>
                         <option value="EOI">EOI</option>
                         <option value="RTMI">RTMI</option>
                     </select>
@@ -468,44 +704,6 @@ const PropertyForm = () => {
                     </div>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <label className="form-label">Floor Plans (Images or PDFs)</label>
-                        {previewFloorPlan.length > 0 && (
-                            <button type="button" onClick={handleClearNewFloorPlan} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Clear New Files</button>
-                        )}
-                    </div>
-                    <input type="file" multiple accept="image/*,application/pdf,.webp" onChange={handleFloorPlanChange} className="form-input" />
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {Array.isArray(existingFloorPlan) && existingFloorPlan.map((file, index) => {
-                            if (typeof file !== 'string') return null;
-                            const isPdf = file.match(/\.pdf$/i);
-                            return (
-                                <div key={`exist-fp-${index}`} style={{ position: 'relative' }}>
-                                    {isPdf ? (
-                                        <a href={`${API_BASE_URL}${file}`} target="_blank" rel="noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
-                                            <span style={{ fontSize: '24px' }}>📄</span>
-                                            <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Existing PDF</span>
-                                        </a>
-                                    ) : (
-                                        <img src={`${API_BASE_URL}${file}`} alt="Existing Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #3b82f6', cursor: 'pointer' }} onClick={() => setModalImage(`${API_BASE_URL}${file}`)} />
-                                    )}
-                                    <button type="button" onClick={() => handleRemoveExistingFloorPlan(file)} style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>&times;</button>
-                                </div>
-                            );
-                        })}
-                        {previewFloorPlan.map((file, index) => (
-                            file.type === 'application/pdf' ? (
-                                <div key={`new-fp-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px solid #ddd', borderRadius: '4px' }}>
-                                    <span style={{ fontSize: '24px' }}>📄</span>
-                                    <span style={{ fontSize: '10px', marginTop: '4px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                                </div>
-                            ) : (
-                                <img key={`new-fp-${index}`} src={file.url} alt="Preview Floor Plan" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setModalImage(file.url)} />
-                            )
-                        ))}
-                    </div>
-                </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

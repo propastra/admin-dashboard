@@ -113,7 +113,11 @@ router.get('/', async (req, res) => {
 
         if (req.query.configurations) {
             const configList = req.query.configurations.split(',');
-            where.configuration = { [Op.in]: configList };
+            if (!where[Op.and]) where[Op.and] = [];
+            const configOrs = configList.map((c: string) => ({
+                configuration: { [Op.like]: `%${c}%` }
+            }));
+            where[Op.and].push({ [Op.or]: configOrs });
         }
 
         if (req.query.dimension) {

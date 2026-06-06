@@ -156,21 +156,47 @@ const SearchPage = () => {
                     const projNameRaw = prop.projectName || prop.propertyName.split(' - ')[0].trim();
                     const projName = projNameRaw.split('  ')[0].trim();
                     
+                    const parseConfigs = (val) => {
+                        if (!val) return [];
+                        if (Array.isArray(val)) {
+                            if (val.length > 0 && typeof val[0] === 'object') {
+                                return val.map(c => c.configuration);
+                            }
+                            return val;
+                        }
+                        try {
+                            const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+                            if (Array.isArray(parsed)) {
+                                if (parsed.length > 0 && typeof parsed[0] === 'object') {
+                                    return parsed.map(c => c.configuration);
+                                }
+                                return parsed;
+                            }
+                            return [val];
+                        } catch (e) {
+                            return [val];
+                        }
+                    };
+
+                    const cList = parseConfigs(prop.configuration);
+
                     if (!grouped[projName]) {
                         grouped[projName] = { 
                             ...prop,
-                            variantCount: 1,
-                            allConfigurations: prop.configuration && prop.configuration.trim() !== '' ? [prop.configuration] : [],
+                            variantCount: cList.length > 0 ? cList.length : 1,
+                            allConfigurations: cList.filter(Boolean),
                             minNormalized: getNormalized(prop.price, prop.priceUnit),
                             maxNormalized: getNormalized(prop.price, prop.priceUnit),
                             maxPrice: prop.price,
                             maxPriceUnit: prop.priceUnit
                         };
                     } else {
-                        grouped[projName].variantCount += 1;
-                        if (prop.configuration && prop.configuration.trim() !== '' && !grouped[projName].allConfigurations.includes(prop.configuration)) {
-                            grouped[projName].allConfigurations.push(prop.configuration);
-                        }
+                        grouped[projName].variantCount += cList.length > 0 ? cList.length : 1;
+                        cList.forEach(c => {
+                            if (c && c.trim() !== '' && !grouped[projName].allConfigurations.includes(c)) {
+                                grouped[projName].allConfigurations.push(c);
+                            }
+                        });
                         
                         const norm = getNormalized(prop.price, prop.priceUnit);
                         if (!isNaN(norm)) {

@@ -43,8 +43,34 @@ const Home = () => {
                 grouped[projName].maxPriceRaw = prop.price;
                 grouped[projName].maxPriceUnit = prop.priceUnit;
             }
-            if (prop.configuration && !grouped[projName].configurations.includes(prop.configuration)) {
-                grouped[projName].configurations.push(prop.configuration);
+            if (prop.configuration) {
+                const parseConfigs = (val) => {
+                    if (!val) return [];
+                    if (Array.isArray(val)) {
+                        if (val.length > 0 && typeof val[0] === 'object') {
+                            return val.map(c => c.configuration);
+                        }
+                        return val;
+                    }
+                    try {
+                        const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+                        if (Array.isArray(parsed)) {
+                            if (parsed.length > 0 && typeof parsed[0] === 'object') {
+                                return parsed.map(c => c.configuration);
+                            }
+                            return parsed;
+                        }
+                        return [val];
+                    } catch (e) {
+                        return [val];
+                    }
+                };
+                const cList = parseConfigs(prop.configuration);
+                cList.forEach(c => {
+                    if (c && !grouped[projName].configurations.includes(c)) {
+                        grouped[projName].configurations.push(c);
+                    }
+                });
             }
             const norm = getNormalized(prop.price, prop.priceUnit);
             if (!isNaN(norm)) {

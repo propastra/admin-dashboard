@@ -87,7 +87,7 @@ app.use('/api/website/favorites', require('./routes/websiteFavorites'));
 app.use('/api/website/developers', require('./routes/developers'));
 
 // Relogen Agency Website Routes
-app.use('/api/relogen', require('./routes/relogenContacts'));
+// app.use('/api/relogen', require('./routes/relogenContacts'));
 
 // Sync Database and Start Server
 app.get('/', (req, res) => {

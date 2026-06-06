@@ -106,8 +106,18 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
 
     const formatPrice = (price, unit) => {
         const p = parseFloat(price);
-        if (unit === 'Cr') return `₹${p} Cr`;
-        if (unit === 'Lakhs') return `₹${p} Lakhs`;
+        if (isNaN(p)) return '—';
+        
+        const u = (unit || '').toLowerCase().trim();
+        if (u === 'cr' || u === 'crore' || u === 'crores') return `₹${p} Cr`;
+        if (u === 'lakhs' || u === 'lakh' || u === 'lac' || u === 'lacs') return `₹${p} Lakhs`;
+        if (u === 'thousands' || u === 'thousand' || u === 'k') return `₹${p} Thousand`;
+        
+        // Fallback for cases where it's a raw large number (e.g. 500000)
+        if (p >= 10000000) return `₹${(p / 10000000).toFixed(2).replace(/\.00$/, '')} Cr`;
+        if (p >= 100000) return `₹${(p / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs`;
+        if (p >= 1000) return `₹${(p / 1000).toFixed(2).replace(/\.00$/, '')} Thousand`;
+        
         return `₹${p.toLocaleString()}`;
     };
 
@@ -115,22 +125,51 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
 
     const formatDimensions = (dim) => {
         if (!dim || dim === 'N/A') return 'N/A';
-        const str = String(dim).trim();
+        let str = String(dim).trim();
+        
+        try {
+            if (str.startsWith('[') && str.endsWith(']')) {
+                const parsed = JSON.parse(str);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    str = parsed.join(', ');
+                }
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+        
         if (str.toLowerCase().includes('sq') || str.toLowerCase().includes('acre') || str.toLowerCase().includes('hectare') || str.toLowerCase().includes('ft')) {
             return str;
         }
         return `${str} sq. ft.`;
     };
 
+    // Safe parsing helper
+    const parseConfigs = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        try {
+            const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+                return parsed.map(c => c.configuration);
+            }
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    const parsedConfigsFromProperty = parseConfigs(property.configuration);
+
     const configsList = (allConfigurations && allConfigurations.length > 0)
         ? allConfigurations
         : (property.configurations && property.configurations.length > 0)
             ? property.configurations
-            : [];
+            : parsedConfigsFromProperty;
 
     const configDisplay = configsList.length > 0
         ? configsList.join(', ')
-        : property.configuration;
+        : (typeof property.configuration === 'string' ? property.configuration : '');
 
     const effectiveVariantCount = variantCount || configsList.length;
 
@@ -139,9 +178,34 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
     return (
         <div className="property-card" onClick={openPropertyWithInquiry}>
             <div className="property-card-image">
-                <img src={photoUrl} alt={displayTitle} loading="lazy" decoding="async" width="400" height="240" />
+                <img 
+                    src={photoUrl} 
+                    alt={displayTitle} 
+                    loading="lazy" 
+                    decoding="async" 
+                    width="400" 
+                    height="240" 
+                    style={{ filter: property.isSoldOut ? 'grayscale(0.35) brightness(0.82)' : 'none', transition: 'filter 0.3s ease' }}
+                />
                 <div className="property-card-badges">
                     <span className="badge-category">{property.category}</span>
+                    {property.isSoldOut && (
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+                            color: 'white', fontSize: '10px', fontWeight: '800',
+                            padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px',
+                            textTransform: 'uppercase', boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
+                            border: '1px solid rgba(255,255,255,0.25)'
+                        }}>
+                            <svg width="10" height="10" viewBox="0 0 20 20" fill="none">
+                                <rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="white" strokeWidth="2"/>
+                                <line x1="5" y1="5" x2="15" y2="15" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                                <line x1="15" y1="5" x2="5" y2="15" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                            </svg>
+                            Sold Out
+                        </span>
+                    )}
                     {property.distance && (
                         <span className="badge-distance">{property.distance} km away</span>
                     )}
@@ -164,7 +228,34 @@ const PropertyCard = ({ property, isFavorited = false, onFavoriteToggle, showAct
 
             <div className="property-card-body">
                 <div className="property-card-header">
-                    <h3 className="property-card-title">{displayTitle}</h3>
+                    <h3 className="property-card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{displayTitle}</span>
+                        {property.isVerified && (
+                            <svg width="20" height="20" viewBox="0 0 40 40" fill="none" title="Verified Property" style={{ flexShrink: 0 }}>
+                                <circle cx="20" cy="20" r="19" fill="#10B981" />
+                                <path d="M12 20.5l5.5 5.5 11-12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                {[0,45,90,135,180,225,270,315].map((angle, i) => (
+                                    <rect key={i} x="18.5" y="0" width="3" height="5" rx="1.5" fill="#10B981"
+                                        transform={`rotate(${angle} 20 20)`} />
+                                ))}
+                            </svg>
+                        )}
+                        {property.isSoldOut && (
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+                                color: 'white', fontSize: '9px', fontWeight: '800',
+                                padding: '2px 5px', borderRadius: '3px', letterSpacing: '0.5px',
+                                textTransform: 'uppercase', flexShrink: 0
+                            }}>
+                                <svg width="8" height="8" viewBox="0 0 20 20" fill="none">
+                                    <line x1="3" y1="3" x2="17" y2="17" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                                    <line x1="17" y1="3" x2="3" y2="17" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                                </svg>
+                                Sold Out
+                            </span>
+                        )}
+                    </h3>
                     <div className="property-card-rating">
                         <Star size={14} fill="#FFB703" color="#FFB703" />
                         <span>{rating}</span>

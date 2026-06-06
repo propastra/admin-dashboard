@@ -31,10 +31,10 @@ const Property = sequelize.define('Property', {
         defaultValue: 'Lakhs',
     },
     dimensions: {
-        type: DataTypes.STRING, // e.g., "1200 sqft"
+        type: DataTypes.JSON, // e.g., "1200 sqft" or JSON array
     },
     configuration: {
-        type: DataTypes.STRING, // e.g., "3BHK"
+        type: DataTypes.JSON, // e.g., "3BHK" or JSON array of objects
     },
     coverPhoto: {
         type: DataTypes.STRING,
@@ -82,6 +82,10 @@ const Property = sequelize.define('Property', {
         type: DataTypes.STRING,
     },
     isVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    isSoldOut: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },

@@ -63,13 +63,79 @@ router.get('/:id', async (req, res) => {
 // @access  Private
 router.post('/', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { name: 'photos', maxCount: 100 }, { name: 'brochure', maxCount: 10 }, { name: 'floorPlan', maxCount: 10 }, { name: 'masterPlan', maxCount: 10 }])], async (req, res) => {
     try {
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, reraNumber, builderInfo, isVerified, isSoldOut, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+
+        let parsedConfiguration = configuration;
+        let parsedDimensions = dimensions;
+        let calculatedPrice = price;
+        let calculatedPriceUnit = priceUnit;
+
+        try {
+            if (typeof configuration === 'string' && (configuration.startsWith('[') || configuration.startsWith('{'))) {
+                parsedConfiguration = JSON.parse(configuration);
+            }
+        } catch (e) {
+            console.error('Error parsing configuration JSON:', e.message);
+        }
+
+        try {
+            if (typeof dimensions === 'string' && (dimensions.startsWith('[') || dimensions.startsWith('{'))) {
+                parsedDimensions = JSON.parse(dimensions);
+            }
+        } catch (e) {
+            console.error('Error parsing dimensions JSON:', e.message);
+        }
+
+        // Calculate minimum starting price automatically if configuration is an array of objects
+        if (Array.isArray(parsedConfiguration) && parsedConfiguration.length > 0 && typeof parsedConfiguration[0] === 'object') {
+            let minPrice = Infinity;
+            let minPriceUnit = priceUnit || 'Lakhs';
+            
+            const getValInLakhs = (val: number, unitStr: string) => {
+                const u = (unitStr || '').toLowerCase().trim();
+                if (u === 'cr' || u === 'crore' || u === 'crores') return val * 100;
+                if (u === 'thousands' || u === 'thousand' || u === 'k') return val / 100;
+                return val; // Default to Lakhs
+            };
+
+            parsedConfiguration.forEach((config: any) => {
+                const pVal = parseFloat(config.price);
+                if (!isNaN(pVal)) {
+                    const currentValInLakhs = getValInLakhs(pVal, config.priceUnit);
+                    const minValInLakhs = getValInLakhs(minPrice, minPriceUnit);
+                    
+                    if (currentValInLakhs < minValInLakhs) {
+                        minPrice = pVal;
+                        minPriceUnit = config.priceUnit || 'Lakhs';
+                    }
+                }
+            });
+            
+            if (minPrice !== Infinity) {
+                calculatedPrice = minPrice;
+                calculatedPriceUnit = minPriceUnit;
+            }
+        }
 
         const coverPhoto = req.files && req.files['coverPhoto'] ? `/uploads/${(req.files['coverPhoto'] as any[])[0].filename}` : null;
         const masterPlan = req.files && req.files['masterPlan'] ? (req.files['masterPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const photos = req.files && req.files['photos'] ? (req.files['photos'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const brochure = req.files && req.files['brochure'] ? (req.files['brochure'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
         const floorPlan = req.files && req.files['floorPlan'] ? (req.files['floorPlan'] as any[]).map((file: any) => `/uploads/${file.filename}`) : [];
+
+        // Map uploaded floor plan files to specific configuration entries if floorPlanFileIndex is present
+        if (Array.isArray(parsedConfiguration)) {
+            parsedConfiguration = parsedConfiguration.map((config: any) => {
+                if (config.floorPlanFileIndex !== undefined && config.floorPlanFileIndex !== null) {
+                    const idx = parseInt(config.floorPlanFileIndex);
+                    if (floorPlan[idx]) {
+                        config.floorPlan = floorPlan[idx];
+                    }
+                    delete config.floorPlanFileIndex;
+                }
+                return config;
+            });
+        }
 
         let parsedAmenities = [];
         try {
@@ -91,10 +157,10 @@ router.post('/', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { na
             description,
             category,
             location,
-            price,
-            priceUnit,
-            dimensions,
-            configuration,
+            price: calculatedPrice,
+            priceUnit: calculatedPriceUnit,
+            dimensions: parsedDimensions,
+            configuration: parsedConfiguration,
             coverPhoto,
             photos,
             brochure,
@@ -106,6 +172,7 @@ router.post('/', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { na
             reraNumber,
             builderInfo,
             isVerified: isVerified === 'true' || isVerified === true,
+            isSoldOut: isSoldOut === 'true' || isSoldOut === true,
             projectHighlights: parsedHighlights,
             possessionStatus,
             furnishingStatus,
@@ -147,6 +214,7 @@ router.post('/bulk', auth, async (req, res) => {
             amenities: Array.isArray(p.amenities) ? p.amenities : (p.amenities ? String(p.amenities).split(',').map(s => s.trim()) : []),
             projectHighlights: Array.isArray(p.projectHighlights) ? p.projectHighlights : (p.projectHighlights ? String(p.projectHighlights).split(',').map(s => s.trim()) : []),
             isVerified: p.isVerified === 'true' || p.isVerified === true,
+            isSoldOut: p.isSoldOut === 'true' || p.isSoldOut === true,
             bhk: p.bhk ? parseInt(p.bhk) : null,
             latitude: p.latitude ? parseFloat(p.latitude) : null,
             longitude: p.longitude ? parseFloat(p.longitude) : null,
@@ -193,7 +261,59 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
         const property = await Property.findByPk(req.params.id);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
-        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingCoverPhoto, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+        const { propertyName, description, category, location, price, priceUnit, dimensions, configuration, projectName, amenities, status, existingCoverPhoto, existingPhotos, existingBrochure, existingFloorPlan, existingMasterPlan, reraNumber, builderInfo, isVerified, isSoldOut, projectHighlights, possessionStatus, furnishingStatus, bhk, latitude, longitude, possessionTime, developerName, developerId, landParcel, floor, units, investmentType } = req.body;
+
+        let parsedConfiguration = configuration;
+        let parsedDimensions = dimensions;
+        let calculatedPrice = price;
+        let calculatedPriceUnit = priceUnit;
+
+        try {
+            if (typeof configuration === 'string' && (configuration.startsWith('[') || configuration.startsWith('{'))) {
+                parsedConfiguration = JSON.parse(configuration);
+            }
+        } catch (e) {
+            console.error('Error parsing configuration JSON:', e.message);
+        }
+
+        try {
+            if (typeof dimensions === 'string' && (dimensions.startsWith('[') || dimensions.startsWith('{'))) {
+                parsedDimensions = JSON.parse(dimensions);
+            }
+        } catch (e) {
+            console.error('Error parsing dimensions JSON:', e.message);
+        }
+
+        // Calculate minimum starting price automatically if configuration is an array of objects
+        if (Array.isArray(parsedConfiguration) && parsedConfiguration.length > 0 && typeof parsedConfiguration[0] === 'object') {
+            let minPrice = Infinity;
+            let minPriceUnit = priceUnit || 'Lakhs';
+            
+            const getValInLakhs = (val: number, unitStr: string) => {
+                const u = (unitStr || '').toLowerCase().trim();
+                if (u === 'cr' || u === 'crore' || u === 'crores') return val * 100;
+                if (u === 'thousands' || u === 'thousand' || u === 'k') return val / 100;
+                return val; // Default to Lakhs
+            };
+
+            parsedConfiguration.forEach((config: any) => {
+                const pVal = parseFloat(config.price);
+                if (!isNaN(pVal)) {
+                    const currentValInLakhs = getValInLakhs(pVal, config.priceUnit);
+                    const minValInLakhs = getValInLakhs(minPrice, minPriceUnit);
+                    
+                    if (currentValInLakhs < minValInLakhs) {
+                        minPrice = pVal;
+                        minPriceUnit = config.priceUnit || 'Lakhs';
+                    }
+                }
+            });
+            
+            if (minPrice !== Infinity) {
+                calculatedPrice = minPrice;
+                calculatedPriceUnit = minPriceUnit;
+            }
+        }
 
         const parseArray = (val: any) => {
             if (!val) return [];
@@ -258,6 +378,24 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
             }
         }
 
+        // Map uploaded floor plan files to specific configuration entries if floorPlanFileIndex is present
+        if (Array.isArray(parsedConfiguration) && req.files) {
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+            if (files['floorPlan']) {
+                const newFloorPlans = files['floorPlan'].map((file: any) => `/uploads/${file.filename}`);
+                parsedConfiguration = parsedConfiguration.map((config: any) => {
+                    if (config.floorPlanFileIndex !== undefined && config.floorPlanFileIndex !== null) {
+                        const idx = parseInt(config.floorPlanFileIndex);
+                        if (newFloorPlans[idx]) {
+                            config.floorPlan = newFloorPlans[idx];
+                        }
+                        delete config.floorPlanFileIndex;
+                    }
+                    return config;
+                });
+            }
+        }
+
         let parsedAmenities = property.amenities;
         if (amenities) {
             try {
@@ -277,7 +415,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
         }
 
         // Sanitize numeric inputs to avoid NaN / database constraint errors
-        const safePrice = (price === '' || price === 'null' || price === 'undefined') ? null : price;
+        const safePrice = (calculatedPrice === '' || calculatedPrice === 'null' || calculatedPrice === 'undefined') ? null : calculatedPrice;
         const safeBhk = (bhk && bhk !== 'null' && bhk !== 'undefined' && !isNaN(parseInt(bhk))) ? parseInt(bhk) : null;
         const safeLat = (latitude && latitude !== 'null' && latitude !== 'undefined' && !isNaN(parseFloat(latitude))) ? parseFloat(latitude) : null;
         const safeLng = (longitude && longitude !== 'null' && longitude !== 'undefined' && !isNaN(parseFloat(longitude))) ? parseFloat(longitude) : null;
@@ -288,9 +426,9 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
             category,
             location,
             price: safePrice,
-            priceUnit,
-            dimensions,
-            configuration,
+            priceUnit: calculatedPriceUnit,
+            dimensions: parsedDimensions,
+            configuration: parsedConfiguration,
             coverPhoto,
             photos,
             brochure,
@@ -302,6 +440,7 @@ router.put('/:id', [auth, upload.fields([{ name: 'coverPhoto', maxCount: 1 }, { 
             reraNumber,
             builderInfo,
             isVerified: isVerified === 'true' || isVerified === true,
+            isSoldOut: isSoldOut === 'true' || isSoldOut === true,
             projectHighlights: parsedHighlights,
             possessionStatus,
             furnishingStatus,

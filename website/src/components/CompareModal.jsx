@@ -92,8 +92,17 @@ const CompareModal = ({ isOpen, onClose }) => {
     if (!price) return 'N/A';
     const p = parseFloat(price);
     if (isNaN(p)) return `${price} ${unit || ''}`;
-    if (unit === 'Cr') return `₹${p} Cr`;
-    if (unit === 'Lakhs') return `₹${p} Lakhs`;
+    
+    const u = (unit || '').toLowerCase().trim();
+    if (u === 'cr' || u === 'crore' || u === 'crores') return `₹${p} Cr`;
+    if (u === 'lakhs' || u === 'lakh' || u === 'lac' || u === 'lacs') return `₹${p} Lakhs`;
+    if (u === 'thousands' || u === 'thousand' || u === 'k') return `₹${p} Thousand`;
+    
+    // Fallback for cases where it's a raw large number (e.g. 500000)
+    if (p >= 10000000) return `₹${(p / 10000000).toFixed(2).replace(/\.00$/, '')} Cr`;
+    if (p >= 100000) return `₹${(p / 100000).toFixed(2).replace(/\.00$/, '')} Lakhs`;
+    if (p >= 1000) return `₹${(p / 1000).toFixed(2).replace(/\.00$/, '')} Thousand`;
+    
     return `₹${p.toLocaleString()}`;
   };
 
