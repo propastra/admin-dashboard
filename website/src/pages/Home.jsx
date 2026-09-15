@@ -455,26 +455,48 @@ const Home = () => {
                 <div className="home-hero-content">
                     {/* Hero Text */}
                     <div className="hero-text">
+                        <div className="hero-eyebrow">
+                            <span className="hero-eyebrow-dot"></span>
+                            <span>Exclusive Real Estate Collection</span>
+                        </div>
                         <h1>Find Your <span className="hero-highlight">Dream Home</span></h1>
-                        <p>Explore premium properties across India's top cities</p>
+                        <p>Discover curated luxury villas, apartments & plots across India's top cities</p>
                     </div>
 
                     {/* Search Bar */}
                     <form className="home-search" onSubmit={handleSearch}>
-                        <Search size={20} className="search-icon" onClick={handleSearch} style={{ cursor: 'pointer' }} />
+                        <Search size={22} className="search-icon" onClick={handleSearch} style={{ cursor: 'pointer' }} />
                         <input
                             type="text"
                             placeholder="Search by location, project or property..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <button type="button" className="map-btn" onClick={() => ensureIdentified(() => navigate('/map'), 'Explore homes on map')}>
+                        <button type="button" className="map-btn" title="Explore on Map" onClick={() => ensureIdentified(() => navigate('/map'), 'Explore homes on map')}>
                             <MapPin size={18} />
                         </button>
-                        <button type="button" className="filter-btn" onClick={() => ensureIdentified(() => navigate('/search'), 'Find your perfect match')}>
+                        <button type="button" className="filter-btn" title="Filter Search" onClick={() => ensureIdentified(() => navigate('/search'), 'Find your perfect match')}>
                             <SlidersHorizontal size={18} />
                         </button>
+                        <button type="submit" className="hero-search-submit-btn">
+                            Search
+                        </button>
                     </form>
+
+                    {/* Trust Badges Bar */}
+                    <div className="hero-trust-bar">
+                        <div className="hero-trust-item">
+                            <span className="trust-icon">🏢</span> 500+ Verified Projects
+                        </div>
+                        <div className="hero-trust-divider"></div>
+                        <div className="hero-trust-item">
+                            <span className="trust-icon">📍</span> Top Metro Cities
+                        </div>
+                        <div className="hero-trust-divider"></div>
+                        <div className="hero-trust-item">
+                            <span className="trust-icon">⚡</span> Direct Developer Prices
+                        </div>
+                    </div>
                 </div>
 
                 {/* Decorative elements */}
@@ -495,40 +517,53 @@ const Home = () => {
                 />
             </React.Suspense>
 
-            {/* Modern Promotional Banner */}
+            {/* Modern Promotional Banner - Real Estate Theme */}
             <div className="promo-banner-section">
                 <div className="promo-banner-bg-wrapper">
                     <img
-                        src="/images/promo-banner-bg.png"
-                        alt="Get your personalized investment plan"
+                        src="/images/realestate-banner-bg.jpg"
+                        alt="Real Estate Investment Plan"
                         className="promo-banner-img"
                     />
+                    <div className="promo-banner-overlay" />
                 </div>
 
-                {/* Only the CTA — no text overlay, image already has it */}
-                <div className="promo-banner-cta-wrap">
-                    {bannerCtaSubmitted ? (
-                        <div className="promo-cta-success">
-                            <div className="promo-success-icon">✅</div>
-                            <div className="promo-success-text">
-                                <strong>We'll reach out soon!</strong>
-                                <span>Our expert will contact you within 24 hrs.</span>
+                <div className="promo-banner-content-container">
+                    <div className="promo-banner-text-box">
+                        <span className="promo-banner-badge">✨ Real Estate Advisory</span>
+                        <h2 className="promo-banner-title">
+                            Get your personalized <br />
+                            <span className="promo-banner-highlight">investment plan</span>
+                        </h2>
+                        <p className="promo-banner-subtitle">
+                            Unlock high-yield property investments & expert growth strategies
+                        </p>
+                    </div>
+
+                    <div className="promo-banner-cta-wrap">
+                        {bannerCtaSubmitted ? (
+                            <div className="promo-cta-success">
+                                <div className="promo-success-icon">✅</div>
+                                <div className="promo-success-text">
+                                    <strong>We'll reach out soon!</strong>
+                                    <span>Our expert will contact you within 24 hrs.</span>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="promo-action-group">
-                            <button
-                                className="promo-cta-btn"
-                                onClick={() => ensureIdentified(
-                                    handleBannerExpertClick,
-                                    'To talk to our expert, please verify your details'
-                                )}
-                            >
-                                Talk to Our Expert
-                            </button>
-                            <span className="promo-microcopy">Expert advice in under 24 hrs</span>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="promo-action-group">
+                                <button
+                                    className="promo-cta-btn"
+                                    onClick={() => ensureIdentified(
+                                        handleBannerExpertClick,
+                                        'To talk to our expert, please verify your details'
+                                    )}
+                                >
+                                    Talk to Our Expert
+                                </button>
+                                <span className="promo-microcopy">Expert advice in under 24 hrs</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -669,41 +704,7 @@ const Home = () => {
                     </React.Suspense>
                 )}
 
-                {/* ── Stats Section ── */}
-                <div className="stats-section">
-                    <div className="stats-section-inner">
-                        <div className="stats-header">
-                            <span className="stats-eyebrow">Our Track Record</span>
-                            <h2 className="stats-title">Numbers That <span className="stats-highlight">Speak</span></h2>
-                        </div>
-                        <div className="stats-grid">
-                            <div className="stat-card">
-                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #eef2ff, #c7d2fe)' }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B3F8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-                                </div>
-                                <div className="stat-card-value">₹150<span className="stat-unit">Cr+</span></div>
-                                <div className="stat-card-label">Inventory Sold</div>
-                                <div className="stat-card-bar" style={{ '--bar-color': '#3B3F8C' }} />
-                            </div>
-                            <div className="stat-card">
-                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)' }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                </div>
-                                <div className="stat-card-value">120<span className="stat-unit">+</span></div>
-                                <div className="stat-card-label">Units Sold</div>
-                                <div className="stat-card-bar" style={{ '--bar-color': '#d97706' }} />
-                            </div>
-                            <div className="stat-card">
-                                <div className="stat-card-icon" style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)' }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                                </div>
-                                <div className="stat-card-value">3.72<span className="stat-unit"> Cr</span></div>
-                                <div className="stat-card-label">Revenue Generated</div>
-                                <div className="stat-card-bar" style={{ '--bar-color': '#16a34a' }} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* Top Locations */}
                 <section className="home-section animate-section">

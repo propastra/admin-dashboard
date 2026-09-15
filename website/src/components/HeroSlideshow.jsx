@@ -1,22 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './HeroSlideshow.css';
 
-// Optimised: mobile-sized images on small screens, desktop on large
+// Realistic Bangalore luxury real estate images (apartments & villas)
 const HERO_IMAGES = [
   {
-    src: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=75&w=1280",
-    srcSet: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=70&w=640 640w, https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=75&w=1280 1280w",
-    alt: "Modern luxury house",
+    src: "/images/hero-bangalore-apartment.jpg",
+    alt: "Luxury high-rise apartment towers in Bangalore",
   },
   {
-    src: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=75&w=1280",
-    srcSet: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=70&w=640 640w, https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=75&w=1280 1280w",
-    alt: "High-end apartment",
+    src: "/images/hero-bangalore-villa.jpg",
+    alt: "Modern luxury villa with private pool in Bangalore",
   },
   {
-    src: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=75&w=1280",
-    srcSet: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=70&w=640 640w, https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=75&w=1280 1280w",
-    alt: "Luxury villa",
+    src: "/images/hero-bangalore-residence.jpg",
+    alt: "Bangalore skyline residence with rooftop garden",
   },
 ];
 
@@ -24,7 +21,7 @@ const SLIDE_DURATION = 5000;
 
 const HeroSlideshow = () => {
     const [current, setCurrent] = useState(0);
-    const [loaded, setLoaded] = useState([true, false, false]); // only preload first
+    const [loaded, setLoaded] = useState([true, true, true]);
 
     const advance = useCallback(() => {
         setCurrent(prev => {
@@ -49,8 +46,6 @@ const HeroSlideshow = () => {
                     {loaded[i] && (
                         <img
                             src={img.src}
-                            srcSet={img.srcSet}
-                            sizes="100vw"
                             alt={img.alt}
                             className="hero-slide-img"
                             /* First image eager, rest lazy */

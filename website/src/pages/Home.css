@@ -156,54 +156,92 @@
 
 /* ====== CLEANED UP HEADER STYLES ====== */
 
+/* Hero Eyebrow Badge */
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fde047;
+    backdrop-filter: blur(12px);
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.hero-eyebrow-dot {
+    width: 8px;
+    height: 8px;
+    background: #f59e0b;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #f59e0b;
+    animation: pulse 2s infinite;
+}
+
 /* Hero Text */
 .hero-text {
-    margin-bottom: var(--space-xl);
+    margin-bottom: 28px;
     animation: fadeInUp 0.6s ease forwards;
 }
 
 .hero-text h1 {
-    font-size: var(--font-size-3xl);
-    font-weight: 800;
-    color: var(--white);
-    letter-spacing: -0.5px;
-    line-height: 1.2;
-    margin-bottom: 6px;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -1px;
+    line-height: 1.15;
+    margin-bottom: 10px;
+    text-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .hero-highlight {
-    background: linear-gradient(135deg, #F5A623, #FFD93D);
+    color: #fbbf24;
+    background: linear-gradient(135deg, #fde047 0%, #f59e0b 50%, #d97706 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 2px 10px rgba(245, 158, 11, 0.35));
 }
 
 .hero-text p {
-    color: rgba(255, 255, 255, 0.65);
-    font-size: var(--font-size-base);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 17px;
+    font-weight: 400;
+    max-width: 580px;
+    line-height: 1.5;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-/* Search */
+/* Search Bar - Modern Glassmorphism */
 .home-search {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 14px 18px;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: var(--radius-xl);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    gap: 12px;
+    padding: 8px 12px 8px 20px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    transition: all 0.35s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
     animation: fadeInUp 0.7s ease forwards;
+    backdrop-filter: blur(16px);
 }
 
 .home-search:focus-within {
-    border-color: var(--brand);
-    box-shadow: 0 8px 40px rgba(59, 63, 140, 0.2);
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(59, 130, 246, 0.2);
+    transform: translateY(-2px);
 }
 
 .home-search .search-icon {
-    color: var(--brand);
+    color: #3b82f6;
     flex-shrink: 0;
 }
 
@@ -211,58 +249,127 @@
     flex: 1;
     border: none;
     outline: none;
-    font-size: var(--font-size-sm);
+    font-size: 15px;
     background: transparent;
-    color: var(--gray-900);
+    color: #0f172a;
     font-weight: 500;
 }
 
 .home-search input::placeholder {
-    color: var(--gray-400);
+    color: #64748b;
 }
 
 .map-btn {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--brand);
+    color: #1e293b;
     cursor: pointer;
-    background: var(--brand-bg);
+    background: #f1f5f9;
     border: none;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-normal);
+    border-radius: 50%;
+    transition: all 0.25s ease;
     flex-shrink: 0;
 }
 
 .map-btn:hover {
-    background: #eef2ff;
-    transform: translateY(-2px);
-}
-
-.map-btn:active {
-    transform: scale(0.95);
+    background: #e2e8f0;
+    color: #3b82f6;
+    transform: scale(1.08);
 }
 
 .filter-btn {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--white);
+    color: #1e293b;
     cursor: pointer;
-    background: var(--gradient-brand);
+    background: #f1f5f9;
     border: none;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-normal);
+    border-radius: 50%;
+    transition: all 0.25s ease;
     flex-shrink: 0;
 }
 
 .filter-btn:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-brand);
+    background: #e2e8f0;
+    color: #3b82f6;
+    transform: scale(1.08);
+}
+
+.hero-search-submit-btn {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.hero-search-submit-btn:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5);
+}
+
+/* Trust Badges Bar below search */
+.hero-trust-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 10px 20px;
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    backdrop-filter: blur(12px);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.hero-trust-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.trust-icon {
+    font-size: 14px;
+}
+
+.hero-trust-divider {
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+}
+
+@media (max-width: 650px) {
+    .hero-trust-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        border-radius: 16px;
+    }
+
+    .hero-trust-divider {
+        display: none;
+    }
+
+    .hero-search-submit-btn {
+        display: none; /* keep clean on mobile */
+    }
 }
 
 /* ====== BODY / CONTENT ====== */
@@ -544,21 +651,19 @@
 .promo-banner-section {
     width: 92%;
     max-width: 1140px;
-    /* Matched to main container for professional look */
     margin: 40px auto;
-    border-radius: 20px;
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
     transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
     position: relative;
-    height: 320px;
-    /* Increased height */
-    background: #111827;
+    min-height: 280px;
+    background: #0f172a;
 }
 
 .promo-banner-section:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    transform: translateY(-6px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
 }
 
 .promo-banner-bg-wrapper {
@@ -573,35 +678,90 @@
     object-fit: cover;
     object-position: center;
     transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
-    filter: brightness(1.2) contrast(1.05);
-    /* Increased brightness further as requested */
+    filter: brightness(0.95) contrast(1.05);
 }
 
 .promo-banner-section:hover .promo-banner-img {
-    transform: scale(1.08);
-    /* Subtle zoom on hover */
+    transform: scale(1.06);
 }
 
 .promo-banner-overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg,
-            rgba(17, 24, 39, 0.1) 0%,
-            rgba(17, 24, 39, 0.5) 25%,
-            rgba(17, 24, 39, 0.85) 50%,
-            rgba(17, 24, 39, 0.95) 100%);
-    /* Removed backdrop-filter to keep the advisor sharp */
+            rgba(15, 23, 42, 0.95) 0%,
+            rgba(15, 23, 42, 0.82) 40%,
+            rgba(15, 23, 42, 0.45) 75%,
+            rgba(15, 23, 42, 0.2) 100%);
 }
 
-/* CTA sits right below 'investment plan' text — right half, below center */
-.promo-banner-cta-wrap {
-    position: absolute;
-    top: 58%;
-    right: 300px;
+.promo-banner-content-container {
+    position: relative;
     z-index: 2;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
+    min-height: 280px;
+    padding: 36px 48px;
+    gap: 32px;
+}
+
+.promo-banner-text-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 540px;
+}
+
+.promo-banner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fbbf24;
+    backdrop-filter: blur(8px);
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.promo-banner-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.promo-banner-highlight {
+    color: #fbbf24;
+    background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.promo-banner-subtitle {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    line-height: 1.5;
+    font-weight: 400;
+}
+
+.promo-banner-cta-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 /* Banner CTA Styling */
@@ -648,78 +808,76 @@
     font-weight: 500;
 }
 
-
 .promo-cta-btn {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: #ffffff;
     border: none;
-    padding: 16px 40px;
-    border-radius: 12px;
-    font-size: 17px;
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 16px;
     font-weight: 800;
     cursor: pointer;
     box-shadow: 0 10px 25px rgba(217, 119, 6, 0.4);
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     letter-spacing: 0.2px;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
 }
 
 .promo-cta-btn:hover {
-    transform: translateY(-3px) scale(1.05);
+    transform: translateY(-3px) scale(1.04);
     box-shadow: 0 15px 35px rgba(217, 119, 6, 0.5);
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
 }
 
 .promo-microcopy {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.75);
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+@media (max-width: 850px) {
+    .promo-banner-content-container {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 32px 28px;
+        gap: 20px;
+    }
+    
+    .promo-banner-title {
+        font-size: 26px;
+    }
+
+    .promo-banner-cta-wrap {
+        align-self: stretch;
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 600px) {
     .promo-banner-section {
         width: 95%;
-        margin: 12px auto 16px;
-        border-radius: 14px;
-        height: auto;
-        /* let the image define height */
+        margin: 16px auto;
+        border-radius: 16px;
+        min-height: auto;
     }
 
-    .promo-banner-bg-wrapper {
-        position: relative;
-        /* stack normally on mobile */
-        inset: unset;
+    .promo-banner-content-container {
+        padding: 24px 20px;
     }
 
-    .promo-banner-img {
+    .promo-banner-title {
+        font-size: 22px;
+    }
+
+    .promo-banner-subtitle {
+        font-size: 13px;
+    }
+
+    .promo-action-group {
         width: 100%;
-        height: auto;
-        object-fit: cover;
-        display: block;
-        border-radius: 14px;
-    }
-
-    .promo-banner-cta-wrap {
-        position: relative;
-        /* flow below image on mobile */
-        top: unset;
-        right: unset;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        background: #0f172a;
-        border-radius: 0 0 14px 14px;
-    }
-
-    .promo-cta-btn {
-        font-size: 14px;
-        padding: 12px 28px;
-        width: 100%;
-        max-width: 280px;
     }
 
     .promo-cta-success {
