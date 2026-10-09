@@ -55,17 +55,21 @@ jobs:
             set -e
 
             # ============================================================
-            # STEP 0: SETUP SWAP (Prevent OOM on t3.micro)
+            # STEP 0: SETUP 2.5GB SWAP (Prevent OOM on t3.micro)
             # ============================================================
             echo "=== [0/6] Setting up Swap ==="
-            if [ ! -f /swapfile ]; then
-                sudo fallocate -l 1.5G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1536
+            SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
+            if [ -z "$SWAP_SIZE" ] || [ "$SWAP_SIZE" -lt 2200 ]; then
+                echo "Creating/Enlarging Swap to 2.5GB..."
+                sudo swapoff /swapfile 2>/dev/null || true
+                sudo rm -f /swapfile
+                sudo fallocate -l 2.5G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2560
                 sudo chmod 600 /swapfile
                 sudo mkswap /swapfile
                 sudo swapon /swapfile || true
-                echo "Swap created!"
+                echo "2.5GB Swap enabled!"
             else
-                echo "Swap already exists."
+                echo "Swap already sufficient (${SWAP_SIZE}MB)."
             fi
 
             BACKEND_DIR="/home/ubuntu/Admin_dashboard/backend"
@@ -168,7 +172,8 @@ jobs:
             rm -rf dist
 
             npm install --prefer-offline 2>/dev/null || npm install
-            export NODE_OPTIONS="--max-old-space-size=512"
+            export UV_THREADPOOL_SIZE=2
+            export NODE_OPTIONS="--max-old-space-size=1536"
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Frontend deployed!"
@@ -183,7 +188,8 @@ jobs:
             rm -rf dist
 
             npm install --prefer-offline 2>/dev/null || npm install
-            export NODE_OPTIONS="--max-old-space-size=512"
+            export UV_THREADPOOL_SIZE=2
+            export NODE_OPTIONS="--max-old-space-size=1536"
             npm run build
             sudo chown -R www-data:www-data dist
             echo "Website deployed!"
