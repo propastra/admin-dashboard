@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { sendOtp, verifyOtp } from '../services/api';
+import { sendOtp, verifyOtp, resendOtp } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './MobileLogin.css';
 
@@ -54,7 +54,7 @@ const MobileLogin = () => {
         setError('');
 
         if (otp.length < 4) {
-            setError('Please enter the complete OTP');
+            setError('Please enter the complete 4-digit OTP');
             return;
         }
 
@@ -75,12 +75,24 @@ const MobileLogin = () => {
         setError('');
         setLoading(true);
         try {
-            await sendOtp({ phone });
+            await resendOtp({ phone });
             startResendTimer();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to resend OTP.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOtpPaste = (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+        if (pasted) {
+            setOtp(pasted);
+            const inputs = document.querySelectorAll('.otp-box');
+            if (inputs[Math.min(pasted.length, 3)]) {
+                inputs[Math.min(pasted.length, 3)].focus();
+            }
         }
     };
 
@@ -136,11 +148,13 @@ const MobileLogin = () => {
                         <form onSubmit={handleVerifyOtp} className="login-form">
                             <div className="input-group">
                                 <label>Enter OTP</label>
-                                <div className="otp-inputs">
+                                <div className="otp-inputs" onPaste={handleOtpPaste}>
                                     {[0, 1, 2, 3].map((i) => (
                                         <input
                                             key={i}
                                             type="text"
+                                            inputMode="numeric"
+                                            autoComplete={i === 0 ? "one-time-code" : "off"}
                                             maxLength={1}
                                             className="otp-box"
                                             value={otp[i] || ''}

@@ -166,6 +166,133 @@
     margin: 0;
 }
 
+/* OTP Verification UI inside Inquiry Popup */
+.inquiry-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inquiry-verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #10B981;
+    font-weight: 700;
+    font-size: 13px;
+    background: #ECFDF5;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid #A7F3D0;
+}
+
+.inquiry-phone-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.inquiry-phone-input-row input {
+    flex: 1;
+}
+
+.inquiry-verify-btn {
+    padding: 0 16px;
+    height: 46px;
+    background: #3B3F8C;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.inquiry-verify-btn:hover:not(:disabled) {
+    background: #2E3272;
+    transform: translateY(-1px);
+}
+
+.inquiry-verify-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.inquiry-otp-box {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: inquiryPopupSlideIn 0.2s ease-out;
+}
+
+.inquiry-otp-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #3B3F8C;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.inquiry-otp-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.inquiry-otp-field {
+    width: 140px !important;
+    text-align: center;
+    font-size: 20px !important;
+    font-weight: 800;
+    letter-spacing: 6px;
+    padding: 8px 12px !important;
+}
+
+.inquiry-otp-confirm-btn {
+    flex: 1;
+    background: #F5A623;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.inquiry-otp-confirm-btn:hover:not(:disabled) {
+    background: #E09215;
+}
+
+.inquiry-otp-confirm-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.inquiry-otp-resend-row {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.inquiry-resend-link {
+    background: none;
+    border: none;
+    color: #3B3F8C;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    text-decoration: underline;
+}
+
 @media (max-width: 480px) {
     .inquiry-popup-modal {
         padding: 24px;

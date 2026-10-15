@@ -24,6 +24,7 @@ export const loginUser = (data) => api.post('/website/auth/login', data);
 export const getMe = () => api.get('/website/auth/me');
 export const updateProfile = (data) => api.put('/website/auth/profile', data);
 export const sendOtp = (data) => api.post('/website/auth/send-otp', data);
+export const resendOtp = (data) => api.post('/website/auth/resend-otp', data);
 export const verifyOtp = (data) => api.post('/website/auth/verify-otp', data);
 
 // ======= PROPERTIES =======
